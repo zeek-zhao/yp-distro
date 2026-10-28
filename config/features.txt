@@ -11,3 +11,4 @@ cve-tool | dunfell,kirkstone,scarthgap | - | - | ok
 cve-tool | wrynose | - | - | degraded
 distro-backfill | wrynose | - | - | degraded
 report-archive | all | tests/bats/06_report.bats | report | ok
+shared-cache | all | tests/bats/07_cache.bats | cache | ok
