@@ -91,6 +91,34 @@ for path in files:
 }
 
 # bats test_tags=kas
+@test "wrynose keeps bitbake out of BBLAYERS" {
+    # 缺省 layers 时 kas 用 {'': None}，会把 bitbake/ 当 layer，解析必失败
+    run grep -A3 '^  bitbake:' "${KAS_DIR}/releases/wrynose.yml"
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"layers: {}"* ]]
+}
+
+# bats test_tags=kas
+@test "release-specific knobs match each Yocto version" {
+    grep -q 'CONF_VERSION = "1"' "${KAS_DIR}/releases/dunfell.yml"
+    grep -q 'CONF_VERSION ??= "2"' "${KAS_DIR}/base.yml"
+    for release in scarthgap wrynose; do
+        grep -q 'YP_SRC_DIR = "${UNPACKDIR}"' \
+            "${KAS_DIR}/releases/${release}.yml"
+    done
+    grep -q 'YP_CVE_CLASS = "sbom-cve-check"' "${KAS_DIR}/releases/wrynose.yml"
+    grep -q 'YP_CVE_ENABLE = "1"' "${KAS_DIR}/variants/custom.yml"
+    run grep -q 'INHERIT += "cve-check"' "${KAS_DIR}/variants/custom.yml"
+    [ "${status}" -eq 1 ]
+}
+
+# bats test_tags=kas
+@test "image recipe inherits CVE class only for custom variant" {
+    grep -q "bb.utils.contains('YP_CVE_ENABLE', '1', d.getVar('YP_CVE_CLASS')" \
+        "${ROOT_DIR}/layers/meta-yp/recipes-core/images/yp-image.bb"
+}
+
+# bats test_tags=kas
 @test "dev Dockerfile installs kas and records its fingerprint" {
     grep -Fq 'kas==${KAS_VERSION}' "${ROOT_DIR}/docker/dev/Dockerfile"
     grep -Fq "printf 'kas=%s" "${ROOT_DIR}/docker/dev/Dockerfile"

@@ -167,3 +167,56 @@ commit / tag 与 `config/releases/*.env` 的 `EXPECT_SHA` 承担。
 （dunfell `63d05fc0…` / kirkstone `93431249…` / scarthgap `64e69ed2…` /
 wrynose 三仓库 `51fd94a6…` `7c25b111…` `0f03c732…`），
 证明 variant 层没有扰动版本锁。
+
+### 四版真实解析（`bitbake -p`）
+
+配置能被 kas 解析 ≠ bitbake 能接受。8 个 target 全部用对应 release 镜像
+真跑了一次 `bitbake -p`（只用 release 镜像，dev 镜像缺 HOSTTOOLS）：
+
+| release | bitbake | 解析 .bb（general / custom） | 结果 |
+|---|---|---|---|
+| dunfell | 1.46.0 | 775 / 781 | 均 0 errors |
+| kirkstone | 2.0.0 | 882 / 888 | 均 0 errors |
+| scarthgap | 2.8.1 | 920 / 926 | 均 0 errors |
+| wrynose | 2.18.0 | 950 / 956 | 均 0 errors |
+
+custom 比 general 多 6 个 recipe，来自 multilib（lib32）。
+
+这一轮暴露了 5 个只有真解析才会发现的问题：
+
+1. **`bitbake` 仓库不能当 layer**。kas 的 `Repo.factory` 里
+   `layers_dict = repo_config.get('layers', {'': None})`——不写 `layers` 时
+   默认把**仓库根**当一层。于是 `bitbake/` 进了 `BBLAYERS`，而它没有
+   `conf/layer.conf`，报 `file .../bitbake/conf/layer.conf not found`。
+   修法：`wrynose.yml` 的 `bitbake` 显式写 `layers: {}`。
+   （空 dict 合法；被 schema 拒绝的是 `layers: {meta: {}}` 这种**值**为 `{}` 的写法。）
+2. **`CONF_VERSION` 各版本不同**：dunfell 的 `local.conf.sample` 是 1，
+   kirkstone+ 是 2。base 里写死 2 会让 dunfell 直接 `NotImplementedError`。
+3. **5.0+ 禁止 `S = "${WORKDIR}"`**，`file://` 解包改到 `${UNPACKDIR}`，
+   而 3.1/4.0 没有这个变量。解法**不是**去 `??=` 上游的 `UNPACKDIR`——
+   实测那会污染默认值，导致 96 个 recipe 报
+   `Using UNPACKDIR = ${WORKDIR} is not supported`。而是定义自己的
+   `YP_SRC_DIR`：base 默认 `${WORKDIR}`，scarthgap/wrynose 覆盖成 `${UNPACKDIR}`。
+4. **wrynose 删掉了 `cve-check.bbclass`**，换成 SBOM 驱动的 `sbom-cve-check`；
+   且从 5.0 起它在 `classes-recipe/`，配置层 `INHERIT += "cve-check"` 找不到。
+   解法：`YP_CVE_ENABLE`（variant 决定开关）+ `YP_CVE_CLASS`（release 决定类名），
+   由 `yp-image.bb` 用 `inherit ${@bb.utils.contains(...)}` 条件继承。
+   **不能在 local.conf 里拼 `IMAGE_CLASSES += " ${YP_CVE_CLASS}"`**：
+   `+=` 立即展开，而 kas 的 `local_conf_header` 段顺序是
+   base → custom → machine → release，展开时还拿不到 release 定义的值。
+5. **`RPROVIDES = "virtual/cpp-hello"` 在 6.0 报 QA `virtual-slash`**。
+   `IMAGE_INSTALL` 里的 `virtual/cpp-hello` 由 build 期 `PROVIDES` 解析，
+   runtime 的 `RPROVIDES` 不该带 `virtual/` 前缀。
+
+这 5 条都已变成 `kas-verify.py` 的 `check_version_knobs` 断言，
+并有 5 个反向用例（改坏配置必须报错）证明断言不是空壳。
+
+### 仍未解决：冒号 override 在 dunfell 上静默失效
+
+`cpp-hello-cus-pack_0.1.bb` 里还有 `FILES:${PN}`、`do_compile:append()` 这类
+冒号写法。dunfell 3.1 的 bitbake 把 `:` 当作变量名/函数名的一部分，
+**不报错但也不生效**；scarthgap+ 只认冒号写法。所以同一份 recipe 在四版上
+「都能解析」，但 dunfell 上这些行的语义是丢的。
+
+不影响 `bitbake -p`，但会影响 dunfell 的打包（`FILES` 不生效）。
+留到 dunfell 真构建（#21）时按版本拆 recipe 或分版本 `.bbappend` 处理。
