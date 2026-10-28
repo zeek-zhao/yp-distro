@@ -15,7 +15,8 @@ usage() {
   doctor   检查 release/variant 组合与磁盘水位
   test     运行 BATS 测试
   report   运行测试并生成报告
-  image | source | build | qemu | review | e2e
+  image    构建、校验或列出 Yocto 构建镜像
+  source | build | qemu | review | e2e
            暂未实现
 EOF
 }
@@ -29,8 +30,11 @@ case "${command_name}" in
         usage
         exit 0
         ;;
+    image)
+        exec bash "${ROOT_DIR}/scripts/image.sh" "$@"
+        ;;
     test | report | config | doctor) ;;
-    image | source | build | qemu | review | e2e)
+    source | build | qemu | review | e2e)
         printf 'not implemented yet: %s\n' "${command_name}" >&2
         exit 2
         ;;
