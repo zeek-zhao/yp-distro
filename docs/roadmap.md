@@ -18,14 +18,14 @@
 | [#8](https://github.com/zeek-zhao/yocto/issues/8) | L1 lint + L2 images + pull-check | ✅ `0d7ea70` |
 | [#2](https://github.com/zeek-zhao/yocto/issues/2) | main 分支并挂默认 | ✅ |
 | [#4](https://github.com/zeek-zhao/yocto/issues/4) | 分支模型（dev 集成 + PR 门禁） | ✅ `9140c2e` |
-| [#9](https://github.com/zeek-zhao/yocto/issues/9) | project.sh 子命令补齐 | ⬜ 待开工 |
+| [#9](https://github.com/zeek-zhao/yocto/issues/9) | project.sh 子命令补齐 | ✅ `9ceffdc`（10 子命令 + 5 占位 exit 2；Makefile 全 target 一行转发；`docs/cli.md`；BATS 56） |
 | [#10](https://github.com/zeek-zhao/yocto/issues/10) | scripts/container.sh（命名/非 root/UID 映射） | ✅ `d9ed12e`（容器名 `yocto-<r>-<v>`、uid 映射 + `/etc/passwd` 注入、DL/SSTATE 落 `/work/work/`、85% 水位门禁、`--check`/`--dry-run`） |
 | [#14](https://github.com/zeek-zhao/yocto/issues/14) | **bug**：镜像缺 kas / repo | ✅ `984e915`（kas 4.6；repo 默认不装，留 `INSTALL_REPO=1`） |
 | [#15](https://github.com/zeek-zhao/yocto/issues/15) | **bug**：镜像构建用户不一致 | ✅ `984e915`（统一 `builder`，4 镜像 `id -un` 唯一） |
-| [#11](https://github.com/zeek-zhao/yocto/issues/11) | meta-yp layer 升级（4 版兼容） | ⬜ 待开工 |
+| [#11](https://github.com/zeek-zhao/yocto/issues/11) | meta-yp layer 升级（4 版兼容） | ✅ `eb79142`（LAYERSERIES 四值、`yp.conf`+`yp-common/yp-compat.inc`、`yp-image`/`yp-image-minimal`、全层禁冒号 override；BATS 68） |
 | [#12](https://github.com/zeek-zhao/yocto/issues/12) | ~~source.sh~~ / [#13](https://github.com/zeek-zhao/yocto/issues/13) ~~worktree~~ | ⛔ 被 kas 取代（C40） |
 
-**依赖顺序**：#10 → #9 → #11（#14/#15 已完成；kas 层 #17 可与 #11 并行启动）。
+**依赖顺序**：#10 → #9 → #11 —— **四项全部完成，P0 关闭**。#14/#15 已修；kas 层 #17 转 P1 首卡。
 
 ## P1 打通（v0.2.0）
 
