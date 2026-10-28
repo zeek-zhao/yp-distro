@@ -1,0 +1,11 @@
+# hadolint 规则配置（L1 门禁用）
+ignored:
+  # apt 包不 pin 版本：可复现性由 base 镜像 tag 保证，pin 每个包会让升级极其痛苦
+  - DL3008
+  # pip 不 pin 版本：同上，dev 镜像允许浮动
+  - DL3013
+  # 允许多段 RUN，便于利用构建缓存分层
+  - DL3059
+  # 允许 npm install 不带版本（仅当显式 pin 时例外）
+  - DL3016
+failure-threshold: warning
