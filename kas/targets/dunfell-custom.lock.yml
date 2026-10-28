@@ -1,0 +1,6 @@
+header:
+    version: 14
+overrides:
+    repos:
+        poky:
+            commit: 63d05fc061006bf1a88630d6d91cdc76ea33fbf2

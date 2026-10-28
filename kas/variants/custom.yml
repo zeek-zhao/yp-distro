@@ -5,9 +5,10 @@ distro: yp
 target: yp-image
 
 repos:
+  # meta-yp 就是本仓库自身，不能给 url：否则 kas 会去 clone 私有仓库。
+  # 不写 url 时 kas 以「配置文件所在仓库的根」为 path、并禁用所有 VCS 操作，
+  # 于是 layers 的 key 直接就是相对仓库根的路径。
   yp:
-    url: https://github.com/zeek-zhao/yocto
-    tag: main
     layers:
       layers/meta-yp:
 
