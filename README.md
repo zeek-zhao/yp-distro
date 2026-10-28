@@ -47,7 +47,7 @@ tag 语义：`sha-<7位>` = 某次提交、`3.1|4.0|5.0|6.0` = release 系列、
 config/          release / variant / machine 配置与版本锁
 docker/          4 份构建镜像 + 开发镜像 + 共享依赖安装脚本
 scripts/         入口脚本（dev / image / report / wf3 / ci / container）
-meta-zeek/       Yocto layer（distro conf + image + recipes）
+layers/meta-yp/   Yocto layer（distro conf + image + recipes）
 tests/bats/      BATS 用例（含 CI workflow 静态门禁）
 tasks/           WF3 任务卡（一卡一分支一 PR）
 docs/            分支模型、CI 说明、路线图、qa 报告

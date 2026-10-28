@@ -36,8 +36,8 @@ EOF
 @test "custom variant resolves the wrynose configuration" {
     run project config --release wrynose --variant custom --machine qemux86-64
     [ "${status}" -eq 0 ]
-    [[ "${output}" == *"DISTRO=zeek-distro"* ]]
-    [[ "${output}" == *"IMAGE=core-image-zeek"* ]]
+    [[ "${output}" == *"DISTRO=yp"* ]]
+    [[ "${output}" == *"IMAGE=yp-image"* ]]
     [[ "${output}" == *"REPO_MODE=split"* ]]
 }
 
