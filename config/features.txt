@@ -1,2 +1,3 @@
 # feature_id | 适用 release | bats 文件 | bats tag
 entry-unified | all | tests/bats/00_project.bats | entry
+docker-images | all | tests/bats/01_dockerfile.bats | dockerfile
