@@ -3,6 +3,11 @@ header:
   includes:
     - kas/base.yml
 
+local_conf_header:
+  scarthgap: |
+    # 5.0 起 file:// 解包到 ${UNPACKDIR}，且禁止 S = ${WORKDIR}
+    YP_SRC_DIR = "${UNPACKDIR}"
+
 repos:
   poky:
     url: https://git.yoctoproject.org/poky

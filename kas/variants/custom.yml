@@ -15,7 +15,10 @@ repos:
 local_conf_header:
   custom: |
     YP_VARIANT = "custom"
-    INHERIT += "cve-check"
+    # 只开开关，类名由各 release 决定（wrynose 是 sbom-cve-check）。
+    # 真正 inherit 在 yp-image.bb 里做：local.conf 里用 += 拼接会因为
+    # 段顺序（base->custom->machine->release）拿不到后面定义的类名。
+    YP_CVE_ENABLE = "1"
     require conf/multilib.conf
     MULTILIBS = "multilib:lib32"
     DEFAULTTUNE:virtclass-multilib-lib32 = "x86"

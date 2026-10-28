@@ -7,8 +7,16 @@ target: core-image-minimal
 
 local_conf_header:
   base: |
-    CONF_VERSION = "2"
+    # dunfell(3.1) 的 local.conf.sample 是 1，kirkstone+ 是 2；
+    # 各 release 层按需覆盖。
+    CONF_VERSION ??= "2"
     PACKAGE_CLASSES = "package_rpm"
     INHERIT += "rm_work"
     DL_DIR = "${TOPDIR}/../downloads"
     SSTATE_DIR = "${TOPDIR}/../sstate"
+    # CVE 检查的 class 名各版本不同：wrynose 用 sbom-cve-check 取代了 cve-check。
+    # 只有 custom variant 会真正把它加进 IMAGE_CLASSES。
+    YP_CVE_CLASS ??= "cve-check"
+    # file:// 的解包目录各版本不同：3.1/4.0 在 ${WORKDIR}，5.0+ 在 ${UNPACKDIR}。
+    # 这里只定义我们自己的别名，绝不能去 ??= 上游的 UNPACKDIR（会污染默认值）。
+    YP_SRC_DIR ??= "${WORKDIR}"

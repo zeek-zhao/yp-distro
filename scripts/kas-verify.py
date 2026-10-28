@@ -278,6 +278,74 @@ def verify_target(
                     "repository resolved from the configuration root"
                 )
 
+    check_version_knobs(config, release, variant)
+
+
+def _local_conf_text(config: dict[str, Any]) -> str:
+    headers = config.get("local_conf_header") or {}
+    if not isinstance(headers, dict):
+        return ""
+    return "\n".join(str(value) for value in headers.values())
+
+
+def check_version_knobs(
+    config: dict[str, Any], release: str, variant: str
+) -> None:
+    """版本相关开关必须与目标 release 匹配。
+
+    这些差异都是真跑 bitbake -p 才暴露的（见 docs/kas.md）：
+    dunfell 的 local.conf.sample 是 CONF_VERSION=1；5.0+ 禁止 S=${WORKDIR}；
+    6.0 用 sbom-cve-check 取代 cve-check；bitbake 仓库不能当 layer。
+    """
+    text = _local_conf_text(config)
+
+    if release == "dunfell":
+        if 'CONF_VERSION = "1"' not in text:
+            raise VerificationError("dunfell 需要 CONF_VERSION = \"1\"")
+        if 'CONF_VERSION = "2"' in text:
+            raise VerificationError("dunfell 的 CONF_VERSION 不能是 2")
+    elif 'CONF_VERSION ??= "2"' not in text:
+        raise VerificationError(
+            f"{release} 需要 CONF_VERSION ??= \"2\""
+        )
+
+    if release in ("scarthgap", "wrynose"):
+        if 'YP_SRC_DIR = "${UNPACKDIR}"' not in text:
+            raise VerificationError(
+                f"{release} 的 file:// 解包在 UNPACKDIR，"
+                "必须设置 YP_SRC_DIR = \"${UNPACKDIR}\""
+            )
+        if "UNPACKDIR ?=" in text:
+            raise VerificationError(
+                "禁止在配置层定义 UNPACKDIR（会污染上游默认值，"
+                "导致 96 个 recipe 解析失败）"
+            )
+
+    if release == "wrynose":
+        if 'YP_CVE_CLASS = "sbom-cve-check"' not in text:
+            raise VerificationError(
+                "wrynose 已移除 cve-check，YP_CVE_CLASS 必须是 "
+                "sbom-cve-check"
+            )
+        repos = config.get("repos") or {}
+        bitbake_repo = repos.get("bitbake")
+        if not isinstance(bitbake_repo, dict):
+            raise VerificationError("wrynose 需要 bitbake 仓库")
+        if bitbake_repo.get("layers") != {}:
+            raise VerificationError(
+                "repos.bitbake 必须显式写 layers: {}；缺省时 kas 会把 "
+                "bitbake/ 当成 layer，bitbake -p 必失败"
+            )
+
+    if variant == "custom":
+        if 'YP_CVE_ENABLE = "1"' not in text:
+            raise VerificationError("custom 需要 YP_CVE_ENABLE = \"1\"")
+        if 'INHERIT += "cve-check"' in text:
+            raise VerificationError(
+                'INHERIT += "cve-check" 在 scarthgap+ 找不到 classes/，'
+                "必须由 image recipe 条件继承"
+            )
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)

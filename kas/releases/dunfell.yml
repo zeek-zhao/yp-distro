@@ -3,6 +3,10 @@ header:
   includes:
     - kas/base.yml
 
+local_conf_header:
+  dunfell: |
+    CONF_VERSION = "1"
+
 repos:
   poky:
     url: https://git.yoctoproject.org/poky
