@@ -4,6 +4,7 @@ cache/
 artifacts/
 logs/
 reports/
+docs/qa/**/*-render.md
 
 # 凭据 —— 绝不进 Git
 .ssh/
