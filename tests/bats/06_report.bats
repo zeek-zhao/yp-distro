@@ -1,0 +1,124 @@
+#!/usr/bin/env bats
+
+# bats test_tags=report
+
+setup() {
+    source "${BATS_TEST_DIRNAME}/setup.bash"
+    # shellcheck source=../../scripts/lib/artifacts.sh
+    source "${ROOT_DIR}/scripts/lib/artifacts.sh"
+}
+
+@test "report script help exits successfully" {
+    run "${ROOT_DIR}/scripts/report.sh" --help
+    [ "${status}" -eq 0 ]
+}
+
+# bats test_tags=report
+@test "report CLI accepts positional and --release forms equivalently" {
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --variant general --render-only
+    [ "${status}" -eq 0 ]
+    option_archive="${output##*Archive: }"
+
+    run "${ROOT_DIR}/scripts/report.sh" wrynose --variant general --render-only
+    [ "${status}" -eq 0 ]
+    positional_archive="${output##*Archive: }"
+    [ "${option_archive}" = "${positional_archive}" ]
+}
+
+# bats test_tags=report
+@test "artifact primary prefers ext4 and list excludes manifests" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy"
+    mkdir -p "${deploy_dir}"
+    touch "${deploy_dir}/core-image-qemux86-64.rootfs.ext4"
+    touch "${deploy_dir}/core-image-qemux86-64.rootfs.tar.bz2"
+    touch "${deploy_dir}/core-image-qemux86-64.rootfs.manifest"
+
+    run artifact_primary "${deploy_dir}" core-image qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == /* ]]
+    [[ "${output}" == *".rootfs.ext4" ]]
+    run artifact_list "${deploy_dir}" core-image qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == /* ]]
+    [[ "${output}" == *".rootfs.ext4"* ]]
+    [[ "${output}" == *".rootfs.tar.bz2"* ]]
+    [[ "${output}" != *".manifest" ]]
+}
+
+# bats test_tags=report
+@test "artifact primary prefers zstd ext4 and list keeps zstd tarballs" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-zst"
+    mkdir -p "${deploy_dir}"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4.zst"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.tar.zst"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.manifest"
+
+    run artifact_primary "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".rootfs.ext4.zst" ]]
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".rootfs.ext4.zst"* ]]
+    [[ "${output}" == *".rootfs.tar.zst"* ]]
+    [[ "${output}" != *".manifest" ]]
+}
+
+# bats test_tags=report
+@test "artifact primary fails when no image exists" {
+    mkdir -p "${BATS_TEST_TMPDIR}/empty"
+    run artifact_primary "${BATS_TEST_TMPDIR}/empty" core-image qemux86-64
+    [ "${status}" -ne 0 ]
+    run artifact_list "${BATS_TEST_TMPDIR}/missing" core-image qemux86-64
+    [ "${status}" -eq 0 ]
+    [ -z "${output}" ]
+}
+
+# bats test_tags=report
+@test "artifact sha256 matches a known digest" {
+    printf 'hello' >"${BATS_TEST_TMPDIR}/hello"
+    run artifact_sha256 "${BATS_TEST_TMPDIR}/hello"
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824" ]
+}
+
+# bats test_tags=report
+@test "artifact bytes follows symlinks in deploy dir" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-link"
+    mkdir -p "${deploy_dir}"
+    head -c 4096 /dev/zero >"${deploy_dir}/core-image-minimal-qemux86-64.rootfs-1.ext4.zst"
+    ln -s core-image-minimal-qemux86-64.rootfs-1.ext4.zst \
+        "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4.zst"
+
+    run artifact_primary "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    run artifact_bytes "${output}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "4096" ]
+}
+
+# bats test_tags=report
+@test "artifact list excludes qemuboot.conf" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-qb"
+    mkdir -p "${deploy_dir}"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4.zst"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.qemuboot.conf"
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".rootfs.ext4.zst"* ]]
+    [[ "${output}" != *".qemuboot.conf"* ]]
+}
+
+# bats test_tags=report
+@test "render-only report includes configured degraded aspects" {
+    local degraded_file="${BATS_TEST_TMPDIR}/degraded.txt"
+    cp "${ROOT_DIR}/config/degraded.txt" "${degraded_file}"
+    run env YP_DEGRADED_FILE="${degraded_file}" \
+        "${ROOT_DIR}/scripts/report.sh" --release wrynose \
+        --variant general --render-only
+    [ "${status}" -eq 0 ]
+    archive_path="${ROOT_DIR}/${output##*Archive: }"
+    grep -Fq '## 降级清单' "${archive_path}"
+    grep -Fq 'spdx-format' "${archive_path}"
+}
