@@ -1,0 +1,7 @@
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+    - kas/releases/kirkstone.yml
+    - kas/machines/qemux86-64.yml
+    - kas/variants/custom.yml

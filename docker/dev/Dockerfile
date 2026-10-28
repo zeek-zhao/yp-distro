@@ -27,6 +27,7 @@ ARG GH_VERSION=2.103.3
 ARG YQ_VERSION=4.54.1
 ARG NODE_VERSION=22.23.4
 ARG COPILOT_CLI_VERSION=1.0.105
+ARG KAS_VERSION=4.6
 
 # ── 用户映射（215 上 jenkins uid/gid = 2000；构建时由 dev.sh 传入实际值）──
 ARG DEV_UID=2000
@@ -128,6 +129,14 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDE
     && yamllint --version
 
 ###############################################################################
+# 4b. kas —— Yocto 配置层工具（仅用于 kas/*.yml 的静态解析校验，不跑 bitbake）
+#     ubuntu 24.04 是 PEP668 受管环境；以 root 装到 /usr/local/bin
+###############################################################################
+RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDEX}" \
+        "kas==${KAS_VERSION}" \
+    && kas --version
+
+###############################################################################
 # 5. Node + 远程 AI CLI（WF3 的编码端；215 宿主不装 node）
 #    copilot 是 npm 包装器 + 平台专属二进制，optionalDependencies 在部分镜像上
 #    不会自动解析，故显式安装平台包。
@@ -187,6 +196,7 @@ RUN { \
         printf 'yq=%s\n'         "$(yq --version | awk '{print $4}')"; \
         printf 'node=%s\n'       "$(node --version | tr -d 'v')"; \
         printf 'copilot=%s\n'    "$(copilot --version 2>/dev/null | head -1)"; \
+        printf 'kas=%s\n'        "$(kas --version | awk '{print $2}')"; \
         printf 'docker=host-mounted\n'; \
     } > /etc/yocto-dev-versions \
     && cat /etc/yocto-dev-versions

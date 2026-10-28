@@ -9,6 +9,7 @@
 |---|---|---|
 | `config` | 打印解析后的最终配置（`DISTRO`/`IMAGE`/`MACHINE`/`RELEASE`/`REPO_MODE`/`TAG`/`VARIANT`，`LC_ALL=C sort`） | `--release`（必填）、`--variant`（必填）、`--machine`（必填） |
 | `doctor` | 打印 8 个 release×variant 组合 + 磁盘水位检查，返回值沿用现状（水位超限非 0） | 无 |
+| `kas` | 在开发容器内静态校验 kas 配置，不检出上游仓库 | `--release` 与 `--variant`（同时指定时只校验一个组合；省略时校验全部） |
 | `test` | 跑 BATS：`bats -r tests/bats`，**不写报告**（报告归 `report`） | `--tags <tag>` → 追加 `--filter-tags <tag>` |
 | `report` | 转发 `scripts/report.sh <release> --variant <v>`（三层报告，需求 §6） | `--release`（默认 `all`）、`--variant`（默认 `general`） |
 | `lint` | 转发 `bash scripts/ci/lint.sh`，参数直通 | 直通 |
@@ -54,6 +55,7 @@
 Makefile targets
 └── ./project.sh
     ├── config / doctor / test / hooks             （project.sh 内置）
+    ├── kas         ──> scripts/kas-verify.py（开发容器内）
     ├── report     ──> scripts/report.sh
     ├── lint       ──> scripts/ci/lint.sh
     ├── secret-scan──> scripts/ci/secret-scan.sh
