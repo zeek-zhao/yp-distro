@@ -20,12 +20,12 @@
 | [#4](https://github.com/zeek-zhao/yocto/issues/4) | 分支模型（dev 集成 + PR 门禁） | ✅ `9140c2e` |
 | [#9](https://github.com/zeek-zhao/yocto/issues/9) | project.sh 子命令补齐 | ⬜ 待开工 |
 | [#10](https://github.com/zeek-zhao/yocto/issues/10) | scripts/container.sh（命名/非 root/UID 映射） | ⬜ 待开工 |
-| [#14](https://github.com/zeek-zhao/yocto/issues/14) | **bug**：镜像缺 kas / repo | ⬜ P0 必修 |
-| [#15](https://github.com/zeek-zhao/yocto/issues/15) | **bug**：镜像构建用户不一致 | ⬜ P0 必修 |
+| [#14](https://github.com/zeek-zhao/yocto/issues/14) | **bug**：镜像缺 kas / repo | ✅ `984e915`（kas 4.6；repo 默认不装，留 `INSTALL_REPO=1`） |
+| [#15](https://github.com/zeek-zhao/yocto/issues/15) | **bug**：镜像构建用户不一致 | ✅ `984e915`（统一 `builder`，4 镜像 `id -un` 唯一） |
 | [#11](https://github.com/zeek-zhao/yocto/issues/11) | meta-zeek layer 升级（4 版兼容） | ⬜ 待开工 |
 | [#12](https://github.com/zeek-zhao/yocto/issues/12) | ~~source.sh~~ / [#13](https://github.com/zeek-zhao/yocto/issues/13) ~~worktree~~ | ⛔ 被 kas 取代（C40） |
 
-**依赖顺序**：#14 → #15 → #10 → #9 → #11（kas 层 #17 可与 #11 并行启动）。
+**依赖顺序**：#10 → #9 → #11（#14/#15 已完成；kas 层 #17 可与 #11 并行启动）。
 
 ## P1 打通（v0.2.0）
 
