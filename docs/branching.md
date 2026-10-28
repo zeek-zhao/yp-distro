@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `main` | **稳定线**：可发布、可复现。GHCR 镜像与 git tag 只从这里产生 | 只接受来自 `dev` 的 PR（或 `hotfix/*`） | 永久 |
 | `dev` | **集成线**（默认分支）：日常合入，CI 必须绿 | 任务分支经 PR 合入；紧急小修可直接提交 | 永久 |
-| `feat/<TASK-ID>-<slug>` | 单张任务卡的实现分支，如 `feat/P0-11-meta-yp` | WF3 派单的 AI / 人工 | 合并即删 |
+| `feat/<TASK-ID>-<slug>` | 单张任务卡的实现分支，如 `feat/P0-08-meta-yp` | WF3 派单的 AI / 人工 | 合并即删 |
 | `fix/<slug>`、`docs/<slug>` | 缺陷与文档小修 | 直接 PR 到 `dev` | 合并即删 |
 | `hotfix/<slug>` | 线上/稳定线紧急修复 | PR 到 `main`，同时回灌 `dev` | 合并即删 |
 
@@ -17,7 +17,7 @@
 ## 2. 一次改动的完整路径
 
 ```
-feat/P0-11-meta-yp ──PR──> dev ──PR（阶段收口时）──> main ──tag──> v0.1.0
+feat/P0-08-meta-yp ──PR──> dev ──PR（阶段收口时）──> main ──tag──> v0.1.0
 ```
 
 1. 派单前从 `dev` 切任务分支：`git switch -c feat/<TASK-ID>-<slug> dev`
