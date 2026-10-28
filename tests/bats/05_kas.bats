@@ -82,6 +82,15 @@ for path in files:
 }
 
 # bats test_tags=kas
+@test "custom variant references meta-yp as a local repository" {
+    # 不能有 url 或任何版本引用，否则 kas 会 clone 私有仓库
+    run grep -E '^[[:space:]]+(url|commit|tag|branch|refspec|path):' \
+        "${KAS_DIR}/variants/custom.yml"
+    [ "${status}" -eq 1 ]
+    grep -q '^      layers/meta-yp:$' "${KAS_DIR}/variants/custom.yml"
+}
+
+# bats test_tags=kas
 @test "dev Dockerfile installs kas and records its fingerprint" {
     grep -Fq 'kas==${KAS_VERSION}' "${ROOT_DIR}/docker/dev/Dockerfile"
     grep -Fq "printf 'kas=%s" "${ROOT_DIR}/docker/dev/Dockerfile"
