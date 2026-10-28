@@ -9,8 +9,8 @@ setup() {
 # bats test_tags=kas
 @test "kas configuration contains the complete release and variant matrix" {
     local yml_count target_count release variant
-    yml_count="$(find "${KAS_DIR}" -name '*.yml' | wc -l)"
-    target_count="$(find "${KAS_DIR}/targets" -name '*.yml' | wc -l)"
+    yml_count="$(find "${KAS_DIR}" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
+    target_count="$(find "${KAS_DIR}/targets" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
     [ "${yml_count}" -eq 16 ]
     [ "${target_count}" -eq 8 ]
     for release in dunfell kirkstone scarthgap wrynose; do
@@ -48,7 +48,8 @@ from pathlib import Path
 import sys
 import yaml
 root = Path(sys.argv[1])
-files = sorted((root / "kas").rglob("*.yml"))
+files = [p for p in sorted((root / "kas").rglob("*.yml"))
+         if not p.name.endswith(".lock.yml")]
 assert len(files) == 16, len(files)
 for path in files:
     assert yaml.safe_load(path.read_text())["header"]["version"] == 14, path
