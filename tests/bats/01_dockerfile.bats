@@ -70,6 +70,17 @@ EOF
 }
 
 # bats test_tags=dockerfile
+@test "each Dockerfile has the identical builder USER instruction" {
+    local release file
+    for release in dunfell kirkstone scarthgap wrynose; do
+        file="${ROOT_DIR}/docker/${release}/Dockerfile"
+        run grep -E '^USER[[:space:]]+' "${file}"
+        [ "${status}" -eq 0 ]
+        [ "${output}" = 'USER builder' ]
+    done
+}
+
+# bats test_tags=dockerfile
 @test "each Dockerfile has source and title OCI labels" {
     local release file
     for release in dunfell kirkstone scarthgap wrynose; do

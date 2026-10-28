@@ -5,6 +5,7 @@ ARG APT_MIRROR=cn.archive.ubuntu.com
 ARG BUILD_UID=1000
 ARG BUILD_GID=1000
 ARG BUILD_USER=builder
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ARG SHELLCHECK_VERSION=0.9.0
 ARG SHFMT_VERSION=3.14.1
 ARG BATS_VERSION=1.14.0
@@ -35,6 +36,6 @@ LABEL org.opencontainers.image.title="yocto-wrynose" \
 COPY docker/common/install-yocto-deps.sh /tmp/install-yocto-deps.sh
 RUN bash /tmp/install-yocto-deps.sh && rm -f /tmp/install-yocto-deps.sh
 
-USER ${BUILD_USER}
+USER builder
 WORKDIR /work
 CMD ["bash"]

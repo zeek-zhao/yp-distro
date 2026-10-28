@@ -5,6 +5,13 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../lib/log.sh
 source "${ROOT_DIR}/scripts/lib/log.sh"
 cd -- "${ROOT_DIR}"
+
+# 工具兜底：install-tools.sh 默认装到 $HOME/.local/bin，但非登录 shell 的 PATH 往往不含它，
+# 导致容器内 `make lint` 误报「找不到 xxx」。这里与 tests/bats 的查找逻辑保持一致。
+case ":${PATH}:" in
+    *":${HOME}/.local/bin:"*) ;;
+    *) [[ -d "${HOME}/.local/bin" ]] && export PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
 skip=""
 while (($#)); do
     case "$1" in
