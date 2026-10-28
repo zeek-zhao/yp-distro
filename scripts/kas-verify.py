@@ -183,6 +183,8 @@ def read_env(path: Path) -> dict[str, str]:
 
 def check_all_headers(repo_root: Path) -> None:
     for path in sorted((repo_root / "kas").rglob("*.yml")):
+        if path.name.endswith(".lock.yml"):
+            continue
         config = load_yaml(path)
         header = config.get("header")
         if not isinstance(header, dict) or header.get("version") != 14:
