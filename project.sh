@@ -13,6 +13,7 @@ usage() {
 命令：
   config       解析并打印最终配置
   doctor       检查 release/variant 组合与磁盘水位
+  kas          静态校验 kas 配置（不检出上游仓库）
   test         运行 BATS 测试
   report       生成测试报告
   lint         运行静态检查
@@ -33,6 +34,9 @@ command_usage() {
             ;;
         doctor)
             printf '用法：./project.sh doctor\n'
+            ;;
+        kas)
+            printf '用法：./project.sh kas [--release R --variant V]\n'
             ;;
         test)
             printf '用法：./project.sh test [--tags TAG]\n'
@@ -172,7 +176,7 @@ shift
 
 case "${COMMAND_NAME}" in
     source | build | qemu | review | e2e) not_implemented "${COMMAND_NAME}" ;;
-    config | doctor | test | report | lint | secret-scan | ci-tools | hooks | image | shell) ;;
+    config | doctor | kas | test | report | lint | secret-scan | ci-tools | hooks | image | shell) ;;
     *) die "未知命令：${COMMAND_NAME}；使用 --help 查看用法" ;;
 esac
 
@@ -183,6 +187,7 @@ fi
 
 case "${COMMAND_NAME}" in
     config) parse_options "release variant machine" "$@" ;;
+    kas) parse_options "release variant" "$@" ;;
     doctor | hooks) parse_options "" "$@" ;;
     test) parse_options "tags" "$@" ;;
     report) parse_options "release variant" "$@" ;;
@@ -198,6 +203,13 @@ case "${COMMAND_NAME}" in
 esac
 
 case "${COMMAND_NAME}" in
+    kas)
+        kas_args=()
+        [[ -z "${OPT_RELEASE}" ]] || kas_args+=(--release "${OPT_RELEASE}")
+        [[ -z "${OPT_VARIANT}" ]] || kas_args+=(--variant "${OPT_VARIANT}")
+        exec bash "${ROOT_DIR}/scripts/dev.sh" python3 \
+            "${ROOT_DIR}/scripts/kas-verify.py" "${kas_args[@]}"
+        ;;
     test)
         test_args=(-r "${ROOT_DIR}/tests/bats")
         if [[ -n "${OPT_TAGS}" ]]; then
