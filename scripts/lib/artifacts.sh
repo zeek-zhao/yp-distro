@@ -17,7 +17,8 @@ artifact_list() {
         [[ -f "${path}" ]] || continue
         name="${path##*/}"
         [[ "${name}" == *.manifest || "${name}" == *.testdata.json ||
-            "${name}" == *.spdx.* || "${name}" == *.json ]] && continue
+            "${name}" == *.spdx.* || "${name}" == *.json ||
+            "${name}" == *.qemuboot.conf ]] && continue
         artifacts+=("${path}")
     done
     ((${#artifacts[@]} == 0)) && return 0
@@ -58,7 +59,8 @@ artifact_primary() {
         for candidate in "${deploy_dir}/${image}-${machine}.rootfs."*; do
             [[ -f "${candidate}" ]] || continue
             [[ "${candidate}" == *.manifest || "${candidate}" == *.testdata.json ||
-                "${candidate}" == *.spdx.* || "${candidate}" == *.json ]] && continue
+                "${candidate}" == *.spdx.* || "${candidate}" == *.json ||
+                "${candidate}" == *.qemuboot.conf ]] && continue
             candidates+=("${candidate}")
         done
         primary="$(_artifact_newest "${candidates[@]}")"
@@ -76,5 +78,5 @@ artifact_sha256() {
 artifact_bytes() {
     [[ $# -eq 1 ]] || die "用法：artifact_bytes <path>"
     [[ -f "$1" ]] || return 1
-    stat -c %s -- "$1"
+    stat -Lc %s -- "$1"
 }
