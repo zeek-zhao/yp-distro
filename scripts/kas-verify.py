@@ -268,8 +268,15 @@ def verify_target(
             raise VerificationError(
                 "repos.yp.layers must contain only layers/meta-yp"
             )
-        if custom_repo.get("tag") != "main":
-            raise VerificationError("repos.yp.tag must be main before P1-02")
+        # meta-yp 是本仓库自身，必须以「本地仓库」形态引入：不给 url，
+        # 也不给任何版本引用，kas 才会用配置根作 path 且不做 VCS 操作。
+        # 一旦写了 url，kas 会去 clone 私有仓库（慢且需要凭证）。
+        for forbidden in ("url", "commit", "tag", "branch", "refspec", "path"):
+            if custom_repo.get(forbidden) is not None:
+                raise VerificationError(
+                    f"repos.yp.{forbidden} must be absent: meta-yp is a local "
+                    "repository resolved from the configuration root"
+                )
 
 
 def parse_args() -> argparse.Namespace:

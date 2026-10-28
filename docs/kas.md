@@ -130,16 +130,40 @@ overrides:
 `IncludeHandler` 会在读配置时自动找同目录的 `<file>.lock.yml` 并注入，
 所以 lockfile 入库后，`kas checkout` 就按 commit 而非可变 tag 执行。
 
-### 尚未验证：custom variant
+### custom variant：本仓库自身的 layer
 
-`kas/variants/custom.yml` 的 `repos.yp` 指向本仓库
-（`https://github.com/zeek-zhao/yocto`，私有）。真检出让 kas 去 clone 自己，
-既慢又需要凭证，而 layer 其实**已经在磁盘上**。候选方案：
+`kas/variants/custom.yml` 的 `repos.yp` **刻意不写 `url`**。kas 的 `repos.py` 里
+`url is None` 分支会：
 
-1. `repos.yp` 去掉 `url`（schema 允许）→ kas 不做版本控制操作，但要求
-   `$KAS_WORK_DIR/yp` 已存在，检出前软链到仓库根；
-2. `KAS_REPO_REF_DIR` 指向本地 bare 仓库，从本地 clone（仍需 clone，但不出网）；
-3. `url` 换成 `file://` 本地路径。
+1. 把 path 设为 `Repo.get_root_path(top_repo_path)`，即**当前配置文件所在仓库的根**；
+2. 置 `disable_operations = True`，对该仓库不做任何 VCS 操作。
 
-需实测后择一，并同步 `docs/kas.md` 与设计文档 §4.5。在此之前，4 个
-`-custom` target 的 checkout / lockfile 都未做。
+于是 `layers: {layers/meta-yp: null}` 直接命中 `<仓库根>/layers/meta-yp`。
+日志里对应的是 `Using /work as root for repository yp`。
+
+如果把 `url` 写回去（哪怕指向本仓库自己），`kas checkout` 会去 clone 这个私有仓库，
+慢且需要凭证，而 layer 其实已经在磁盘上——这是 P1-03 之前的错误写法。
+
+4 个 `-custom` target 实测（215，`KAS_CLONE_DEPTH=1`）：
+
+| release | checkout | lock | workdir 有 `yp/` | `bblayers.conf` |
+|---|---|---|---|---|
+| dunfell | rc=0 | rc=0 | 否 | `${TOPDIR}/../../../layers/meta-yp` |
+| kirkstone | rc=0 | rc=0 | 否 | 同上 |
+| scarthgap | rc=0 | rc=0 | 否 | 同上 |
+| wrynose | rc=0（三仓库） | rc=0 | 否 | 同上 |
+
+### custom 的 lockfile 里没有 `yp`
+
+`kas lock` 的 `_filter_enabled`（`kas/plugins/lock.py`）会过滤掉
+`operations_disabled` 的仓库，注释是 "when locking, only consider repos managed by kas"。
+所以 `kas/targets/*-custom.lock.yml` 里只有上游仓库。
+
+这是**正确**行为，不是缺陷：把本仓库自己的 commit 写进 lockfile 会自指——
+lockfile 一提交，记录的那个 commit 就不再是 HEAD。本仓库版本的审计由 git
+commit / tag 与 `config/releases/*.env` 的 `EXPECT_SHA` 承担。
+
+4 个 custom lockfile 与同版本 general lockfile 的 SHA **逐字一致**
+（dunfell `63d05fc0…` / kirkstone `93431249…` / scarthgap `64e69ed2…` /
+wrynose 三仓库 `51fd94a6…` `7c25b111…` `0f03c732…`），
+证明 variant 层没有扰动版本锁。
