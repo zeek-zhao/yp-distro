@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -206,6 +207,7 @@ def verify_target(
         else kas_config(target_path, repo_root)
     )
     check_all_headers(repo_root)
+    check_shared_cache(repo_root)
 
     variant_env = read_env(
         repo_root / "config" / "variants" / f"{variant}.env"
@@ -286,6 +288,31 @@ def _local_conf_text(config: dict[str, Any]) -> str:
     if not isinstance(headers, dict):
         return ""
     return "\n".join(str(value) for value in headers.values())
+
+
+def check_shared_cache(repo_root: Path) -> None:
+    """#23: base.yml is the sole source of shared cache assignments."""
+    path = repo_root / "kas" / "base.yml"
+    text = _local_conf_text(load_yaml(path))
+    for variable, directory in (("DL_DIR", "downloads"), ("SSTATE_DIR", "sstate")):
+        expected = f'${{TOPDIR}}/../../{directory}'
+        assignments = re.findall(
+            rf'^\s*{variable}\s*([?+:.\w]*=)\s*["\']([^"\']*)["\']\s*(?:#.*)?$',
+            text,
+            re.MULTILINE,
+        )
+        if assignments != [("=", expected)]:
+            detail = ""
+            if any(
+                value.startswith("${TOPDIR}/../")
+                and not value.startswith("${TOPDIR}/../../")
+                for _, value in assignments
+            ):
+                detail = "；每版本一份 downloads，会造成 4×4.5GB 重复下载"
+            raise VerificationError(
+                f"#23 {path}: 必须且只能设置 {variable} = \"{expected}\""
+                f"（缺失或赋值不符）{detail}"
+            )
 
 
 def check_version_knobs(

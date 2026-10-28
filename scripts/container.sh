@@ -125,6 +125,8 @@ run_args=(
     -v "${HOST_REPO_DIR}:/work"
     -v "${HOST_REPO_DIR}/work/home/.passwd:/etc/passwd:ro"
     -e "HOME=${home_dir}"
+    # 这两个变量是给人工排查看的契约声明；真值由 kas/base.yml 决定，
+    # bitbake 不从环境导入它们。
     -e "DL_DIR=${dl_dir}"
     -e "SSTATE_DIR=${sstate_dir}"
 )

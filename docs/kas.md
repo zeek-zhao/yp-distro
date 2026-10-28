@@ -18,6 +18,9 @@ variant 配置。release 仓库及 tag 与 `config/*.env` 双轨维护，由
 ## 静态约束
 
 - `header.version` 固定为 14；顶层字段及 `repos` 项字段受白名单约束。
+- `check_shared_cache`（#23）要求 `kas/base.yml` 用 `=` 固定
+  `DL_DIR = "${TOPDIR}/../../downloads"` 和
+  `SSTATE_DIR = "${TOPDIR}/../../sstate"`，禁止缺失、弱赋值或每版本独立缓存。
 - `layers` 的每个 layer 值必须是 null、字符串、整数或布尔值；空 mapping
   作为 layer 值无效。
 - include 先按仓库根解析，找不到时再相对当前文件解析；按列表顺序深度优先
@@ -27,6 +30,40 @@ variant 配置。release 仓库及 tag 与 `config/*.env` 双轨维护，由
   `yp` layer。
 - `kas/` 中列出的基础、release、variant、machine 和 target 文件共 16 个
   YAML 文件（需求清单的“15 个”与列出的文件数量不一致）。
+
+## 串行构建与共享缓存（#23）
+
+```bash
+bash scripts/build.sh --release scarthgap --variant general --dry-run
+bash scripts/build.sh --release scarthgap --variant general
+# 在宿主机也可经 dev 容器直通入口：
+bash scripts/dev.sh bash scripts/build.sh --release wrynose --variant custom
+```
+
+默认 `--image-mode release` 经 `./project.sh shell` 使用对应 release 镜像；
+`--image-mode dev` 经 `scripts/dev.sh` 使用开发环境（需自行满足该版本的
+HOSTTOOLS，正式构建推荐 release 镜像）。两者共用 `work/build.lock` 的 fd 9
+非阻塞锁，第二个构建立即提示串行约束并退出 3，dry-run 也取锁。
+参数错误退出 2；真构建保留命令退出码。
+锁文件保留，不要在构建中删除它；`project.sh build` 暂保留未实现接口。
+
+入口预建缓存、日志及 kas 工作目录，在容器内设置 `KAS_CLONE_DEPTH=1`、
+`KAS_WORK_DIR=/work/work/kas-<release>-<variant>`。
+日志 `work/logs/build-<release>-<variant>.log` 记录起止时间、标准输出和错误；
+同名 `.meta` 为纯整数耗时秒数，失败构建同样记录。
+报告的「构建统计」读取它们，缺失时显示 `n/a`，不产生新的 degraded 项。
+
+`TOPDIR` 是 `/work/work/kas-<release>-<variant>/build`，所以缓存必须退两层
+才落到共享的 `work/downloads` 和 `work/sstate`；退一层会每版本复制一份。
+bitbake 不自动导入环境中的 `DL_DIR` / `SSTATE_DIR`，`??=` 也不能覆盖
+bitbake.conf 已有的 `?=` 默认值，因此真值只在 `kas/base.yml` 用 `=` 定义。
+`container.sh` 的同名环境变量仅作人工排查的契约声明。
+
+**#23 验收偏差说明（供 PR 描述沿用）**：原要求在 `config/*.env` 显式写
+宿主绝对缓存路径已作废；不增加第二份路径配置，唯一真本是 `kas/base.yml`。
+本任务不迁移已有的各版本缓存，也不运行真构建。
+报告渲染前先提交源文件变更以保持 `SOURCE_FINGERPRINT` 可复现；
+验证用 `--render-only`，完成后删除临时 `*-render.md`，不改已归档报告。
 
 ## 实测结论与设计修正
 

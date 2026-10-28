@@ -241,6 +241,24 @@ if [[ -f "${serial_log}" ]]; then
     serial_bytes="$(stat -c %s -- "${serial_log}")"
 fi
 
+# 缺失构建统计只能记 n/a，不能新增 degraded；config/degraded.txt 是唯一真本，
+# 99_coverage.bats 会双向校验报告降级清单（CI 不执行真构建）。
+build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}.log"
+build_meta="${build_log%.log}.meta"
+build_duration="n/a"
+tasks_summary="n/a"
+sstate_hit="n/a"
+if [[ -f "${build_meta}" ]]; then
+    meta_value="$(cat -- "${build_meta}")"
+    [[ ! "${meta_value}" =~ ^[0-9]+$ ]] || build_duration="${meta_value}s"
+fi
+if [[ -f "${build_log}" ]]; then
+    tasks_value="$(sed -nE "s/.*NOTE: Tasks Summary: Attempted ([0-9]+) tasks of which ([0-9]+) didn't need to be rerun.*/\1 \/ \2/p" "${build_log}" | tail -n 1)"
+    sstate_value="$(sed -nE 's/.*Sstate summary: Wanted ([0-9]+) Local [0-9]+ Mirrors [0-9]+ Missed [0-9]+ Current ([0-9]+) \(([0-9]+)% match,.*/\2\/\1 (\3%)/p' "${build_log}" | tail -n 1)"
+    [[ -z "${tasks_value}" ]] || tasks_summary="${tasks_value}"
+    [[ -z "${sstate_value}" ]] || sstate_hit="${sstate_value}"
+fi
+
 archive_name="${date_stamp}-${commit}"
 ((render_only == 0)) || archive_name+="-render"
 archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
@@ -285,6 +303,13 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
         printf -- '- Artifact bytes: n/a（未构建）\n'
         printf -- '- Artifact SHA-256: n/a（未构建）\n'
         printf -- '- Image digest: n/a（本地构建无 registry digest）\n'
+    fi
+    printf '\n### 构建统计\n\n'
+    printf -- '- Build duration: %s\n' "${build_duration}"
+    printf -- '- Tasks attempted / cached: %s\n' "${tasks_summary}"
+    printf -- '- Sstate hit: %s\n' "${sstate_hit}"
+    if [[ -f "${build_log}" ]]; then
+        printf -- '- Build log: `%s`\n' "${build_log}"
     fi
     printf '\n## QEMU 串口\n\n'
     if ((serial_exists)); then
