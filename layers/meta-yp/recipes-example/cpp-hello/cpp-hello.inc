@@ -7,7 +7,7 @@ SRC_URI = "file://helloworld.c"
 
 TARGET_CC_ARCH += "${LDFLAGS}" 
 
-S = "${WORKDIR}"
+S = "${YP_SRC_DIR}"
 
 do_compile() {
     ${CC} helloworld.c -o helloworld
