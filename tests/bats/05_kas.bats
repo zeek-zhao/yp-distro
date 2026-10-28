@@ -128,13 +128,13 @@ for path in files:
 @test "kas command is wired through Makefile and project CLI" {
     grep -Eq '^PROJECT_TARGETS = .*([[:space:]]|^)kas([[:space:]]|$)' "${ROOT_DIR}/Makefile"
     grep -q 'kas ' "${ROOT_DIR}/project.sh"
-    grep -q '^kas-layer | all | tests/bats/05_kas.bats | kas$' \
+    grep -q '^kas-layer | all | tests/bats/05_kas.bats | kas | ok$' \
         "${ROOT_DIR}/config/features.txt"
 }
 
 # bats test_tags=kas
 @test "kas feature and BATS tag registration match" {
     grep -q '^# bats test_tags=kas$' "${BATS_TEST_DIRNAME}/05_kas.bats"
-    grep -q '^kas-layer | all | tests/bats/05_kas.bats | kas$' \
+    grep -q '^kas-layer | all | tests/bats/05_kas.bats | kas | ok$' \
         "${ROOT_DIR}/config/features.txt"
 }

@@ -1,0 +1,4 @@
+# aspect | release | 理由 | 需求条款
+spdx-format | wrynose | SPDX 2.x 产物已在 6.0 移除，只能产出新的 SBOM 格式 | §7.3
+cve-tool | wrynose | cve-check.bbclass 已在 6.0 移除，改用 sbom-cve-check | §7.3
+distro-backfill | wrynose | DISTRO_FEATURES_BACKFILL 已在 6.0 移除 | §7.3
