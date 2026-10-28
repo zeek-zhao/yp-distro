@@ -1,0 +1,6 @@
+# 能力标识|适用release|测试文件|阶段
+version-lock-dual-mode|all|tests/bats/02_source.bats|P0
+entry-unified|all|tests/bats/00_project.bats|P0
+dockerfile-static|all|tests/bats/01_dockerfile.bats|P0
+bats-report|all|tests/bats/03_report.bats|P0
+ci-l1-l2|all|tests/bats/04_ci.bats|P0
