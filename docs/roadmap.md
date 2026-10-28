@@ -1,0 +1,68 @@
+# 工程计划（roadmap）
+
+> 与 GitHub 上的 Milestones / Project 看板一一对应。改计划先改这里，再改 Issue。
+> 需求真本：Obsidian `40-项目/YP/Yocto-多版本工程需求.md` §7。
+
+- 看板：https://github.com/users/zeek-zhao/projects/4
+- 里程碑：`v0.1.0`（P0 基线）→ `v0.2.0`（P1 打通）→ `v1.0.0`（P2 交付能力）
+
+## P0 基线（v0.1.0）
+
+**出口条件**：GHCR 4 镜像免登录可拉、L1 全绿、`project.sh test` 轻量用例可跑。
+
+| # | 项 | 状态 |
+|---|---|---|
+| [#5](https://github.com/zeek-zhao/yocto/issues/5) | config/*.env 四份 + schema 校验 | ✅ `2d313dc` |
+| [#6](https://github.com/zeek-zhao/yocto/issues/6) | 共享依赖脚本 + 4 份 Dockerfile | ✅ `75e9844` |
+| [#7](https://github.com/zeek-zhao/yocto/issues/7) | BATS 骨架 + 报告三层 + 指纹 | ✅ `24a6da0` |
+| [#8](https://github.com/zeek-zhao/yocto/issues/8) | L1 lint + L2 images + pull-check | ✅ `0d7ea70` |
+| [#2](https://github.com/zeek-zhao/yocto/issues/2) | main 分支并挂默认 | ✅ |
+| [#4](https://github.com/zeek-zhao/yocto/issues/4) | 分支模型（dev 集成 + PR 门禁） | ✅ `9140c2e` |
+| [#9](https://github.com/zeek-zhao/yocto/issues/9) | project.sh 子命令补齐 | ⬜ 待开工 |
+| [#10](https://github.com/zeek-zhao/yocto/issues/10) | scripts/container.sh（命名/非 root/UID 映射） | ⬜ 待开工 |
+| [#14](https://github.com/zeek-zhao/yocto/issues/14) | **bug**：镜像缺 kas / repo | ⬜ P0 必修 |
+| [#15](https://github.com/zeek-zhao/yocto/issues/15) | **bug**：镜像构建用户不一致 | ⬜ P0 必修 |
+| [#11](https://github.com/zeek-zhao/yocto/issues/11) | meta-zeek layer 升级（4 版兼容） | ⬜ 待开工 |
+| [#12](https://github.com/zeek-zhao/yocto/issues/12) | ~~source.sh~~ / [#13](https://github.com/zeek-zhao/yocto/issues/13) ~~worktree~~ | ⛔ 被 kas 取代（C40） |
+
+**依赖顺序**：#14 → #15 → #10 → #9 → #11（kas 层 #17 可与 #11 并行启动）。
+
+## P1 打通（v0.2.0）
+
+**出口条件**：每版本 × 每 variant 一次真实构建 + QEMU 通过，报告归档。
+
+| # | 项 | 依赖 |
+|---|---|---|
+| [#17](https://github.com/zeek-zhao/yocto/issues/17) | kas 层落地（15 个 yml + lockfile） | #14 |
+| [#18](https://github.com/zeek-zhao/yocto/issues/18) | wrynose 全链路实跑 | #14 #17 |
+| [#19](https://github.com/zeek-zhao/yocto/issues/19) | scarthgap 全链路实跑 | #18 |
+| [#20](https://github.com/zeek-zhao/yocto/issues/20) | kirkstone 全链路实跑 | #19 |
+| [#21](https://github.com/zeek-zhao/yocto/issues/21) | dunfell 全链路实跑 | #20 |
+| [#22](https://github.com/zeek-zhao/yocto/issues/22) | general / custom 独立 distro 双 variant | #11 #18 |
+| [#23](https://github.com/zeek-zhao/yocto/issues/23) | 缓存策略（DL_DIR / sstate + 文件锁） | #10 #22 |
+
+实跑顺序固定为 **wrynose → scarthgap → kirkstone → dunfell**（C34：先跑 215 上已验证的 wrynose 拿第一份报告，风险后置）。
+
+## P2 交付能力（v1.0.0）
+
+| # | 项 |
+|---|---|
+| [#25](https://github.com/zeek-zhao/yocto/issues/25) | SDK / eSDK 产出 |
+| [#26](https://github.com/zeek-zhao/yocto/issues/26) | 合规：SPDX / FOSS / CVE 跨版本 |
+| [#27](https://github.com/zeek-zhao/yocto/issues/27) | arm64 machine 维度（scarthgap/wrynose） |
+| [#28](https://github.com/zeek-zhao/yocto/issues/28) | recipe 内 do_scancode 定案（C26） |
+
+## 未决问题（question）
+
+| # | 问题 | 影响 |
+|---|---|---|
+| [#16](https://github.com/zeek-zhao/yocto/issues/16) | 215 磁盘余量与 docker 镜像回收边界 | 188GB 可回收镜像属其他 Jenkins 任务，不能 `prune -a`；`DL_DIR` 落点必须显式 |
+| [#24](https://github.com/zeek-zhao/yocto/issues/24) | wrynose 三仓库拆分在 kas 的 layers 表达未验证 | 214 上无多版本实践可参考，需 215 实测 `kas dump` |
+| [#28](https://github.com/zeek-zhao/yocto/issues/28) | do_scancode 是否值得进构建期 | 可能让每个 recipe 的构建时间翻倍 |
+
+## 阶段收口动作
+
+1. 该里程碑下开放的 Issue 清零；
+2. `dev` → `main` 一个 PR（描述里贴验收结论）；
+3. 打 tag `vX.Y.Z`；
+4. 更新本文件与 Obsidian 交接单。
