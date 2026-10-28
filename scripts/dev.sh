@@ -75,6 +75,7 @@ build_run_args() {
     RUN_ARGS=(
         --rm
         -v "${ROOT_DIR}:/work"
+        -e "WB_HOST_REPO_DIR=${ROOT_DIR}"
         -w /work
     )
 
@@ -93,10 +94,12 @@ build_run_args() {
     host_docker="$(command -v docker 2>/dev/null || true)"
     if [[ -n "${host_docker}" ]]; then
         RUN_ARGS+=(-v "${host_docker}:/usr/local/bin/docker:ro")
+        RUN_ARGS+=(-e "WB_HOST_DOCKER_BIN=${host_docker}")
         local plugin_dir
         for plugin_dir in /usr/libexec/docker/cli-plugins /usr/lib/docker/cli-plugins; do
             if [[ -d "${plugin_dir}" ]]; then
                 RUN_ARGS+=(-v "${plugin_dir}:/usr/local/lib/docker/cli-plugins:ro")
+                RUN_ARGS+=(-e "WB_HOST_DOCKER_PLUGIN_DIR=${plugin_dir}")
                 break
             fi
         done

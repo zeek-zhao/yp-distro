@@ -44,6 +44,8 @@ build_image() {
     log "构建 ${tag}"
     docker build \
         -f "${ROOT_DIR}/docker/${release}/Dockerfile" \
+        --label project=yocto \
+        --label "yocto.release=${release}" \
         -t "${tag}" \
         --build-arg "APT_MIRROR=${APT_MIRROR:-cn.archive.ubuntu.com}" \
         --build-arg "PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}" \
