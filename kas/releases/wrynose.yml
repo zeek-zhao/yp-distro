@@ -1,0 +1,19 @@
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+repos:
+  openembedded-core:
+    url: https://git.openembedded.org/openembedded-core
+    tag: yocto-6.0.4
+    layers:
+      meta:
+  bitbake:
+    url: https://git.openembedded.org/bitbake
+    tag: yocto-6.0.4
+  meta-yocto:
+    url: https://git.yoctoproject.org/meta-yocto
+    tag: yocto-6.0.4
+    layers:
+      meta-poky:

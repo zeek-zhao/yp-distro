@@ -1,0 +1,5 @@
+header:
+  version: 14
+
+distro: poky
+target: core-image-minimal
