@@ -254,7 +254,8 @@ if [[ -f "${build_meta}" ]]; then
 fi
 if [[ -f "${build_log}" ]]; then
     tasks_value="$(sed -nE "s/.*NOTE: Tasks Summary: Attempted ([0-9]+) tasks of which ([0-9]+) didn't need to be rerun.*/\1 \/ \2/p" "${build_log}" | tail -n 1)"
-    sstate_value="$(sed -nE 's/.*Sstate summary: Wanted ([0-9]+) Local [0-9]+ Mirrors [0-9]+ Missed [0-9]+ Current ([0-9]+) \(([0-9]+)% match,.*/\2\/\1 (\3%)/p' "${build_log}" | tail -n 1)"
+    # Current is the total objects in the cache directory, not the number of hits.
+    sstate_value="$(sed -nE 's/.*Sstate summary: Wanted ([0-9]+) Local ([0-9]+) Mirrors [0-9]+ Missed [0-9]+ Current [0-9]+ \(([0-9]+)% match,.*/\2\/\1 (\3%)/p' "${build_log}" | tail -n 1)"
     [[ -z "${tasks_value}" ]] || tasks_summary="${tasks_value}"
     [[ -z "${sstate_value}" ]] || sstate_hit="${sstate_value}"
 fi
