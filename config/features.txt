@@ -4,3 +4,4 @@ docker-images | all | tests/bats/01_dockerfile.bats | dockerfile
 ci-workflows | all | tests/bats/02_workflows.bats | ci
 container-runtime | all | tests/bats/03_container.bats | container
 layer-structure | all | tests/bats/04_layer.bats | layer
+kas-layer | all | tests/bats/05_kas.bats | kas
