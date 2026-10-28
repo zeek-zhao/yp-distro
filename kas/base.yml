@@ -12,8 +12,9 @@ local_conf_header:
     CONF_VERSION ??= "2"
     PACKAGE_CLASSES = "package_rpm"
     INHERIT += "rm_work"
-    DL_DIR = "${TOPDIR}/../downloads"
-    SSTATE_DIR = "${TOPDIR}/../sstate"
+    # ../.. 刻意指向共享 work/；只用 .. 会退化成每版本一份缓存（#23）。
+    DL_DIR = "${TOPDIR}/../../downloads"
+    SSTATE_DIR = "${TOPDIR}/../../sstate"
     # CVE 检查的 class 名各版本不同：wrynose 用 sbom-cve-check 取代了 cve-check。
     # 只有 custom variant 会真正把它加进 IMAGE_CLASSES。
     YP_CVE_CLASS ??= "cve-check"
