@@ -1,7 +1,7 @@
 # 命名约定（C42 · P0 定死）
 
-> 决策日期 2026-10-28。原名 `meta-zeek` / `zeek-distro` / `core-image-zeek` 是个人化命名，
-> 已统一改为中性功能名 **`yp`**（Yocto Platform）。P0 之后不得再改，P1 的 kas yml、
+> 决策日期 2026-10-28。layer / distro / image 已统一使用中性功能名 **`yp`**（Yocto Platform）。
+> P0 之后不得再改，P1 的 kas yml、
 > layer.conf、recipe、文档全部引用本约定。
 
 ## 一、定名表
@@ -10,9 +10,9 @@
 |---|---|---|
 | layer 目录 | `layers/meta-yp/` | 仓库内子目录；kas `repos.yp.path = layers/meta-yp` 自引用 |
 | `BBFILE_COLLECTIONS` | `meta-yp` | `layer.conf`；`LAYERDEPENDS_meta-yp = "core"` |
-| 发行版 | `yp` | `layers/meta-yp/conf/distro/yp.conf`，`DISTRO = "yp"`、`DISTRO_NAME = "YP"` |
-| custom 镜像 | `yp-image` | 全量镜像（C27 独立 distro 侧） |
-| custom 精简镜像 | `yp-image-minimal` | 最小可解析探针 |
+| 发行版 | `yp` | `layers/meta-yp/conf/distro/yp.conf`，`DISTRO = "yp"`、`DISTRO_NAME = "YP (Yocto Platform)"` |
+| custom 镜像 | `yp-image` | `layers/meta-yp/recipes-core/images/yp-image.bb`，基线镜像加 cpp-hello 示例（C27 独立 distro 侧） |
+| custom 精简镜像 | `yp-image-minimal` | `layers/meta-yp/recipes-core/images/yp-image-minimal.bb`，纯基线镜像 / 最小可解析探针 |
 | build 目录 | `build/<release>/<variant>` | 见需求 §4.1 磁盘模型 |
 | 容器名 | `yocto-<release>-<variant>` | #10 `container.sh` 生成，便于 `docker ps` 识别 |
 | GHCR 镜像 | `ghcr.io/zeek-zhao/yocto/<release>` | 账号路径固定为 GitHub 账号，**不随本约定改名** |
@@ -29,7 +29,7 @@
 
 | 文件 | 改动 |
 |---|---|
-| `meta-zeek/` → `layers/meta-yp/` | `git mv`（内容除 layer.conf 集合名外零改动） |
+| `layers/meta-yp/` | 迁移后的 layer 目录；发行版与镜像骨架已落地 |
 | `layers/meta-yp/conf/layer.conf` | 集合名/模式/优先级/依赖 4 处 → `meta-yp` |
 | `config/variants/custom.env` | `DISTRO=yp`、`IMAGE=yp-image` |
 | `tests/bats/00_project.bats` | 断言同步为 `DISTRO=yp` / `IMAGE=yp-image` |
@@ -41,8 +41,7 @@
 ## 四、验证
 
 ```bash
-make lint                 # shellcheck / shfmt / hadolint / actionlint
-bash scripts/dev.sh bash tests/bats/00_project.bats
-bash scripts/dev.sh ./project.sh config scarthgap --variant custom   # 期望 DISTRO=yp / IMAGE=yp-image
-git grep -n "meta-zeek\|zeek-distro\|core-image-zeek"                 # 仅剩 reference/legacy 与历史任务卡
+bash scripts/dev.sh bash scripts/ci/lint.sh   # shellcheck / shfmt / hadolint / actionlint
+bash scripts/dev.sh bats tests/bats/00_project.bats tests/bats/04_layer.bats
+bash scripts/dev.sh ./project.sh config --release scarthgap --variant custom   # 期望 DISTRO=yp / IMAGE=yp-image
 ```
