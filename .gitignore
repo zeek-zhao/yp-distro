@@ -1,0 +1,12 @@
+# 构建与运行产物 —— 不进 Git
+work/
+cache/
+artifacts/
+logs/
+reports/
+
+# 凭据 —— 绝不进 Git
+.ssh/
+*.pem
+*.key
+.env
