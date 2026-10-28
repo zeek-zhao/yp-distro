@@ -49,3 +49,26 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/ci/secret-scan.sh
+
+  # 私有仓库 + GitHub Free 计划下 rulesets 不可用（403），用它兜住「不许直推 main」：
+  # 若 main 上的提交没有关联 PR，直接失败。见 docs/branching.md §4。
+  branch-guard:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: 校验 main 上的提交来自 PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          count="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq 'length')"
+          if [ "${count}" -eq 0 ]; then
+            echo "::error::提交 ${SHA} 未经 PR 直接进入 main；流程见 docs/branching.md §4"
+            exit 1
+          fi
+          echo "来自 ${count} 个 PR，通过"

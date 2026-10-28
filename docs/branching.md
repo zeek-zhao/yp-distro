@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `main` | **稳定线**：可发布、可复现。GHCR 镜像与 git tag 只从这里产生 | 只接受来自 `dev` 的 PR（或 `hotfix/*`） | 永久 |
 | `dev` | **集成线**（默认分支）：日常合入，CI 必须绿 | 任务分支经 PR 合入；紧急小修可直接提交 | 永久 |
-| `feat/<TASK-ID>-<slug>` | 单张任务卡的实现分支，如 `feat/P0-05-meta-zeek` | WF3 派单的 AI / 人工 | 合并即删 |
+| `feat/<TASK-ID>-<slug>` | 单张任务卡的实现分支，如 `feat/P0-08-meta-yp` | WF3 派单的 AI / 人工 | 合并即删 |
 | `fix/<slug>`、`docs/<slug>` | 缺陷与文档小修 | 直接 PR 到 `dev` | 合并即删 |
 | `hotfix/<slug>` | 线上/稳定线紧急修复 | PR 到 `main`，同时回灌 `dev` | 合并即删 |
 
@@ -17,7 +17,7 @@
 ## 2. 一次改动的完整路径
 
 ```
-feat/P0-05-meta-zeek ──PR──> dev ──PR（阶段收口时）──> main ──tag──> v0.1.0
+feat/P0-08-meta-yp ──PR──> dev ──PR（阶段收口时）──> main ──tag──> v0.1.0
 ```
 
 1. 派单前从 `dev` 切任务分支：`git switch -c feat/<TASK-ID>-<slug> dev`
@@ -42,6 +42,14 @@ feat/P0-05-meta-zeek ──PR──> dev ──PR（阶段收口时）──> ma
 ## 4. 门禁与约定
 
 - **PR 必须 CI 绿**才能合 `main`；`dev` 允许红着迭代但不得带红进 PR。
+- **GitHub 侧强制保护不可用（实测）**：本仓库是私有仓库 + GitHub Free 计划，
+  `POST /repos/.../rulesets` 与经典分支保护均返回
+  `403 Upgrade to GitHub Pro or make this repository public to enable this feature`。
+  因此「不许直推 main」靠两层落地：
+  1. **本地钩子**：`make hooks`（`git config core.hooksPath .githooks`）→ `.githooks/pre-push`
+     拦截推 `refs/heads/main`，紧急放行用 `ALLOW_MAIN_PUSH=1`；
+  2. **CI 校验**：`ci.yml` 在 `main` 的 push 上校验 HEAD 是否来自 PR 合并（见 job `branch-guard`）。
+  仓库升 Pro 或转 public 后，应改用 ruleset 并在本节记录替换。
 - **PR 描述模板**：改动点 / 验收命令与输出 / 关联 Issue（`Closes #12`）/ 风险与回滚。
 - **不改写已推送历史**：禁止 `push --force` 到 `main`/`dev`；回滚用 `git revert` 在 `dev` 上做。
 - **提交信息**：多行一律脚本文件 + `git commit -F -`（内联双引号会把 `\n` 变字面量，已踩过）。
@@ -58,3 +66,4 @@ WF3（`scripts/wf3.sh`）在 215 的仓库工作树里直接跑 Copilot CLI，�
 | 日期 | 变更 | 触发 |
 |---|---|---|
 | 2026-10-28 | 初版；新增 `dev` 并设为默认分支；`ci.yml` push 触发加 `dev` | 需求 §12 / C41 |
+| 2026-10-28 | 记录 Free 私有仓库 rulesets 不可用，改用 pre-push 钩子 + CI 守卫 | 实测 403 |
