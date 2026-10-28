@@ -54,7 +54,92 @@ release 文件各自定义其仓库；**不使用 `layers: {}`**，layer 路径�
 `meta:`、`meta-poky:` 或 `layers/meta-yp:` 这样的 null 值。
 
 custom layer 配置使用 `YP_VARIANT`，distro/镜像分别为 `yp` 和 `yp-image`。
-`yp` repo 暂以 `tag: main` 引用本仓库，后续 P1-02 再固定到 commit。
+`yp` repo 暂以 `tag: main` 引用本仓库；custom variant 的检出尚未验证（私有仓库自引用，见下节）。
 
-开发 Dockerfile 已加入 kas 4.6 安装层与版本指纹；本卡不重建镜像，镜像构建
-留给 P1-02 前执行。
+开发 Dockerfile 已加入 kas 4.6 安装层与版本指纹；镜像已重建，容器内 `kas --version` 为 `kas 4.6 (configuration format version 18, earliest compatible version 1)`，校验器 `auto` 引擎已切到真 kas，与 `--engine builtin` 结论一致。
+
+## 实际检出实测（P1-02 前半，2026-10-28）
+
+4 个 release 的 `-general` target 全部 `kas checkout` + `kas lock` 通过。
+
+### 浅克隆是必需的，否则不可用
+
+`git.openembedded.org` / `git.yoctoproject.org` 直连很慢：全量克隆 20 分钟只拉了
+249M（按此速度 poky 需 2 小时以上）。kas 认 `KAS_CLONE_DEPTH` 环境变量
+（`0` = 全量，`N` = 浅克隆 N 层），设 `KAS_CLONE_DEPTH=1` 后：
+
+| release | 耗时 | 磁盘 |
+|---|---|---|
+| dunfell | 30s | 79M |
+| kirkstone | 27s | 85M |
+| scarthgap | 34s | 88M |
+| wrynose（三仓库） | 17s | 69M |
+
+合计约 **340M**，而不是原先担心的 20GB。构建仍需要 `DL_DIR` 里的上游 tarball，
+那部分由 bitbake 下载，与源码检出无关。
+
+### `KAS_WORK_DIR` 必须预先存在
+
+kas 不会创建它，直接 `os.chdir` 过去，否则报
+`FileNotFoundError: [Errno 2] No such file or directory`。检出前先 `mkdir -p`。
+
+### 检出结果与 `config/*.env` 完全对齐
+
+`kas checkout` 解析 tag 得到的 commit 与 `config/*.env` 的 `EXPECT_SHA` 逐字一致：
+
+| release | tag | SHA | 比对 |
+|---|---|---|---|
+| dunfell | `yocto-3.1.33` | `63d05fc061006bf1a88630d6d91cdc76ea33fbf2` | MATCH |
+| kirkstone | `yocto-4.0.35` | `93431249a6260da7bd29ee3ca32145d89e5b8259` | MATCH |
+| scarthgap | `yocto-5.0.20` | `64e69ed23703f6358ec431d3f5f1f8483f974cae` | MATCH |
+| wrynose（三仓库） | `yocto-6.0.4` | oe-core `0f03c732a0a2d0506b41b1abe60b3f368b2300dc`<br>bitbake `51fd94a67fa17650a9ff623492005972bbc7d26f`<br>meta-yocto `7c25b11156553145fa6b241a2d4f65d94438f804` | 记录备用（`config/wrynose.env` 无 `EXPECT_SHA`） |
+
+双轨（C36）的 tag 副本没有漂移。
+
+### wrynose 三仓库的 layers 推导可靠（#24）
+
+`kas checkout kas/targets/wrynose-general.yml` 生成的 `build/conf/bblayers.conf`：
+
+```text
+BBLAYERS ?= " \
+    ${TOPDIR}/../bitbake \
+    ${TOPDIR}/../meta-yocto/meta-poky \
+    ${TOPDIR}/../openembedded-core/meta"
+```
+
+- 三条路径全部正确，kas 没有把 poky 组合仓库的假设套到拆分仓库上；
+- `bitbake` 目录本身就作为 layer 进入 `BBLAYERS`，**不需要额外的 `env:` 段**
+  来补 `BBPATH` / `PATH`；
+- `kas lock` 对多仓库**逐个固化**：`wrynose-general.lock.yml` 的
+  `overrides.repos` 下三个 repo 各有一条 `commit`。
+
+### lockfile 的落点与格式
+
+`kas lock kas/targets/<r>-general.yml` 在 **target 同级**生成
+`kas/targets/<r>-general.lock.yml`（不是 `kas/locks/`），内容是：
+
+```yaml
+header:
+    version: 14
+overrides:
+    repos:
+        poky:
+            commit: 64e69ed23703f6358ec431d3f5f1f8483f974cae
+```
+
+`IncludeHandler` 会在读配置时自动找同目录的 `<file>.lock.yml` 并注入，
+所以 lockfile 入库后，`kas checkout` 就按 commit 而非可变 tag 执行。
+
+### 尚未验证：custom variant
+
+`kas/variants/custom.yml` 的 `repos.yp` 指向本仓库
+（`https://github.com/zeek-zhao/yocto`，私有）。真检出让 kas 去 clone 自己，
+既慢又需要凭证，而 layer 其实**已经在磁盘上**。候选方案：
+
+1. `repos.yp` 去掉 `url`（schema 允许）→ kas 不做版本控制操作，但要求
+   `$KAS_WORK_DIR/yp` 已存在，检出前软链到仓库根；
+2. `KAS_REPO_REF_DIR` 指向本地 bare 仓库，从本地 clone（仍需 clone，但不出网）；
+3. `url` 换成 `file://` 本地路径。
+
+需实测后择一，并同步 `docs/kas.md` 与设计文档 §4.5。在此之前，4 个
+`-custom` target 的 checkout / lockfile 都未做。
