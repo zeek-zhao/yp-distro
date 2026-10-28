@@ -18,11 +18,23 @@
 GHCR 本身不强制 tag 不可变；需要严格可复现时记录镜像 digest。
 推送只使用自动注入的 `GITHUB_TOKEN` 和 `packages: write`。
 
-**首次推送后由派单方逐个把 4 个包设为 public，本卡不修改任何仓库或包设置。**
-Web：个人主页 Packages → 对应包 → Package settings → Change visibility → Public。
-API 路径：`PATCH /user/packages/container/yocto%2F<release>`，body 为 `{"visibility":"public"}`，
-由具备包管理权限的派单方执行；若服务端不支持该修改接口，以 Web 为准。
-包名包含斜杠，URL 必须编码，例如 `yocto%2Fdunfell`；未编码会 404。
+**首次推送后由派单方逐个把 4 个包设为 public，CI 本身不修改任何仓库或包设置。**
+
+只能走 Web UI —— **REST API 没有"修改包可见性"的端点**（2026-10-28 实测：
+`PATCH /user/packages/container/yocto%2F<release>` 恒返回 404，官方文档里包相关端点只有
+GET / DELETE / POST restore，无 PATCH / PUT）。所以个人令牌无论什么 scope 都改不了可见性。
+
+直达链接（包名含斜杠，URL 里编码成 `%2F`）：
+
+```
+https://github.com/users/zeek-zhao/packages/container/yocto%2Fdunfell/settings
+https://github.com/users/zeek-zhao/packages/container/yocto%2Fkirkstone/settings
+https://github.com/users/zeek-zhao/packages/container/yocto%2Fscarthgap/settings
+https://github.com/users/zeek-zhao/packages/container/yocto%2Fwrynose/settings
+```
+
+页面底部 Danger Zone → Change visibility → Public → 输入包名确认。
+改完用 `pull-check.yml` 或匿名 `docker manifest inspect` 复核（private 时返回 `unauthorized`）。
 私有仓库不等于包必须私有；公开后手动运行 `pull-check` 验证 C24，不做任何登录。
 
 ## 本地等价命令
