@@ -13,7 +13,9 @@ usage() {
 命令：
   config   解析并打印配置
   doctor   检查 release/variant 组合与磁盘水位
-  image | source | build | qemu | review | test | report | e2e
+  test     运行 BATS 测试
+  report   运行测试并生成报告
+  image | source | build | qemu | review | e2e
            暂未实现
 EOF
 }
@@ -27,11 +29,11 @@ case "${command_name}" in
         usage
         exit 0
         ;;
-    image | source | build | qemu | review | test | report | e2e)
+    test | report | config | doctor) ;;
+    image | source | build | qemu | review | e2e)
         printf 'not implemented yet: %s\n' "${command_name}" >&2
         exit 2
         ;;
-    config | doctor) ;;
     *) die "未知命令：${command_name}；使用 --help 查看用法" ;;
 esac
 
@@ -64,6 +66,13 @@ while (($# > 0)); do
 done
 
 case "${command_name}" in
+    test)
+        exec bats -r "${ROOT_DIR}/tests/bats"
+        ;;
+    report)
+        exec "${ROOT_DIR}/scripts/report.sh" "${release:-all}" \
+            --variant "${variant:-general}"
+        ;;
     config)
         [[ -n "${release}" ]] || die "config 必须指定 --release"
         load_release "${release}"

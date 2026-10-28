@@ -140,12 +140,14 @@ bash scripts/dev.sh bats tests/bats/
 # 期望：输出不含 "skipped"
 
 # 3. junit 报告生成
-bash scripts/dev.sh project.sh test --release wrynose --variant general
+bash scripts/dev.sh ./project.sh test --release wrynose --variant general
 ls reports/bats-wrynose-general-*.xml
 # 期望：文件存在，且能 grep 到 <testsuite
+# 注意：必须写 ./project.sh，不能写裸 project.sh —— dev.sh 容器内直通是 exec "$@"，
+#       裸命令不在 PATH 会报 `exec: "project.sh": executable file not found in $PATH`
 
 # 4. 归档报告生成
-bash scripts/dev.sh project.sh report --release wrynose --variant general
+bash scripts/dev.sh ./project.sh report --release wrynose --variant general
 ls docs/qa/wrynose/*.md
 # 期望：存在，且含 SOURCE_FINGERPRINT / commit / 用例统计 三段
 
