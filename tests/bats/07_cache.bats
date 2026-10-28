@@ -164,6 +164,7 @@ EOF
 NOTE: Tasks Summary: Attempted 10 tasks of which 2 didn't need to be rerun and all succeeded.
 Sstate summary: Wanted 10 Local 2 Mirrors 0 Missed 8 Current 5 (20% match, 0 missed)
 NOTE: Tasks Summary: Attempted 100 tasks of which 80 didn't need to be rerun and all succeeded.
+# Keep Current different from Local so using the cache total as hits fails this test.
 Sstate summary: Wanted 50 Local 20 Mirrors 0 Missed 30 Current 40 (40% match, 0 missed)
 EOF
     run bash "${test_root}/scripts/report.sh" --release scarthgap --variant general --render-only
@@ -171,7 +172,7 @@ EOF
     local archive="${test_root}/${output##*Archive: }"
     grep -Fq 'Build duration: 123s' "${archive}"
     grep -Fq 'Tasks attempted / cached: 100 / 80' "${archive}"
-    grep -Fq 'Sstate hit: 40/50 (40%)' "${archive}"
+    grep -Fq 'Sstate hit: 20/50 (40%)' "${archive}"
     grep -Fq "Build log: \`${log}\`" "${archive}"
     rm -- "${log}" "${log%.log}.meta"
     run bash "${test_root}/scripts/report.sh" --release scarthgap --variant general --render-only
