@@ -208,14 +208,34 @@ header:
 
 ## 校验器：`scripts/kas-verify.py`
 
-**这是本卡的技术核心。** 要求：
+**这是本卡的技术核心。** 要求**双引擎**，因为 dev 镜像当前**还没有装 kas**（本卡只改 Dockerfile、不重建镜像）：
 
-- 纯 Python 3，只依赖 `pyyaml` 与 **kas 自带的 `kas.includehandler`**（镜像里已有，无需额外安装）。
+| 引擎 | 条件 | 合并逻辑来源 |
+|---|---|---|
+| `kas` | `import kas.includehandler` 可用 | 调 `IncludeHandler([yml], repo_root, use_lock=False).get_config()`，**自带 JSON-schema 校验** |
+| `builtin` | kas 包不可用 | 自己实现（规则见下） |
+| `auto`（默认） | 有 kas 用 kas，否则 builtin | — |
+
 - 用法：
   ```
-  python3 scripts/kas-verify.py                    # 校验全部 8 个 target
-  python3 scripts/kas-verify.py --release R --variant V   # 只校验一个
+  python3 scripts/kas-verify.py                              # auto，校验全部 8 个 target
+  python3 scripts/kas-verify.py --engine builtin             # 强制内置实现
+  python3 scripts/kas-verify.py --release R --variant V      # 只校验一个
+  python3 scripts/kas-verify.py --root DIR                   # 换仓库根（BATS 用临时副本时必需）
   ```
+- 启动时打印一行 `engine=builtin` 或 `engine=kas`（BATS 会检查）。
+
+### `builtin` 引擎必须复刻的合并规则（从 kas 4.6 源码读出，**不要自己发挥**）
+
+1. **include 路径解析**：先试 `os.path.join(repo_root, inc)`；该路径不存在时回退 `os.path.join(os.path.dirname(当前文件), inc)`；两者都不存在 → 报错退出。
+2. **合并顺序**：深度优先，按 `header.includes` 列表顺序依次展开，**最后合并文件自身内容**；冲突时**后者覆盖前者**。
+3. **dict 深合并**：两边都是 mapping → 递归合并；否则（含 `None`、列表、标量）**直接覆盖**。
+4. **`repos.<id>: null` 保留为 `None`**（不要删除 key）——与 kas 的 schema 语义保持一致。
+5. **字段白名单校验**（等价于 kas 的 schema 收紧版）：
+   - 顶层只允许：`header / machine / distro / target / repos / local_conf_header / bblayers_conf_header / env / defaults / overrides / build_system / task / proxy_config / menu_configuration / artifacts`
+   - `repos.<id>` 只允许：`name / url / type / commit / branch / tag / refspec / path / layers / patches`
+   - `layers` 的值只允许 `null / str / int / bool`（**写 `{}` 必须报错**，这是实测过的真实坑）
+6. 任一环节失败 → 打印 `FAIL <target>: <原因>`，最终 `exit 1`。
 - 对每个 target 断言（任一失败 → 打印 `FAIL <target>: <原因>` 并最终 `exit 1`）：
   1. `IncludeHandler(...).get_config()` 不抛异常（含 kas 的 schema 校验）
   2. `distro` 与 `config/variants/<v>.env` 的 `DISTRO` 一致
@@ -238,7 +258,7 @@ header:
 | `kas/variants/{general,custom}.yml` | 新增（2 个） |
 | `kas/machines/qemux86-64.yml` | 新增 |
 | `kas/targets/{dunfell,kirkstone,scarthgap,wrynose}-{general,custom}.yml` | 新增（8 个） |
-| `scripts/kas-verify.py` | 新增 |
+| `scripts/kas-verify.py` | 新增（双引擎校验器） |
 | `tests/bats/05_kas.bats` | 新增（tag = `kas`） |
 | `config/features.txt` | 追加一行 |
 | `project.sh` | 新增 `kas` 子命令 |
@@ -277,8 +297,8 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDE
 每个用例都要 `# bats test_tags=kas`。至少覆盖：
 
 1. `kas/` 下恰好 15 个 `.yml`，且 8 个 `targets/*.yml` 文件名与 4×2 矩阵一一对应
-2. **校验器全绿**：`run python3 scripts/kas-verify.py` → `status == 0` 且输出含 `8 targets OK`
-3. **双轨漂移会被抓到**：临时把某个 `releases/*.yml` 的 tag 改坏（用 `sed -i` 到副本 + `--config-root`？**不允许**改仓库文件）→ 采用更简单的方式：用一个 BATS 内的临时目录复制 `kas/` 与 `config/`，改坏后跑校验器，断言 rc != 0。若实现成本过高，可退化为「断言校验器源码里包含 tag 比对逻辑」的弱测试，但**优先做真测试**。
+2. **校验器全绿**：`run python3 scripts/kas-verify.py --engine builtin` → `status == 0` 且输出含 `8 targets OK`
+3. **双轨漂移会被抓到**：把 `kas/` 与 `config/` 复制到 `$BATS_TEST_TMPDIR`，用 `sed` 改坏某个 `releases/*.yml` 的 tag，再以该临时目录为 root 跑内置引擎（校验器需要支持 `--root DIR` 参数指向临时根），断言 rc != 0 且输出含 `FAIL`。**这条必须真测**（防校验器写成永远返回 0 的空壳）。
 4. 所有 yml 的 `header.version` 都是 14（`grep -L` 风格或 python 一行）
 5. `base.yml` **不含** `repos:` 段落（防回退到已作废设计）
 6. `releases/wrynose.yml` 不含 `poky:`，且含 `openembedded-core` / `bitbake` / `meta-yocto` 三个 repo
@@ -342,11 +362,16 @@ test -f docs/kas.md
 
 ```bash
 bash scripts/dev.sh python3 scripts/kas-verify.py
-# 期望 rc=0，末行 "8 targets OK"
+# 期望 rc=0，含 "engine=builtin"（镜像未装 kas）与 "8 targets OK"
+
+bash scripts/dev.sh python3 scripts/kas-verify.py --engine builtin
+# 期望 rc=0，"8 targets OK"
 
 bash scripts/dev.sh python3 scripts/kas-verify.py --release wrynose --variant custom
 # 期望 rc=0
 ```
+
+> 若镜像里已有 kas（P1-02 之后），`auto` 会自动打印 `engine=kas`，两种引擎结论必须一致。
 
 ### D. 双轨一致性（人工抽查，与校验器互为印证）
 
@@ -404,8 +429,9 @@ git status --short
 ## 完成定义（DoD）
 
 - [ ] A–H 全部 rc=0
-- [ ] `python3 scripts/kas-verify.py` 输出 `8 targets OK`
-- [ ] 15 个 yml 全部通过 kas 的 `IncludeHandler`（含内置 schema 校验）
+- [ ] `python3 scripts/kas-verify.py --engine builtin` 输出 `8 targets OK`
+- [ ] 15 个 yml 全部通过内置引擎的结构校验；`auto` 在无 kas 时自动降级并打印 `engine=builtin`
+- [ ] 校验器不是空壳：BATS 里「改坏 tag → rc != 0」的用例真测过
 - [ ] `base.yml` 无 `repos:`；`wrynose.yml` 无 `poky:`；`custom.yml` 用 `YP_VARIANT`
 - [ ] 8 个 target 的 include 列表都指向 `kas/...` 相对仓库根路径
 - [ ] `config/features.txt` 有 `kas-layer` 行，`99_coverage.bats` 全绿
