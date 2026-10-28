@@ -83,6 +83,34 @@ setup() {
 }
 
 # bats test_tags=report
+@test "artifact bytes follows symlinks in deploy dir" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-link"
+    mkdir -p "${deploy_dir}"
+    head -c 4096 /dev/zero >"${deploy_dir}/core-image-minimal-qemux86-64.rootfs-1.ext4.zst"
+    ln -s core-image-minimal-qemux86-64.rootfs-1.ext4.zst \
+        "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4.zst"
+
+    run artifact_primary "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    run artifact_bytes "${output}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "4096" ]
+}
+
+# bats test_tags=report
+@test "artifact list excludes qemuboot.conf" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-qb"
+    mkdir -p "${deploy_dir}"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4.zst"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.rootfs.qemuboot.conf"
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".rootfs.ext4.zst"* ]]
+    [[ "${output}" != *".qemuboot.conf"* ]]
+}
+
+# bats test_tags=report
 @test "render-only report includes configured degraded aspects" {
     local degraded_file="${BATS_TEST_TMPDIR}/degraded.txt"
     cp "${ROOT_DIR}/config/degraded.txt" "${degraded_file}"
