@@ -146,3 +146,25 @@ PY
     [ "${status}" -eq 0 ]
     [[ "${output}" == *"secret-scan: clean ("* ]]
 }
+
+# bats test_tags=ci
+@test "main is guarded by a branch guard job requiring PR provenance" {
+    run grep -E '^  branch-guard:$' "${CI_YML}"
+    [ "${status}" -eq 0 ]
+    run grep -F "github.ref == 'refs/heads/main'" "${CI_YML}"
+    [ "${status}" -eq 0 ]
+    run grep -E '^[[:space:]]+pull-requests: read$' "${CI_YML}"
+    [ "${status}" -eq 0 ]
+    run grep -F '/commits/${SHA}/pulls' "${CI_YML}"
+    [ "${status}" -eq 0 ]
+}
+
+# bats test_tags=ci
+@test "promised gates exist in repository: pre-push hook and make hooks" {
+    run test -x "${ROOT_DIR}/.githooks/pre-push"
+    [ "${status}" -eq 0 ]
+    run grep -E '^hooks:$' "${ROOT_DIR}/Makefile"
+    [ "${status}" -eq 0 ]
+    run grep -F 'refs/heads/main' "${ROOT_DIR}/.githooks/pre-push"
+    [ "${status}" -eq 0 ]
+}
