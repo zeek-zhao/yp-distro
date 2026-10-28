@@ -46,6 +46,7 @@ build_image() {
         -f "${ROOT_DIR}/docker/${release}/Dockerfile" \
         -t "${tag}" \
         --build-arg "APT_MIRROR=${APT_MIRROR:-cn.archive.ubuntu.com}" \
+        --build-arg "PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}" \
         "${ROOT_DIR}"
 }
 
@@ -56,6 +57,13 @@ verify_image() {
     docker run --rm "${tag}" bash -c '
         set -euo pipefail
         test "$(id -u)" -ne 0
+        test "$(id -un)" = builder
+        kas_version="$(kas --version)"
+        if ! grep -Eq "(^|[[:space:]])4\.6(\.[0-9]+)?([[:space:]]|$)" <<<"${kas_version}"; then
+            printf "Unexpected kas version: %s\n" "${kas_version}" >&2
+            exit 1
+        fi
+        printf "kas=%s\n" "${kas_version}"
         bats --version
         shellcheck --version
         shfmt --version
