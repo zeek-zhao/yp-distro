@@ -93,10 +93,12 @@ build_run_args() {
         )
     fi
 
-    # ── GitHub 认证：复用宿主 gh 配置（gh 与 copilot 都读这里）────────────
-    if [[ -d "${HOME}/.config/gh" ]]; then
-        RUN_ARGS+=(-v "${HOME}/.config/gh:/home/$(id -un)/.config/gh")
-    fi
+    # ── 持久 HOME：copilot / gh 的登录凭证要跨容器存活 ────────────────────
+    # 用仓库内目录而非 docker volume，属主天然与宿主 UID 一致，无需 chown。
+    # 认证只需做一次，凭证落在 .devhome/.copilot（或 .config/gh），进 .gitignore。
+    local devhome="${ROOT_DIR}/.devhome"
+    mkdir -p "${devhome}"
+    RUN_ARGS+=(-v "${devhome}:/home/$(id -un)")
     # 注意：函数末尾不能用 `[[ ... ]] && cmd` 形式，set -e 下条件为假会让整个脚本退出
     if [[ -n "${GH_TOKEN:-}" ]]; then
         RUN_ARGS+=(-e "GH_TOKEN=${GH_TOKEN}")
@@ -172,6 +174,9 @@ case "${1:-}" in
             log "镜像不存在，自动构建"
             do_build
         }
-        exec docker run "${RUN_ARGS[@]}" "${IMAGE}" "$@"
+        # 交互式命令（如 copilot login）需要 TTY，tmux pane 里同样满足 -t 0/-t 1
+        tty_flag=()
+        [[ -t 0 && -t 1 ]] && tty_flag=(-it)
+        exec docker run "${RUN_ARGS[@]}" "${tty_flag[@]}" "${IMAGE}" "$@"
         ;;
 esac
