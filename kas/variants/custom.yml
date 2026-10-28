@@ -1,0 +1,20 @@
+header:
+  version: 14
+
+distro: yp
+target: yp-image
+
+repos:
+  yp:
+    url: https://github.com/zeek-zhao/yocto
+    tag: main
+    layers:
+      layers/meta-yp:
+
+local_conf_header:
+  custom: |
+    YP_VARIANT = "custom"
+    INHERIT += "cve-check"
+    require conf/multilib.conf
+    MULTILIBS = "multilib:lib32"
+    DEFAULTTUNE:virtclass-multilib-lib32 = "x86"

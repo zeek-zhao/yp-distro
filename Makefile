@@ -1,4 +1,4 @@
-PROJECT_TARGETS = config doctor image source build qemu review test report e2e lint secret-scan ci-tools hooks shell
+PROJECT_TARGETS = config doctor kas image source build qemu review test report e2e lint secret-scan ci-tools hooks shell
 
 .PHONY: help $(PROJECT_TARGETS)
 
@@ -10,6 +10,9 @@ config:
 
 doctor:
 	./project.sh doctor
+
+kas:
+	./project.sh kas
 
 image:
 	./project.sh image

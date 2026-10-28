@@ -1,0 +1,12 @@
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+repos:
+  poky:
+    url: https://git.yoctoproject.org/poky
+    tag: yocto-5.0.20
+    layers:
+      meta:
+      meta-poky:
