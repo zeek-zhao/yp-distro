@@ -1,0 +1,39 @@
+name: pull-check
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要验证的镜像 tag"
+        default: latest
+        type: string
+  schedule:
+    - cron: "0 22 * * 0" # 每周一 06:00 (CST)
+permissions:
+  contents: read
+jobs:
+  pull:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [dunfell, kirkstone, scarthgap, wrynose]
+    steps:
+      - name: Anonymous pull and assertions
+        env:
+          RELEASE: ${{ matrix.release }}
+          TAG: ${{ inputs.tag || 'latest' }}
+        run: |
+          set -euo pipefail
+          img="ghcr.io/zeek-zhao/yocto/${RELEASE}:${TAG}"
+          docker pull "$img"
+          docker run --rm "$img" bash -c '
+            set -euo pipefail
+            test "$(id -u)" -ne 0
+            test "${YOCTO_RELEASE}" = "'"${RELEASE}"'"
+            shellcheck --version | grep -q 0.9.0
+            shfmt --version
+            bats --version
+            test "$(locale charmap)" = UTF-8
+            printf "pulled release=%s user=%s uid=%s\n" "${YOCTO_RELEASE}" "$(id -un)" "$(id -u)"
+          '
