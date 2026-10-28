@@ -10,3 +10,6 @@ reports/
 *.pem
 *.key
 .env
+
+# 容器持久 HOME（copilot / gh 凭证）
+.devhome/
