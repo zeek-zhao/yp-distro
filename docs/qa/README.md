@@ -9,6 +9,7 @@
 - `config/features.txt` 标注每个能力的 `ok` 或 `degraded` 状态。
 - `config/degraded.txt` 是降级理由及需求条款的唯一来源。
 - 报告按 release 从 `config/degraded.txt` 呈现降级项。
+- 跨版本差异的唯一真本是 `config/crossdiff.txt`，报告只做呈现；无可比版本时记为 `n/a`，不新增降级项。
 - `tests/bats/99_coverage.bats` 校验特性标注、降级理由和最新报告三处一致。
 
 ## 降级项实测依据（wrynose = yocto-6.0.4）
