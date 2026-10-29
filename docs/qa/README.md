@@ -4,7 +4,9 @@
 - `docs/qa/<release>/<date>-<sha>.md` 是一次 BATS 测试报告。
 - `--render-only` 生成 `<date>-<sha>-render.md`，用于无测试渲染验证。
 - 报告的「构建产物」记录 deploy 目录、主产物、字节数和 SHA-256。
-- 同目录的 `artifacts.sha256` 保存该次构建全部镜像产物的校验和及来源信息。
+- 同目录的 `artifacts-<date>-<sha>[-<variant>].sha256` 保存该次构建全部镜像产物的
+  校验和及来源信息（`#41` 之前叫固定的 `artifacts.sha256`，同一 release 重跑会改写
+  旧归档指向的文件，历史文件保留原样）。
 - 报告的「QEMU 串口」记录登录提示匹配状态和日志大小；未运行时明确标注。
 - `config/features.txt` 标注每个能力的 `ok` 或 `degraded` 状态。
 - `config/degraded.txt` 是降级理由及需求条款的唯一来源。

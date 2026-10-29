@@ -193,3 +193,20 @@ setup() {
     [[ "${general_archive}" != *-general-* ]]
     rm -f -- "${general_archive}"
 }
+
+# bats test_tags=report
+@test "checksum file name follows the archive so old reports stay consistent" {
+    # #41：校验文件曾固定叫 artifacts.sha256，同一 release 每跑一次报告就重写，
+    # 旧归档报告指向的 commit 于是和文件头对不上。现在名字带 date+commit，
+    # 每次真构建各留一份，谁也不会覆盖谁。
+    # 这里只断言命名规则：报告正文那行要真有产物才输出，CI 无构建产物时不存在。
+    grep -qF 'checksum_name="artifacts-${date_stamp}-${commit}"' \
+        "${ROOT_DIR}/scripts/report.sh"
+    grep -qF 'checksum_name+="-${variant}"' "${ROOT_DIR}/scripts/report.sh"
+    # 正文引用的必须是这个名字，不能写死
+    grep -qF '全部产物 sha256: 见 `%s.sha256`' "${ROOT_DIR}/scripts/report.sh"
+    grep -qF '"${checksum_name}"' "${ROOT_DIR}/scripts/report.sh"
+    # 不许退回固定名
+    run grep -qE '^checksum_name="artifacts"$' "${ROOT_DIR}/scripts/report.sh"
+    [ "${status}" -eq 1 ]
+}
