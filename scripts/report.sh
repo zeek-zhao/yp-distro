@@ -259,11 +259,12 @@ render_crossdiff() {
 }
 
 # 只有真跑过测试/构建的归档才写 sha256：--render-only 常在测试里被调用，
-# 若无条件重写会把已归档的 artifacts.sha256 的 commit 头改掉（#41）。
-# 校验文件名同归档名：general 用 artifacts.sha256，其它 variant 用
-# artifacts-<variant>.sha256，否则两个 variant 会互相覆盖（#22 要对比两者 SHA）。
-checksum_name="artifacts"
-[[ "${variant}" == "general" ]] || checksum_name="artifacts-${variant}"
+# 若在 render 时重写，会把已归档文件的 commit 头改成当前 HEAD（#41）。
+# 校验文件名跟归档名走：artifacts-<date>-<sha>[-<variant>].sha256。
+# 原来固定叫 artifacts.sha256，同一 release 每跑一次报告就重写一次，
+# 于是旧归档报告（<date>-<old-sha>.md）指向的文件头部 commit 已经不是它了。
+checksum_name="artifacts-${date_stamp}-${commit}"
+[[ "${variant}" == "general" ]] || checksum_name+="-${variant}"
 
 if ((render_only == 0)) && ((${#artifact_paths[@]} > 0)); then
     checksum_file="${ROOT_DIR}/docs/qa/${release}/${checksum_name}.sha256"

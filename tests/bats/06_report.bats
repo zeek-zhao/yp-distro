@@ -193,3 +193,19 @@ setup() {
     [[ "${general_archive}" != *-general-* ]]
     rm -f -- "${general_archive}"
 }
+
+# bats test_tags=report
+@test "checksum file name follows the archive so old reports stay consistent" {
+    # #41：校验文件曾固定叫 artifacts.sha256，同一 release 每跑一次报告就重写，
+    # 旧归档报告指向的 commit 于是和文件头对不上。现在名字带 date+commit，
+    # 每次真构建各留一份，谁也不会覆盖谁。
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --variant general --render-only
+    [ "${status}" -eq 0 ]
+    local archive="${ROOT_DIR}/${output##*Archive: }"
+    local expected="artifacts-$(date +%Y%m%d)-$(git -C "${ROOT_DIR}" rev-parse --short HEAD)"
+    grep -Fq "见 \`${expected}.sha256\`" "${archive}"
+    # 不许再退回固定名
+    run grep -Fq '见 `artifacts.sha256`' "${archive}"
+    [ "${status}" -eq 1 ]
+    rm -f -- "${archive}"
+}
