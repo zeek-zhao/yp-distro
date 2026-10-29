@@ -18,6 +18,11 @@ local_conf_header:
     # CVE 检查的 class 名各版本不同：wrynose 用 sbom-cve-check 取代了 cve-check。
     # 只有 custom variant 会真正把它加进 IMAGE_CLASSES。
     YP_CVE_CLASS ??= "cve-check"
+    # 只有能从全局 INHERIT 找到类的版本才在 yp.conf 里打开（6.0 例外）。
+    YP_CVE_GLOBAL_INHERIT ??= "1"
+    # custom variant 的调试特性。debug-tweaks 在 6.0 被拆掉（IMAGE_FEATURES[validitems]
+    # 里已经没有它），所以由各 release 覆盖这个值，custom.yml 只做一层引用。
+    YP_IMAGE_FEATURES ??= "debug-tweaks ssh-server-dropbear"
     # file:// 的解包目录各版本不同：3.1/4.0 在 ${WORKDIR}，5.0+ 在 ${UNPACKDIR}。
     # 这里只定义我们自己的别名，绝不能去 ??= 上游的 UNPACKDIR（会污染默认值）。
     YP_SRC_DIR ??= "${WORKDIR}"

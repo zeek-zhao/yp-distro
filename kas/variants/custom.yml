@@ -1,6 +1,7 @@
 header:
   version: 14
 
+# C27：custom = 独立 distro + 独立 image，靠 distro/image 区分，不是 DISTRO_FEATURES 开关。
 distro: yp
 target: yp-image
 
@@ -15,10 +16,25 @@ repos:
 local_conf_header:
   custom: |
     YP_VARIANT = "custom"
-    # 只开开关，类名由各 release 决定（wrynose 是 sbom-cve-check）。
-    # 真正 inherit 在 yp-image.bb 里做：local.conf 里用 += 拼接会因为
-    # 段顺序（base->custom->machine->release）拿不到后面定义的类名。
-    YP_CVE_ENABLE = "1"
+
+    # ---- 与 general 的差异项（需求 §4.2）----
+    # 主机名 <release>-custom：YP_RELEASE_NAME 在 kas/releases/<r>.yml 里定义。
+    # hostname 是 base-files 认的普通变量，不需要 override 语法。
+    hostname = "${YP_RELEASE_NAME}-custom"
+    # init 系统统一 systemd（3.1 起四个版本都有 init-manager-systemd.inc）
+    INIT_MANAGER = "systemd"
+    # 调试特性：走 YP_IMAGE_FEATURES（默认 debug-tweaks + dropbear ssh，
+    # 6.0 覆盖成 allow-empty-password/allow-root-login/post-install-logging）。
+    # 这里必须用 `=` 而不是 `+=`：`+=` 会在本行立即展开，而 release 段在本段之后才写。
+    EXTRA_IMAGE_FEATURES = "${YP_IMAGE_FEATURES}"
+    # multilib lib32（能力打开，镜像本身仍只装主架构包）
     require conf/multilib.conf
     MULTILIBS = "multilib:lib32"
+    # 两种分隔符都写：3.1 只认 `_`，4.0+ 只认 `:`，未命中的那行是惰性变量。
     DEFAULTTUNE:virtclass-multilib-lib32 = "x86"
+    DEFAULTTUNE_virtclass-multilib-lib32 = "x86"
+
+    # ---- CVE 检查 ----
+    # 只开开关，类名由各 release 决定（wrynose 是 sbom-cve-check）。
+    # 真正的全局 inherit 在 layers/meta-yp/conf/distro/yp.conf 里做。
+    YP_CVE_ENABLE = "1"

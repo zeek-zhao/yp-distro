@@ -8,3 +8,23 @@
 # baseline and INIT_MANAGER untouched, so these changes need no workaround.
 #
 # Add any future required release-specific branches below.
+
+# ---------------------------------------------------------------------------
+# override 分隔符（C11：dunfell 与其它三版同等支持）
+#
+# 3.1 只认 `_`，4.0+ 只认 `:`，没有任何一种写法能同时生效。
+# 碰到必须按包名/override 赋值的变量时，**两种分隔符各写一行**，
+# 未命中的那一行在对方版本里只是个没人读的惰性变量：
+#
+#   FILES:${PN}-cus = "a"      # 4.0+ 生效
+#   FILES_${PN}-cus = "a"      # 3.1 生效
+#
+# 已知使用点（改一处要同步改另一处）：
+#   - layers/meta-yp/recipes-example/cpp-hello/cpp-hello-cus-pack_0.1.bb
+#   - layers/meta-yp/conf/distro/yp.conf（PREFERRED_PROVIDER_virtual/cpp-hello）
+#   - kas/variants/custom.yml（DEFAULTTUNE virtclass-multilib-lib32）
+#
+# 任务级追加（do_install:append）没有这个退路：3.1 会把冒号写法解析成
+# 一个没人调用的函数名，静默丢掉整个追加逻辑。需要按版本差异时直接重定义
+# 整个任务函数（见 cpp-hello-cus-pack）。
+# ---------------------------------------------------------------------------

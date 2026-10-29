@@ -10,3 +10,7 @@ repos:
     layers:
       meta:
       meta-poky:
+
+local_conf_header:
+  release-name: |
+    YP_RELEASE_NAME = "kirkstone"
