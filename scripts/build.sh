@@ -2,11 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# machine 后缀规则与 report.sh / qemu.sh 共用同一实现，避免两处各写一份。
+# shellcheck source=lib/common.sh
+source "${ROOT_DIR}/scripts/lib/common.sh"
 
 usage() {
     cat <<'EOF'
 Usage:
-  scripts/build.sh --release <r> --variant general|custom [--image-mode release|dev] [--dry-run]
+  scripts/build.sh --release <r> --variant general|custom [--machine <m>]
+                   [--image-mode release|dev] [--dry-run]
 EOF
 }
 
@@ -18,15 +22,17 @@ invalid_args() {
 
 release=""
 variant=""
+machine=qemux86-64
 image_mode=release
 dry_run=0
 while (($# > 0)); do
     case "$1" in
-        --release | --variant | --image-mode)
+        --release | --variant | --machine | --image-mode)
             (($# >= 2)) || invalid_args "$1 缺少参数"
             case "$1" in
                 --release) release="$2" ;;
                 --variant) variant="$2" ;;
+                --machine) machine="$2" ;;
                 --image-mode) image_mode="$2" ;;
             esac
             shift 2
@@ -58,6 +64,10 @@ case "${image_mode}" in
     release | dev) ;;
     *) invalid_args "--image-mode 必须是 release|dev" ;;
 esac
+[[ "${machine}" =~ ^[[:alnum:]_-]+$ ]] ||
+    invalid_args "--machine 名称非法：${machine}"
+[[ -f "${ROOT_DIR}/config/machines/${machine}.env" ]] ||
+    invalid_args "machine 配置不存在：config/machines/${machine}.env"
 
 cd -- "${ROOT_DIR}"
 mkdir -p work
@@ -69,10 +79,17 @@ if ! flock -n 9; then
 fi
 # 保留锁文件的 inode，避免删除后后续构建锁住不同文件。
 
-kas_work_dir="/work/work/kas-${release}-${variant}"
-build_command="mkdir -p ${kas_work_dir} /work/work/downloads /work/work/sstate && KAS_CLONE_DEPTH=1 KAS_WORK_DIR=${kas_work_dir} kas build /work/kas/targets/${release}-${variant}.yml"
+# machine 维度用 kas 多配置叠加：target 里 include 的是默认 machine 的 yml，
+# 非默认 machine 再追加一个 yml，靠顶层 machine: 字段覆盖 —— 无需为每个
+# machine 复制 8 份 target 文件（复制会立刻产生漂移）。
+machine_sfx="$(machine_suffix "${machine}")"
+kas_configs="/work/kas/targets/${release}-${variant}.yml"
+[[ "${machine}" == "qemux86-64" ]] ||
+    kas_configs+=":/work/kas/machines/${machine}.yml"
+kas_work_dir="/work/work/kas-${release}-${variant}${machine_sfx}"
+build_command="mkdir -p ${kas_work_dir} /work/work/downloads /work/work/sstate && KAS_CLONE_DEPTH=1 KAS_WORK_DIR=${kas_work_dir} kas build ${kas_configs}"
 if [[ "${image_mode}" == release ]]; then
-    command_args=(./project.sh shell --release "${release}" --variant "${variant}" -- bash -lc)
+    command_args=(./project.sh shell --release "${release}" --variant "${variant}" --machine "${machine}" -- bash -lc)
 else
     command_args=(bash scripts/dev.sh bash -lc)
 fi
@@ -82,8 +99,8 @@ if ((dry_run)); then
     exit 0
 fi
 
-mkdir -p work/downloads work/sstate work/logs "work/kas-${release}-${variant}"
-build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}.log"
+mkdir -p work/downloads work/sstate work/logs "work/kas-${release}-${variant}${machine_sfx}"
+build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}${machine_sfx}.log"
 build_meta="${build_log%.log}.meta"
 start_seconds="$(date +%s)"
 printf 'Build start: %s\n' "$(date --iso-8601=seconds)" | tee "${build_log}"

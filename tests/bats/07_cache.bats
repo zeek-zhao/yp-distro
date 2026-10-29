@@ -103,7 +103,7 @@ cache_fixture() {
 @test "build.sh dry-run prints the container command and shared cache paths" {
     run bash "${ROOT_DIR}/scripts/build.sh" --release scarthgap --variant general --dry-run
     [ "${status}" -eq 0 ]
-    [[ "${output}" == "./project.sh shell --release scarthgap --variant general -- bash -lc '"* ]]
+    [[ "${output}" == "./project.sh shell --release scarthgap --variant general --machine qemux86-64 -- bash -lc '"* ]]
     [[ "${output}" == *"KAS_CLONE_DEPTH=1"* ]]
     [[ "${output}" == *"KAS_WORK_DIR=/work/work/kas-scarthgap-general"* ]]
     [[ "${output}" == *"/work/work/downloads /work/work/sstate"* ]]

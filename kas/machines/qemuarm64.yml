@@ -1,0 +1,10 @@
+header:
+  version: 14
+
+machine: qemuarm64
+
+# aarch64 走 TCG 全模拟（用容器内 qemu-system-native，不依赖宿主 qemu-system-arm），
+# 内存给到 2G：TCG 下内核 + 用户态更吃内存，1G 容易在起机阶段被 OOM 拖死。
+local_conf_header:
+  qemu: |
+    QB_MEM = "-m 2048"
