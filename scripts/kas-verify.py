@@ -321,8 +321,9 @@ def check_version_knobs(
     """版本相关开关必须与目标 release 匹配。
 
     这些差异都是真跑 bitbake -p 才暴露的（见 docs/kas.md）：
-    dunfell 的 local.conf.sample 是 CONF_VERSION=1；5.0+ 禁止 S=${WORKDIR}；
-    6.0 用 sbom-cve-check 取代 cve-check；bitbake 仓库不能当 layer。
+    dunfell 的 local.conf.sample 是 CONF_VERSION=1；6.0+ 禁止 S=${WORKDIR}
+    且解包目录改到 UNPACKDIR（5.0 没有这个变量）；6.0 用 sbom-cve-check 取代
+    cve-check；bitbake 仓库不能当 layer。
     """
     text = _local_conf_text(config)
 
@@ -336,17 +337,25 @@ def check_version_knobs(
             f"{release} 需要 CONF_VERSION ??= \"2\""
         )
 
-    if release in ("scarthgap", "wrynose"):
+    # UNPACKDIR 是 6.0 才引入的：5.0（scarthgap）及更早的 poky 里根本没有这个变量，
+    # 写成 ${UNPACKDIR} 会让 S 停在字面量，do_unpack 的 cleandirs 展开后被
+    # bb.utils.mkdirhier 的 '$' 检查打死（真构建才暴露，bitbake -n 看不出来）。
+    if release == "wrynose":
         if 'YP_SRC_DIR = "${UNPACKDIR}"' not in text:
             raise VerificationError(
-                f"{release} 的 file:// 解包在 UNPACKDIR，"
+                "wrynose 的 file:// 解包在 UNPACKDIR，"
                 "必须设置 YP_SRC_DIR = \"${UNPACKDIR}\""
             )
-        if "UNPACKDIR ?=" in text:
-            raise VerificationError(
-                "禁止在配置层定义 UNPACKDIR（会污染上游默认值，"
-                "导致 96 个 recipe 解析失败）"
-            )
+    elif 'YP_SRC_DIR = "${UNPACKDIR}"' in text:
+        raise VerificationError(
+            f"{release} 没有 UNPACKDIR 变量（6.0 才引入），不能覆盖 YP_SRC_DIR"
+        )
+
+    if "UNPACKDIR ?=" in text:
+        raise VerificationError(
+            "禁止在配置层定义 UNPACKDIR（会污染上游默认值，"
+            "导致 96 个 recipe 解析失败）"
+        )
 
     if release == "wrynose":
         if 'YP_CVE_CLASS = "sbom-cve-check"' not in text:
@@ -365,8 +374,15 @@ def check_version_knobs(
             )
 
     if variant == "custom":
-        if 'YP_CVE_ENABLE = "1"' not in text:
-            raise VerificationError("custom 需要 YP_CVE_ENABLE = \"1\"")
+        # 开关值随 P2 进度变：当前 "0" —— cve-check 要先建 NVD 全量库（约 4 小时）。
+        # 这里只要求显式写出取值；打开/关闭的理由在 config/degraded.txt 里。
+        if (
+            'YP_CVE_ENABLE = "1"' not in text
+            and 'YP_CVE_ENABLE = "0"' not in text
+        ):
+            raise VerificationError(
+                'custom 需要显式写 YP_CVE_ENABLE = "0" 或 "1"'
+            )
         if 'INHERIT += "cve-check"' in text:
             raise VerificationError(
                 'INHERIT += "cve-check" 在 scarthgap+ 找不到 classes/，'

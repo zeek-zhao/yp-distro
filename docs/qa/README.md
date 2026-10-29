@@ -12,6 +12,21 @@
 - 跨版本差异的唯一真本是 `config/crossdiff.txt`，报告只做呈现；无可比版本时记为 `n/a`，不新增降级项。
 - `tests/bats/99_coverage.bats` 校验特性标注、降级理由和最新报告三处一致。
 
+## QEMU 存证怎么来
+
+```bash
+scripts/qemu.sh --release <release> --variant <variant> [--timeout 300]
+```
+
+- 宿主侧入口是 `scripts/qemu.sh`，容器内部分是 `scripts/lib/inner-qemu.sh`；
+  两者都在仓库里，改一次不用两边同步。
+- 镜像名取 `config/variants/<variant>.env` 的 `IMAGE`（`general` = `core-image-minimal`，
+  `custom` = `yp-image`），不在脚本里写死。
+- 串口日志固定落在 `work/artifacts/<release>/<variant>/qemu-serial.log`；
+  报告只读这个文件判断 `login:` 是否出现，不重新起机。
+- 三个版本约束写在 `inner-qemu.sh` 里：3.1 的 `runqemu` 要 machine 位置参数、
+  4.0+ 不能给 machine、wrynose 的 `.zst` 只支持 `snapshot` 模式。
+
 ## 降级项实测依据（wrynose = yocto-6.0.4）
 
 | aspect | 实测依据 |

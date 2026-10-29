@@ -4,6 +4,9 @@ header:
     - kas/base.yml
 
 local_conf_header:
+  release-name: |
+    # custom variant 的主机名要带 release 名（§4.2）
+    YP_RELEASE_NAME = "dunfell"
   dunfell: |
     CONF_VERSION = "1"
 

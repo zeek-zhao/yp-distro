@@ -25,12 +25,19 @@ setup() {
 @test "yp distro requires poky before identity and both includes after it" {
     run grep -vE '^[[:space:]]*(#|$)' "${DISTRO_DIR}/yp.conf"
     [ "${status}" -eq 0 ]
-    [ "${#lines[@]}" -eq 5 ]
     [ "${lines[0]}" = 'require conf/distro/poky.conf' ]
     [ "${lines[1]}" = 'DISTRO = "yp"' ]
     [ "${lines[2]}" = 'DISTRO_NAME = "YP (Yocto Platform)"' ]
     [ "${lines[3]}" = 'require conf/distro/include/yp-common.inc' ]
     [ "${lines[4]}" = 'require conf/distro/include/yp-compat.inc' ]
+    # 身份与 include 之后只允许两类叠加：
+    #   1) CVE 类的条件 INHERIT（必须放 distro 级，image 级会 SkipRecipe）
+    #   2) virtual 提供者钉死（两种分隔符各一行）
+    local extra
+    extra="$(printf '%s\n' "${lines[@]:5}")"
+    [[ "${extra}" == *'INHERIT += "${@bb.utils.contains'* ]]
+    [[ "${extra}" == *'PREFERRED_PROVIDER_virtual/cpp-hello = "cpp-hello"'* ]]
+    [[ "${extra}" == *'PREFERRED_PROVIDER:virtual/cpp-hello = "cpp-hello"'* ]]
 }
 
 # bats test_tags=layer
@@ -69,9 +76,14 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "reference image installs the cpp example" {
+@test "reference image installs the cpp example by real package name" {
     grep -qx 'SUMMARY = "YP reference image"' "${IMAGE_DIR}/yp-image.bb"
-    grep -qx 'IMAGE_INSTALL += " virtual/cpp-hello"' "${IMAGE_DIR}/yp-image.bb"
+    grep -qx 'IMAGE_INSTALL += "cpp-hello"' "${IMAGE_DIR}/yp-image.bb"
+    # IMAGE_INSTALL 里的虚拟名在 do_rootfs 阶段按 RPROVIDES 解析，而 RPROVIDES
+    # 不能带 virtual/ 前缀（6.0 QA virtual-slash），3.1~5.0 也会报
+    # "Nothing RPROVIDES 'virtual/cpp-hello'"。所以镜像只装真实包名。
+    run grep -qE '^IMAGE_INSTALL.*virtual/cpp-hello' "${IMAGE_DIR}/yp-image.bb"
+    [ "${status}" -eq 1 ]
 }
 
 # bats test_tags=layer
@@ -84,17 +96,23 @@ setup() {
 
 # bats test_tags=layer
 @test "layer configuration and core recipes have no colon overrides" {
-    run grep -rnE ':(append|prepend|remove)\b|:[$][{]PN[}]' \
-        "${LAYER_DIR}/conf" "${LAYER_DIR}/recipes-core"
+    # 只查真正的代码行：yp-compat.inc 的说明性注释会引用冒号写法当例子。
+    # recipes-example/ 不在此列——那是刻意的兼容性演示（两种分隔符各写一行）。
+    run bash -c "grep -rnE ':(append|prepend|remove)\b|:[$][{]PN[}]' \
+        '${LAYER_DIR}/conf' '${LAYER_DIR}/recipes-core' \
+        | grep -vE ':[0-9]+:[[:space:]]*#'"
     [ "${status}" -eq 1 ]
     [ -z "${output}" ]
 }
 
 # bats test_tags=layer
-@test "core minimal bbappend retains the general variant example" {
-    [ -f "${IMAGE_DIR}/core-image-minimal.bbappend" ]
-    grep -qx 'EXTRA_IMAGEDEPENDS += "cpp-hello-scancode"' "${IMAGE_DIR}/core-image-minimal.bbappend"
-    grep -qx 'IMAGE_INSTALL += "virtual/cpp-hello"' "${IMAGE_DIR}/core-image-minimal.bbappend"
+@test "general variant leaves the oe-core image untouched" {
+    # C27：general 直接用 core-image-minimal，所有差异都落在 custom 的 yp-image 上。
+    # 曾经挂过 core-image-minimal.bbappend（EXTRA_IMAGEDEPENDS += cpp-hello-scancode），
+    # #22 已删除；do_scancode 属 P2 未决能力（C26），不能重新挂回镜像。
+    [ ! -f "${IMAGE_DIR}/core-image-minimal.bbappend" ]
+    run grep -rn 'cpp-hello-scancode' "${IMAGE_DIR}"
+    [ "${status}" -eq 1 ]
 }
 
 # bats test_tags=layer
