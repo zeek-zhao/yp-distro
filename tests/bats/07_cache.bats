@@ -14,7 +14,7 @@ teardown() {
         fi
     fi
     if [[ -n "${test_root:-}" ]]; then
-        rm -r -- "${test_root}"
+        rm -rf -- "${test_root}"
     fi
     if [[ -n "${render_archive:-}" ]]; then
         rm -f -- "${render_archive}"
