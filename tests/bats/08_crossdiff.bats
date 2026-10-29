@@ -10,7 +10,7 @@ teardown() {
     if [[ -n "${render_archive:-}" ]]; then
         rm -f -- "${render_archive}"
     fi
-    rm -r -- "${test_root}"
+    rm -rf -- "${test_root}"
 }
 
 validate_crossdiff() {

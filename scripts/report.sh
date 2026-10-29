@@ -119,8 +119,10 @@ if ((render_only == 0)); then
     target_xml="${ROOT_DIR}/reports/bats-${release}-${variant}-${date_stamp}.xml"
 
     SECONDS=0
+    # stdin 必须重定向：部分用例的 teardown 会 rm -r 含只读 git 对象的临时仓库，
+    # rm 在 tty 上会停在 “remove write-protected regular file?” 提示上永久阻塞。
     if bats --formatter junit --output "${output_dir}" -r "${ROOT_DIR}/tests/bats" \
-        >"${output_dir}/bats.xml"; then
+        >"${output_dir}/bats.xml" </dev/null; then
         bats_status=0
     else
         bats_status=$?
@@ -256,7 +258,9 @@ render_crossdiff() {
     ' "${crossdiff_file}"
 }
 
-if ((${#artifact_paths[@]} > 0)); then
+# 只有真跑过测试/构建的归档才写 sha256：--render-only 常在测试里被调用，
+# 若无条件重写会把已归档的 artifacts.sha256 的 commit 头改掉（#41）。
+if ((render_only == 0)) && ((${#artifact_paths[@]} > 0)); then
     checksum_file="${ROOT_DIR}/docs/qa/${release}/artifacts.sha256"
     {
         printf '# Source: release=%s variant=%s commit=%s\n' \
