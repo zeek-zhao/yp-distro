@@ -15,7 +15,7 @@ local_conf_header:
     YP_CVE_GLOBAL_INHERIT = "0"
     # 6.0 删掉了 debug-tweaks，等价组合是这三项（见 image.bbclass 的 validitems）。
     YP_IMAGE_FEATURES = "allow-empty-password allow-root-login post-install-logging ssh-server-dropbear"
-    # 5.0 起 file:// 解包到 ${UNPACKDIR}，且禁止 S = ${WORKDIR}
+    # 6.0 起 file:// 解包到 ${UNPACKDIR}，且禁止 S = ${WORKDIR}
     YP_SRC_DIR = "${UNPACKDIR}"
 
 repos:

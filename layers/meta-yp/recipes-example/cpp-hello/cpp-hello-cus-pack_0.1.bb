@@ -27,6 +27,8 @@ FILES_${PN}-cus = "${CUS_DIR}${bindir}/helloworld1"
 SUMMARY:${PN}-cus = "cus program for helloworld"
 SUMMARY_${PN}-cus = "cus program for helloworld"
 
-PROVIDES += "virtual/cpp-hello"
-# RPROVIDES 不能用 virtual/ 前缀（6.0 QA virtual-slash）；
-# IMAGE_INSTALL 的 "virtual/cpp-hello" 由 build 期 PREFERRED_PROVIDER 解析。
+# 刻意不 PROVIDES "virtual/cpp-hello"：同一个虚拟名有两个提供者时，
+# PREFERRED_PROVIDER 会把没被选中的那份 recipe 直接 SkipRecipe ——
+# "cpp-hello-cus-pack was skipped: PREFERRED_PROVIDER_virtual/cpp-hello
+#  set to cpp-hello"，连 `bitbake cpp-hello-cus-pack` 都点不着。
+# 虚拟名留给 cpp-hello；本 recipe 只出真实包，属于 P2 的多包拆分能力。

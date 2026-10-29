@@ -102,20 +102,32 @@ for path in files:
 @test "release-specific knobs match each Yocto version" {
     grep -q 'CONF_VERSION = "1"' "${KAS_DIR}/releases/dunfell.yml"
     grep -q 'CONF_VERSION ??= "2"' "${KAS_DIR}/base.yml"
-    for release in scarthgap wrynose; do
-        grep -q 'YP_SRC_DIR = "${UNPACKDIR}"' \
+    # UNPACKDIR 只有 6.0（wrynose）才有；5.0 覆盖它会让 S 停在字面量，
+    # 真构建时 do_unpack 直接 fatal（bitbake -n 看不出来）。
+    grep -qE '^[[:space:]]*YP_SRC_DIR = "\$\{UNPACKDIR\}"' \
+        "${KAS_DIR}/releases/wrynose.yml"
+    for release in dunfell kirkstone scarthgap; do
+        # 只看赋值行：scarthgap 的注释里会提到 YP_SRC_DIR（说明为什么不能覆盖）
+        run grep -qE '^[[:space:]]*YP_SRC_DIR[[:space:]]*=' \
             "${KAS_DIR}/releases/${release}.yml"
+        [ "${status}" -eq 1 ]
     done
     grep -q 'YP_CVE_CLASS = "sbom-cve-check"' "${KAS_DIR}/releases/wrynose.yml"
-    grep -q 'YP_CVE_ENABLE = "1"' "${KAS_DIR}/variants/custom.yml"
+    # 开关值随 P2 进度变（当前 "0"：NVD 全量建库约 4 小时），只校验取值合法
+    grep -Eq 'YP_CVE_ENABLE = "[01]"' "${KAS_DIR}/variants/custom.yml"
     run grep -q 'INHERIT += "cve-check"' "${KAS_DIR}/variants/custom.yml"
     [ "${status}" -eq 1 ]
 }
 
 # bats test_tags=kas
-@test "image recipe inherits CVE class only for custom variant" {
+@test "distro layer inherits the CVE class only when the variant asks for it" {
+    # 不能就近 inherit 到 yp-image：cve-update-nvd2-native.bb 自带 SkipRecipe 守卫，
+    # 类没进全局 INHERIT 就会在解析期报 "Nothing PROVIDES 'cve-update-nvd2-native'"。
     grep -q "bb.utils.contains('YP_CVE_ENABLE', '1', d.getVar('YP_CVE_CLASS')" \
+        "${ROOT_DIR}/layers/meta-yp/conf/distro/yp.conf"
+    run grep -q "bb.utils.contains('YP_CVE_ENABLE'" \
         "${ROOT_DIR}/layers/meta-yp/recipes-core/images/yp-image.bb"
+    [ "${status}" -eq 1 ]
 }
 
 # bats test_tags=kas

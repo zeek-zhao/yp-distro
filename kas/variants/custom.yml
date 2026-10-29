@@ -37,4 +37,8 @@ local_conf_header:
     # ---- CVE 检查 ----
     # 只开开关，类名由各 release 决定（wrynose 是 sbom-cve-check）。
     # 真正的全局 inherit 在 layers/meta-yp/conf/distro/yp.conf 里做。
-    YP_CVE_ENABLE = "1"
+    # P1 先关：cve-check 要先建 NVD 库（services.nvd.nist.gov 2.0 API，
+    # 2000 条一页、实测约 2 分钟一页、全量约 125 页 → 单建库几小时）。
+    # 能力矩阵里「合规（SPDX/FOSS/CVE）」是 P2，机制（yp.conf 全局 INHERIT +
+    # 各 release 类名）已就绪，改回 "1" 即可打开（建议同时配 NVDCVE_API_KEY）。
+    YP_CVE_ENABLE = "0"
