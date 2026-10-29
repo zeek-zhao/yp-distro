@@ -59,3 +59,8 @@ lint 只检查跟踪的工程脚本、5 个 Dockerfile 和 workflow；遗留参�
 - 匿名 pull 返回 403：检查四个包是否仍为 private；由派单方公开后重跑验收。
 - 境外镜像构建卡在 apt：确认 `build-args` 覆盖 `APT_MIRROR=archive.ubuntu.com`，不要沿用 215 的国内源。
 - 找不到 actionlint：运行安装器并将对应 `<prefix>/bin` 加到 PATH；静态 BATS 不会跳过此项。
+
+  四个 release 构建镜像与 dev 镜像自 #46 起已在 `/usr/local/bin` 内置
+  shellcheck / shfmt / bats / hadolint / actionlint（构建日志里有
+  `=== linter fingerprint ===` 一行可核对版本），只有直接在宿主跑门禁才需要
+  自己装。之前 release 镜像缺后两个，归档报告只能临时补装、结果不可复现。
