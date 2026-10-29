@@ -281,6 +281,7 @@ def verify_target(
                 )
 
     check_version_knobs(config, release, variant)
+    check_build_env(config, variant)
 
 
 def _local_conf_text(config: dict[str, Any]) -> str:
@@ -313,6 +314,100 @@ def check_shared_cache(repo_root: Path) -> None:
                 f"#23 {path}: 必须且只能设置 {variable} = \"{expected}\""
                 f"（缺失或赋值不符）{detail}"
             )
+
+
+def check_build_env(config: dict[str, Any], variant: str) -> None:
+    """P2 基础设施：并行度上限、磁盘守护、buildhistory、mirror tarball。
+
+    这几项实测都不进 basehash（加完仍 4551 任务里 4548 个不用重跑），
+    也就是说写错了不会在构建时报错、只会悄悄不生效，所以只能靠这里兜。
+    """
+    text = _local_conf_text(config)
+
+    limits = []
+    for variable, template in (
+        ("BB_NUMBER_THREADS", r'BB_NUMBER_THREADS\s*=\s*"\$\{@min\('
+                              r'oe\.utils\.cpu_count\(\), (\d+)\)\}"'),
+        ("PARALLEL_MAKE", r'PARALLEL_MAKE\s*=\s*"-j \$\{@min\('
+                          r'oe\.utils\.cpu_count\(\), (\d+)\)\}"'),
+    ):
+        match = re.search(template, text)
+        if not match:
+            raise VerificationError(
+                f"{variable} 必须写成 min(oe.utils.cpu_count(), <上限>)："
+                "bitbake.conf 里它本身是 ?= 且比 local.conf 先解析，"
+                "在这里再写 ?= 是空操作，写死数值则会脱离机器实际核数"
+            )
+        limits.append(int(match.group(1)))
+    if limits[0] != limits[1]:
+        raise VerificationError(
+            f"BB_NUMBER_THREADS 上限 {limits[0]} 与 PARALLEL_MAKE 上限 "
+            f"{limits[1]} 必须一致，否则任务数与单任务线程数错配"
+        )
+
+    diskmon = re.search(r'BB_DISKMON_DIRS\s*=\s*"([^"]+)"', text)
+    if not diskmon:
+        raise VerificationError("BB_DISKMON_DIRS 未设置：共享盘写满时不会自动刹停")
+    entries = diskmon.group(1).split()
+    for action in ("STOPTASKS", "HALT"):
+        if not any(entry.startswith(f"{action},") for entry in entries):
+            raise VerificationError(
+                f"BB_DISKMON_DIRS 缺少 {action} 档；只有 STOPTASKS 会无限等，"
+                "只有 HALT 会一有压力就整锅端"
+            )
+    for variable in ("${TMPDIR}", "${DL_DIR}", "${SSTATE_DIR}"):
+        if not any(variable in entry for entry in entries):
+            raise VerificationError(
+                f"BB_DISKMON_DIRS 没覆盖 {variable}；这三个才是真正会长大的目录"
+            )
+
+    if 'INHERIT += "buildhistory"' not in text:
+        raise VerificationError(
+            '必须 INHERIT += "buildhistory"：跨版本包内容对比的底账'
+        )
+    history_dir = re.search(r'BUILDHISTORY_DIR\s*=\s*"([^"]+)"', text)
+    if not history_dir:
+        raise VerificationError("BUILDHISTORY_DIR 未设置")
+    location = history_dir.group(1)
+    prefix = "${TOPDIR}/../../buildhistory/"
+    if not location.startswith(prefix):
+        raise VerificationError(
+            f"BUILDHISTORY_DIR 必须落在 {prefix} 下：放 TMPDIR 里会随 rm_work "
+            "或清理 work/ 一起消失"
+        )
+    for placeholder in ("${YP_RELEASE_NAME}", "${YP_VARIANT}"):
+        if placeholder not in location:
+            raise VerificationError(
+                f"BUILDHISTORY_DIR 必须含 {placeholder}，"
+                "否则四个 release / 两个 variant 会写进同一个仓库互相覆盖"
+            )
+    if not re.search(r'BUILDHISTORY_COMMIT\s*=\s*"1"', text):
+        raise VerificationError(
+            'BUILDHISTORY_COMMIT 必须为 "1"：不提交就只是一堆未跟踪文件，'
+            "buildhistory-diff 无从比对"
+        )
+    if not re.search(r'BUILDHISTORY_COMMIT_AUTHOR\s*=\s*"[^"]+"', text):
+        raise VerificationError(
+            "BUILDHISTORY_COMMIT_AUTHOR 未设置：容器里没有 git 身份时 "
+            "commit 会静默失败（buildhistory_commit 整段带 `|| true`）"
+        )
+
+    if not re.search(r'BB_GENERATE_MIRROR_TARBALLS\s*=\s*"1"', text):
+        raise VerificationError(
+            "BB_GENERATE_MIRROR_TARBALLS 未打开："
+            "git 源无法二次搬运，断网环境重建只能重新拉全部源码"
+        )
+
+    if variant == "custom":
+        if not re.search(r'YP_VARIANT\s*=\s*"custom"', text):
+            raise VerificationError(
+                "custom variant 必须显式设置 YP_VARIANT，"
+                "否则 buildhistory 会写进 general 的仓库"
+            )
+    elif re.search(r'YP_VARIANT\s*=\s*"\w+"', text):
+        raise VerificationError(
+            "general variant 不应另设 YP_VARIANT（默认即 general）"
+        )
 
 
 def check_version_knobs(
