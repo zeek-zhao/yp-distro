@@ -122,3 +122,55 @@ setup() {
     grep -Fq '## 降级清单' "${archive_path}"
     grep -Fq 'spdx-format' "${archive_path}"
 }
+
+# bats test_tags=report
+@test "artifact helpers accept pre-5.0 naming without rootfs segment" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-v4"
+    mkdir -p "${deploy_dir}"
+    printf 'x' >"${deploy_dir}/core-image-minimal-qemux86-64.ext4"
+    printf 'y' >"${deploy_dir}/core-image-minimal-qemux86-64.tar.bz2"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.manifest"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.qemuboot.conf"
+    touch "${deploy_dir}/core-image-minimal-qemux86-64.testdata.json"
+
+    run artifact_primary "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"core-image-minimal-qemux86-64.ext4" ]]
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".ext4"* ]]
+    [[ "${output}" == *".tar.bz2"* ]]
+    [[ "${output}" != *".manifest"* ]]
+    [[ "${output}" != *".qemuboot.conf"* ]]
+    [[ "${output}" != *".testdata.json"* ]]
+}
+
+# bats test_tags=report
+@test "artifact helpers fall back to timestamped aliases and do not double count" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-ts"
+    mkdir -p "${deploy_dir}"
+    printf 'x' >"${deploy_dir}/core-image-minimal-qemux86-64-20260101010101.rootfs.ext4"
+    printf 'y' >"${deploy_dir}/core-image-minimal-qemux86-64-20260101010101.rootfs.tar.bz2"
+
+    run artifact_primary "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *".rootfs.ext4" ]]
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [ "$(printf '%s\n' "${output}" | wc -l)" -eq 2 ]
+}
+
+# bats test_tags=report
+@test "artifact list prefers short names when both naming styles coexist" {
+    local deploy_dir="${BATS_TEST_TMPDIR}/deploy-both"
+    mkdir -p "${deploy_dir}"
+    printf 'x' >"${deploy_dir}/core-image-minimal-qemux86-64.rootfs.ext4"
+    printf 'x' >"${deploy_dir}/core-image-minimal-qemux86-64-20260101010101.rootfs.ext4"
+
+    run artifact_list "${deploy_dir}" core-image-minimal qemux86-64
+    [ "${status}" -eq 0 ]
+    [ "$(printf '%s\n' "${output}" | wc -l)" -eq 1 ]
+    [[ "${output}" == *"core-image-minimal-qemux86-64.rootfs.ext4" ]]
+}
