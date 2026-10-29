@@ -43,6 +43,10 @@ REPO_FIELDS = {
 }
 RELEASES = ("dunfell", "kirkstone", "scarthgap", "wrynose")
 VARIANTS = ("general", "custom")
+# 默认 machine：kas/targets/*.yml 里 include 的就是它；非默认 machine 走
+# `kas build target.yml:machine.yml` 叠加，不允许复制 target 文件。
+DEFAULT_MACHINE = "qemux86-64"
+MACHINES = (DEFAULT_MACHINE, "qemuarm64")
 REPO_ENV_KEYS = {
     "poky": ("POKY_TAG",),
     "openembedded-core": ("OE_CORE_TAG",),
@@ -192,6 +196,57 @@ def check_all_headers(repo_root: Path) -> None:
             raise VerificationError(
                 f"{path.relative_to(repo_root)}: header.version must be 14"
             )
+
+
+def check_machine_dimension(repo_root: Path) -> None:
+    """config/machines/<m>.env 与 kas/machines/<m>.yml 必须成对且 MACHINE 一致。
+
+    machine 维度是双轨表达：env 给脚本（工作目录/产物/报告命名），yml 给 bitbake
+    （顶层 machine: 字段）。任一侧漂移都会让产物落到错误的机器上，或 runqemu
+    拿错 machine，所以双向校验。
+    """
+    env_dir = repo_root / "config" / "machines"
+    yml_dir = repo_root / "kas" / "machines"
+    env_names = {path.stem for path in env_dir.glob("*.env")}
+    yml_names = {path.stem for path in yml_dir.glob("*.yml")}
+    if missing := sorted(env_names - yml_names):
+        raise VerificationError(
+            f"config/machines 有而 kas/machines 缺：{', '.join(missing)}"
+        )
+    if missing := sorted(yml_names - env_names):
+        raise VerificationError(
+            f"kas/machines 有而 config/machines 缺：{', '.join(missing)}"
+        )
+    if DEFAULT_MACHINE not in env_names:
+        raise VerificationError(f"缺少默认 machine 配置：{DEFAULT_MACHINE}")
+    for name in sorted(env_names):
+        env = read_env(env_dir / f"{name}.env")
+        declared = env.get("MACHINE", "")
+        if declared != name:
+            raise VerificationError(
+                f"config/machines/{name}.env: MACHINE={declared!r} 与文件名不一致"
+            )
+        config = load_yaml(yml_dir / f"{name}.yml")
+        if config.get("machine") != declared:
+            raise VerificationError(
+                f"kas/machines/{name}.yml: machine={config.get('machine')!r} "
+                f"与 config/machines/{name}.env 的 MACHINE={declared!r} 不一致"
+            )
+    # target 只允许 include 默认 machine；否则等于把 machine 维度硬编码进 8 份
+    # target 文件，改一处必漏一处。
+    for target in sorted((repo_root / "kas" / "targets").glob("*.yml")):
+        if target.name.endswith(".lock.yml"):
+            continue
+        includes = load_yaml(target).get("header", {}).get("includes", [])
+        for include in includes:
+            if not str(include).startswith("kas/machines/"):
+                continue
+            included = Path(str(include)).stem
+            if included != DEFAULT_MACHINE:
+                raise VerificationError(
+                    f"{target.relative_to(repo_root)}: 只允许 include 默认 machine "
+                    f"{DEFAULT_MACHINE}，实际 {included}（非默认机器走 kas 叠加）"
+                )
 
 
 def verify_target(
@@ -528,6 +583,12 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     print(f"engine={engine}")
+
+    try:
+        check_machine_dimension(repo_root)
+    except Exception as exc:  # 机器维度漂移不该静默通过
+        print(f"FAIL machine-dimension: {exc}")
+        return 1
 
     if args.release:
         selected = [(args.release, args.variant)]

@@ -210,3 +210,23 @@ setup() {
     run grep -qE '^checksum_name="artifacts"$' "${ROOT_DIR}/scripts/report.sh"
     [ "${status}" -eq 1 ]
 }
+
+# bats test_tags=report
+@test "report archive name carries the machine for non-default machines" {
+    # #27：同一 release 会同时存在 x86_64 与 arm64 报告，文件名必须能区分，
+    # 否则后生成的会把前一个盖掉。
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --machine qemuarm64 --render-only
+    [ "${status}" -eq 0 ]
+    local arm_archive="${ROOT_DIR}/${output##*Archive: }"
+    [[ "${arm_archive}" == *-qemuarm64-render.md ]]
+    [ -f "${arm_archive}" ]
+    grep -qF 'Machine: `qemuarm64`' "${arm_archive}"
+    rm -f -- "${arm_archive}"
+
+    # 默认 machine 的归档名保持原样，不能出现 -qemux86-64
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --render-only
+    [ "${status}" -eq 0 ]
+    local default_archive="${ROOT_DIR}/${output##*Archive: }"
+    [[ "${default_archive}" != *qemux86-64* ]]
+    rm -f -- "${default_archive}"
+}

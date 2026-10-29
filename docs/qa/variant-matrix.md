@@ -1,8 +1,12 @@
-# 变体矩阵：4 release × 2 variant = 8 种组合
+# 组合矩阵：4 release × 2 variant × 2 machine = 10 种已验收组合
 
 需求 §4.2 要求同一份代码在四个 Yocto 版本上都能出 **general**（贴近 oe-core 默认）
-与 **custom**（独立 distro `yp` + 独立镜像 `yp-image`）两套镜像。本页是 #22 的验收底稿：
-每种组合都有归档报告，报告里的 commit 是**那次真构建时**的 commit，不是重写过的值。
+与 **custom**（独立 distro `yp` + 独立镜像 `yp-image`）两套镜像。本页是 #22 与 #27 的
+验收底稿：每种组合都有归档报告，报告里的 commit 是**那次真构建时**的 commit，
+不是重写过的值。
+
+当前已验收：`4 release × 2 variant × {qemux86-64}` = 8 组（#22），
+外加 `{scarthgap, wrynose} × general × qemuarm64` = 2 组（#27）。
 
 ## 一、8 种组合一览
 
@@ -85,3 +89,61 @@ scripts/dev.sh scripts/report.sh --release <release> --variant <variant>
 ```
 
 `report.sh` 本身不构建，只读 `work/` 下的产物、日志与串口存证，因此在哪个容器跑不影响产物数据。
+
+## 六、machine 维度：arm64（#27，宿主零改动）
+
+issue 原本写着「QEMU 验证 aarch64 启动（宿主需 qemu-system-aarch64）」。实际做下来
+**宿主什么都不用装**：起机用的是 bitbake 自己编进 sysroot 的 `qemu-system-native`。
+
+```bash
+# 宿主侧
+command -v qemu-system-aarch64 || echo absent          # → absent
+# 容器内（bitbake 已经编好）
+ls work/kas-scarthgap-general/build/tmp/sysroots-components/x86_64/qemu-system-native/usr/bin/
+# → qemu-system-aarch64  qemu-system-arm  qemu-system-x86_64  ...
+```
+
+`poky/meta/recipes-devtools/qemu/qemu.inc` 里
+`QEMU_TARGETS ?= "arm aarch64 i386 loongarch64 mips ... x86_64"`，默认就含 `aarch64`，
+所以 `bitbake qemu-helper-native`（`inner-qemu.sh` 本来就会跑）顺带把
+`qemu-system-aarch64` 编了出来。runqemu 实测命令行：
+
+```
+.../qemu-helper-native/1.0/recipe-sysroot-native/usr/bin/qemu-system-aarch64 \
+  -machine virt -cpu cortex-a57 -smp 4 -m 2048 -snapshot -nographic ...
+```
+
+全程 TCG 全模拟，在 release 容器内跑，**215 宿主环境零改动**。
+
+| release | machine | 主产物 | 字节 | SHA-256（前 12） | 任务数 | 构建 | 串口 | 报告（commit） |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| scarthgap | qemuarm64 | `core-image-minimal-qemuarm64.rootfs-*.ext4` | 23115776 | `9b0dac12048b` | 4532 | 801s | 20421 | `scarthgap/20261030-8ca7fed-qemuarm64.md` |
+| wrynose | qemuarm64 | `core-image-minimal-qemuarm64.rootfs-*.ext4.zst` | 6119795 | `7a352b4c7481` | 4611 | 973s | 21934 | `wrynose/20261030-8ca7fed-qemuarm64.md` |
+
+两份报告都是 **124 例全过**（0 失败 0 跳过），串口都到 `qemuarm64 login:`，
+banner 分别是 `Poky 5.0.20 qemuarm64 /dev/ttyAMA0` 与 `Poky 6.0.4 qemuarm64 /dev/ttyAMA0`。
+
+### arm64 与 x86_64 是两套构建（不是同一镜像改名）
+
+| release | x86_64 general | arm64 general |
+|---|---|---|
+| scarthgap | 39925760 B / `d6969a793639` | 23115776 B / `9b0dac12048b` |
+| wrynose | 20274535 B / `65a5fc7be566` | 6119795 B / `7a352b4c7481` |
+
+SHA-256 与体积全不同，且 arm64 的工作区独立（`work/kas-<release>-general-qemuarm64`），
+不会和 x86_64 的 TMPDIR 互相污染。
+
+### 为什么 custom × arm64 不在本次范围
+
+`kas/variants/custom.yml` 的 multilib 段把 lib32 绑定到 **x86 tune**：
+
+```yaml
+require conf/multilib.conf
+MULTILIBS = "multilib:lib32"
+DEFAULTTUNE:virtclass-multilib-lib32 = "x86"
+DEFAULTTUNE_virtclass-multilib-lib32 = "x86"
+```
+
+在 aarch64 machine 上要成立，得另设一套 aarch64 语义的 multilib tune，
+属于独立设计而不是「把 machine 换一下」。issue #27 的验收也只要
+`--release wrynose --machine qemuarm64`（默认 general），所以本次只覆盖 general。

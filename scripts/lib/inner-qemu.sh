@@ -3,7 +3,7 @@
 # scripts/lib/inner-qemu.sh —— 在 release 容器内执行：headless 启动镜像并抓串口日志
 #
 # 由 scripts/qemu.sh 通过 project.sh shell 注入；下列变量由调用方传入：
-#   RELEASE VARIANT IMAGE [BOOT_TIMEOUT]
+#   RELEASE VARIANT IMAGE MACHINE [BOOT_TIMEOUT]
 # =============================================================================
 set -uo pipefail
 
@@ -13,9 +13,14 @@ export TERM="${TERM:-dumb}"
 RELEASE="${RELEASE:?缺少 RELEASE}"
 VARIANT="${VARIANT:?缺少 VARIANT}"
 IMAGE="${IMAGE:?缺少 IMAGE}"
+MACHINE="${MACHINE:?缺少 MACHINE}"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-300}"
 
-WORK="/work/work/kas-${RELEASE}-${VARIANT}"
+# 与 build.sh 的命名规则一致：默认 machine 不加后缀。
+MACHINE_SUFFIX=""
+[[ "${MACHINE}" == "qemux86-64" ]] || MACHINE_SUFFIX="-${MACHINE}"
+
+WORK="/work/work/kas-${RELEASE}-${VARIANT}${MACHINE_SUFFIX}"
 # 仓库形态：dunfell/kirkstone/scarthgap 是 poky 组合仓库；wrynose 是三仓拆分
 if [[ -d "${WORK}/poky" ]]; then
     OEC="${WORK}/poky"
@@ -23,7 +28,7 @@ else
     OEC="${WORK}/openembedded-core"
 fi
 BUILD="${WORK}/build"
-ART_DIR="/work/work/artifacts/${RELEASE}/${VARIANT}"
+ART_DIR="/work/work/artifacts/${RELEASE}/${VARIANT}${MACHINE_SUFFIX}"
 LOG="${ART_DIR}/qemu-serial.log"
 
 mkdir -p "${ART_DIR}"
@@ -33,6 +38,7 @@ echo "=== QEMU 启动 ==="
 echo "hostname: $(hostname)"
 echo "workdir : ${WORK}"
 echo "image   : ${IMAGE}"
+echo "machine : ${MACHINE}"
 echo "timeout : ${BOOT_TIMEOUT}s"
 echo "log     : ${LOG}"
 echo "start   : $(date --iso-8601=seconds)"
@@ -60,7 +66,7 @@ echo "qemu-helper-native: OK"
 #  2) kirkstone(4.0)+ 反过来：多传 machine 会让 IMAGE_LINK_NAME 取不到（见 docs/qa）；
 #  3) wrynose 的 IMAGE_FSTYPES 是 ext4.zst / tar.zst，runqemu 对 .zst 只支持 snapshot 模式。
 if [[ "${RELEASE}" == "dunfell" ]]; then
-    RUNQEMU_ARGS=("qemux86-64" "${IMAGE}")
+    RUNQEMU_ARGS=("${MACHINE}" "${IMAGE}")
 else
     RUNQEMU_ARGS=("${IMAGE}")
 fi
@@ -71,7 +77,12 @@ rc=$?
 set -e
 
 # timeout 杀掉后可能留下 qemu 子进程，清干净（只匹配本容器的 qemu-system）
-pkill -f 'qemu-system-x86_64.*qemux86-64' 2>/dev/null || true
+case "${MACHINE}" in
+    qemux86-64) qemu_proc_pattern='qemu-system-x86_64.*qemux86-64' ;;
+    qemuarm64) qemu_proc_pattern='qemu-system-aarch64.*qemuarm64' ;;
+    *) qemu_proc_pattern="qemu-system.*${MACHINE}" ;;
+esac
+pkill -f "${qemu_proc_pattern}" 2>/dev/null || true
 sleep 1
 
 echo

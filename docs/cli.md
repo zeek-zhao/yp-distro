@@ -11,7 +11,7 @@
 | `doctor` | 打印 8 个 release×variant 组合 + 磁盘水位检查，返回值沿用现状（水位超限非 0） | 无 |
 | `kas` | 在开发容器内静态校验 kas 配置，不检出上游仓库 | `--release` 与 `--variant`（同时指定时只校验一个组合；省略时校验全部） |
 | `test` | 跑 BATS：`bats -r tests/bats`，**不写报告**（报告归 `report`） | `--tags <tag>` → 追加 `--filter-tags <tag>` |
-| `report` | 转发 `scripts/report.sh <release> --variant <v>`（三层报告，需求 §6） | `--release`（默认 `all`）、`--variant`（默认 `general`） |
+| `report` | 转发 `scripts/report.sh <release> --variant <v> [--machine <m>]`（三层报告，需求 §6） | `--release`（默认 `all`）、`--variant`（默认 `general`）、`--machine`（默认 `qemux86-64`） |
 | `lint` | 转发 `bash scripts/ci/lint.sh`，参数直通 | 直通 |
 | `secret-scan` | 转发 `bash scripts/ci/secret-scan.sh`，参数直通 | 直通 |
 | `ci-tools` | 转发 `bash scripts/ci/install-tools.sh`，参数直通 | 直通 |
@@ -30,9 +30,35 @@
 | `e2e` | P2 阶段 |
 
 L3（真构建 + 起机）不进 `project.sh` 的占位表，是两个独立入口：
-`scripts/build.sh --release <r> --variant <v>`（串行构建）和
-`scripts/qemu.sh --release <r> --variant <v>`（headless 起机 + 抓串口）。
+`scripts/build.sh --release <r> --variant <v> [--machine <m>]`（串行构建）和
+`scripts/qemu.sh --release <r> --variant <v> [--machine <m>]`（headless 起机 + 抓串口）。
 镜像名按 `config/variants/<variant>.env` 的 `IMAGE` 取，不写死在脚本里。
+
+### machine 维度
+
+machine 是第三维（`release × variant × machine`），只影响「编给哪种机器」：
+
+| 位置 | 作用 |
+|---|---|
+| `config/machines/<m>.env` | 给脚本：`MACHINE`、`QEMU_SSH_PORT` |
+| `kas/machines/<m>.yml` | 给 bitbake：顶层 `machine:` 字段 + `QB_MEM` |
+| `kas/targets/<rel>-<var>.yml` | 只 include **默认** machine，非默认机器靠叠加 |
+
+非默认 machine 不复制 target 文件，而是用 kas 的多配置叠加：
+
+```bash
+scripts/build.sh --release scarthgap --variant general --machine qemuarm64
+# → kas build targets/scarthgap-general.yml:kas/machines/qemuarm64.yml
+#   工作区 work/kas-scarthgap-general-qemuarm64，产物与归档名带 -qemuarm64
+```
+
+**默认 machine（`qemux86-64`）不加任何后缀**，既有 8 组合的工作区路径、
+产物目录、报告文件名全部不变；只有非默认 machine 才追加 `-<machine>`。
+这样加机器维度不会让历史归档的路径失效。
+
+aarch64 起机走容器内 `qemu-system-native`（bitbake 自己编的
+`qemu-system-aarch64`，`QEMU_TARGETS` 默认就含 `aarch64`），
+**不需要在宿主装 `qemu-system-arm`**，宿主环境保持零改动。
 
 ## 典型流程
 
@@ -40,6 +66,14 @@ L3（真构建 + 起机）不进 `project.sh` 的占位表，是两个独立入�
 
 ```bash
 ./project.sh config --release scarthgap --variant general --machine qemux86-64
+```
+
+arm64 的构建 + 起机（宿主无需任何 aarch64 模拟器）：
+
+```bash
+scripts/build.sh --release scarthgap --variant general --machine qemuarm64
+scripts/qemu.sh --release scarthgap --variant general --machine qemuarm64 --timeout 900
+scripts/report.sh --release scarthgap --variant general --machine qemuarm64
 ```
 
 检查将要执行的 Docker 命令，不启动容器：

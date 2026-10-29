@@ -53,6 +53,17 @@ resolve_all() {
     export RELEASE REPO_MODE TAG VARIANT DISTRO IMAGE MACHINE
 }
 
+# machine 维度后缀：默认 machine（qemux86-64）不加后缀，保证既有 8 组合的
+# 工作区、产物目录、归档名完全不变；非默认 machine 用 -<machine> 隔离，
+# 否则同一 release/variant 的两套构建会共用一个 TMPDIR 并互相覆盖产物。
+machine_suffix() {
+    local machine="${1:-${MACHINE:-qemux86-64}}"
+    if [[ -z "${machine}" || "${machine}" == "qemux86-64" ]]; then
+        return 0
+    fi
+    printf -- '-%s' "${machine}"
+}
+
 work_dir() {
     [[ $# -ge 1 && $# -le 2 ]] || die "用法：work_dir <kind> [release]"
 
