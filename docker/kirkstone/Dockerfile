@@ -9,6 +9,8 @@ ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ARG SHELLCHECK_VERSION=0.9.0
 ARG SHFMT_VERSION=3.14.1
 ARG BATS_VERSION=1.14.0
+ARG HADOLINT_VERSION=2.15.1
+ARG ACTIONLINT_VERSION=1.7.7
 ARG GH_DL=https://github.com
 
 ENV YOCTO_RELEASE=kirkstone \
@@ -23,6 +25,8 @@ ENV YOCTO_RELEASE=kirkstone \
     SHELLCHECK_VERSION=${SHELLCHECK_VERSION} \
     SHFMT_VERSION=${SHFMT_VERSION} \
     BATS_VERSION=${BATS_VERSION} \
+    HADOLINT_VERSION=${HADOLINT_VERSION} \
+    ACTIONLINT_VERSION=${ACTIONLINT_VERSION} \
     GH_DL=${GH_DL} \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
@@ -35,6 +39,8 @@ LABEL org.opencontainers.image.title="yocto-kirkstone" \
 
 COPY docker/common/install-yocto-deps.sh /tmp/install-yocto-deps.sh
 RUN bash /tmp/install-yocto-deps.sh && rm -f /tmp/install-yocto-deps.sh
+COPY docker/common/install-linters.sh /tmp/install-linters.sh
+RUN bash /tmp/install-linters.sh && rm -f /tmp/install-linters.sh
 
 USER builder
 WORKDIR /work
