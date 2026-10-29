@@ -69,3 +69,6 @@ Makefile targets
     ├── shell      ──> scripts/container.sh
     └── source / build / qemu / review / e2e       （未实现占位）
 ```
+
+构建环境相关的并行度上限、磁盘闸、buildhistory 与源码镜像包，见
+[build-env.md](build-env.md)。
