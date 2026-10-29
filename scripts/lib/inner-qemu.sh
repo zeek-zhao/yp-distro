@@ -38,9 +38,13 @@ echo "log     : ${LOG}"
 echo "start   : $(date --iso-8601=seconds)"
 echo
 
-# runqemu 需要 qemu-native / qemu-helper-native 在 native sysroot 里
+# runqemu 需要 qemu-native / qemu-helper-native 在 native sysroot 里。
+# oe-init-build-env 第 29 行会读 $BBSERVER，本脚本带 set -u 就会直接
+# "BBSERVER: unbound variable" 退出，所以 source 前后临时关掉 -u。
 # shellcheck disable=SC1091
+set +u
 source "${OEC}/oe-init-build-env" "${BUILD}" >/dev/null
+set -u
 cd "${BUILD}" || exit 1
 
 if ! bitbake qemu-helper-native >"${ART_DIR}/qemu-helper.log" 2>&1; then
