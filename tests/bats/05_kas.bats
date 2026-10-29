@@ -150,3 +150,49 @@ for path in files:
     grep -q '^kas-layer | all | tests/bats/05_kas.bats | kas | ok$' \
         "${ROOT_DIR}/config/features.txt"
 }
+
+# bats test_tags=kas
+@test "build env bounds the parallelism by min(cores, 20)" {
+    grep -Eq '^    BB_NUMBER_THREADS = "\$\{@min\(oe\.utils\.cpu_count\(\), 20\)\}"$' \
+        "${KAS_DIR}/base.yml"
+    grep -Eq '^    PARALLEL_MAKE = "-j \$\{@min\(oe\.utils\.cpu_count\(\), 20\)\}"$' \
+        "${KAS_DIR}/base.yml"
+    # bitbake.conf 里这两个变量本身就是 ?=，且比 local.conf 先解析，
+    # 在这里再写 ?= 等于没写 —— 不报错、只是自动并行度失效。
+    run grep -E '^    (BB_NUMBER_THREADS|PARALLEL_MAKE) \?=' "${KAS_DIR}/base.yml"
+    [ "${status}" -eq 1 ]
+}
+
+# bats test_tags=kas
+@test "disk monitor keeps both STOPTASKS and HALT tiers" {
+    local line
+    line="$(grep '^    BB_DISKMON_DIRS = ' "${KAS_DIR}/base.yml")"
+    [ -n "${line}" ]
+    [[ "${line}" == *"STOPTASKS,\${TMPDIR}"* ]]
+    [[ "${line}" == *"STOPTASKS,\${DL_DIR}"* ]]
+    [[ "${line}" == *"STOPTASKS,\${SSTATE_DIR}"* ]]
+    [[ "${line}" == *"HALT,\${TMPDIR}"* ]]
+    [[ "${line}" == *"HALT,\${SSTATE_DIR}"* ]]
+}
+
+# bats test_tags=kas
+@test "buildhistory writes one repository per release and variant" {
+    grep -q '^    INHERIT += "buildhistory"$' "${KAS_DIR}/base.yml"
+    grep -qF 'BUILDHISTORY_DIR = "${TOPDIR}/../../buildhistory/${YP_RELEASE_NAME}-${YP_VARIANT}"' \
+        "${KAS_DIR}/base.yml"
+    grep -q '^    BUILDHISTORY_COMMIT = "1"$' "${KAS_DIR}/base.yml"
+    grep -q '^    BUILDHISTORY_COMMIT_AUTHOR = ' "${KAS_DIR}/base.yml"
+    # general 靠默认值，custom 必须显式覆盖；两边都漏就会写进同一目录互相覆盖
+    grep -q '^    YP_VARIANT ??= "general"$' "${KAS_DIR}/base.yml"
+    grep -q '^    YP_VARIANT = "custom"$' "${KAS_DIR}/variants/custom.yml"
+    run grep -q 'YP_VARIANT' "${KAS_DIR}/variants/general.yml"
+    [ "${status}" -eq 1 ]
+}
+
+# bats test_tags=kas
+@test "mirror tarballs are generated for git sources" {
+    grep -q '^    BB_GENERATE_MIRROR_TARBALLS = "1"$' "${KAS_DIR}/base.yml"
+    # 只允许在 base 段统一打开，任何 release 单独覆盖都会让那一版断网不可重建
+    run grep -rq 'BB_GENERATE_MIRROR_TARBALLS' "${KAS_DIR}/releases"
+    [ "${status}" -eq 1 ]
+}
