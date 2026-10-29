@@ -11,7 +11,8 @@ setup() {
     local yml_count target_count release variant
     yml_count="$(find "${KAS_DIR}" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
     target_count="$(find "${KAS_DIR}/targets" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
-    [ "${yml_count}" -eq 16 ]
+    # 17 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
+    [ "${yml_count}" -eq 17 ]
     [ "${target_count}" -eq 8 ]
     for release in dunfell kirkstone scarthgap wrynose; do
         for variant in general custom; do
@@ -50,7 +51,7 @@ import yaml
 root = Path(sys.argv[1])
 files = [p for p in sorted((root / "kas").rglob("*.yml"))
          if not p.name.endswith(".lock.yml")]
-assert len(files) == 16, len(files)
+assert len(files) == 17, len(files)
 for path in files:
     assert yaml.safe_load(path.read_text())["header"]["version"] == 14, path
 ' "${ROOT_DIR}"
@@ -195,4 +196,45 @@ for path in files:
     # 只允许在 base 段统一打开，任何 release 单独覆盖都会让那一版断网不可重建
     run grep -rq 'BB_GENERATE_MIRROR_TARBALLS' "${KAS_DIR}/releases"
     [ "${status}" -eq 1 ]
+}
+
+# bats test_tags=kas
+@test "machine dimension keeps config and kas machine files in pairs" {
+    # #27：machine 是双轨表达 —— env 给脚本（工作区/产物/报告命名），
+    # yml 给 bitbake（顶层 machine:）。缺一侧或值不一致，构建会落到错误的
+    # 机器上，所以两侧必须成对。
+    [ -f "${ROOT_DIR}/config/machines/qemuarm64.env" ]
+    [ -f "${KAS_DIR}/machines/qemuarm64.yml" ]
+    grep -qx 'MACHINE=qemuarm64' "${ROOT_DIR}/config/machines/qemuarm64.env"
+    grep -qx 'machine: qemuarm64' "${KAS_DIR}/machines/qemuarm64.yml"
+    # 默认 machine 不能从任一侧消失
+    [ -f "${ROOT_DIR}/config/machines/qemux86-64.env" ]
+    [ -f "${KAS_DIR}/machines/qemux86-64.yml" ]
+    run python3 "${VERIFY_SCRIPT}" --engine builtin
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"8 targets OK"* ]]
+}
+
+# bats test_tags=kas
+@test "machine suffix only appears for non-default machines" {
+    # 默认 machine 必须保持无后缀：既有 8 组合的工作区、产物目录、归档名
+    # 全依赖这一点，一旦加后缀，历史报告里的路径就全部失效。
+    run machine_suffix qemux86-64
+    [ "${status}" -eq 0 ]
+    [ -z "${output}" ]
+
+    run machine_suffix qemuarm64
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "-qemuarm64" ]
+}
+
+# bats test_tags=kas
+@test "kas targets never hardcode a non-default machine" {
+    # 非默认 machine 靠 kas 叠加（target.yml:machine.yml）接入；一旦有人把
+    # arm64 写进 8 份 target，machine 维度就会开始各处漂移。
+    run grep -l 'kas/machines/qemuarm64.yml' "${KAS_DIR}"/targets/*.yml
+    [ "${status}" -eq 1 ]
+    grep -q 'kas/machines/qemux86-64.yml' "${KAS_DIR}/targets/wrynose-general.yml"
+    grep -qF 'kas_configs+=":/work/kas/machines/${machine}.yml"' \
+        "${ROOT_DIR}/scripts/build.sh"
 }

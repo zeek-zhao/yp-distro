@@ -13,8 +13,8 @@ source "${ROOT_DIR}/scripts/lib/artifacts.sh"
 usage() {
     cat <<'EOF'
 Usage:
-  scripts/report.sh <release|all> [--variant V] [--render-only]
-  scripts/report.sh --release R [--variant V] [--render-only]
+  scripts/report.sh <release|all> [--variant V] [--machine M] [--render-only]
+  scripts/report.sh --release R [--variant V] [--machine M] [--render-only]
   scripts/report.sh --print-fingerprint
 EOF
 }
@@ -45,6 +45,7 @@ fi
 
 release=""
 variant="general"
+machine_arg="qemux86-64"
 render_only=0
 while (($# > 0)); do
     case "$1" in
@@ -57,6 +58,11 @@ while (($# > 0)); do
         --variant)
             (($# >= 2)) || die "--variant 缺少参数"
             variant="$2"
+            shift 2
+            ;;
+        --machine)
+            (($# >= 2)) || die "--machine 缺少参数"
+            machine_arg="$2"
             shift 2
             ;;
         --render-only)
@@ -88,7 +94,7 @@ if [[ "${release}" == "all" ]]; then
     machine=""
     image=""
 else
-    resolve_all "${release}" "${variant}" qemux86-64
+    resolve_all "${release}" "${variant}" "${machine_arg}"
     report_tag="${TAG}"
     machine="${MACHINE}"
     image="${IMAGE}"
@@ -98,6 +104,9 @@ if ((render_only == 0)); then
     command -v bats >/dev/null 2>&1 || die "找不到 bats"
     command -v python3 >/dev/null 2>&1 || die "找不到 python3（解析 JUnit 报告需要）"
 fi
+
+# machine 后缀：默认 qemux86-64 为空，与 build.sh / qemu.sh 规则一致。
+machine_sfx="$(machine_suffix "${machine_arg}")"
 
 date_stamp="$(date +%Y%m%d)"
 start_time="$(date --iso-8601=seconds)"
@@ -116,7 +125,7 @@ failure_list=""
 if ((render_only == 0)); then
     mkdir -p "${ROOT_DIR}/reports"
     output_dir="$(mktemp -d "${ROOT_DIR}/reports/.bats-report.XXXXXX")"
-    target_xml="${ROOT_DIR}/reports/bats-${release}-${variant}-${date_stamp}.xml"
+    target_xml="${ROOT_DIR}/reports/bats-${release}-${variant}${machine_sfx}-${date_stamp}.xml"
 
     SECONDS=0
     # stdin 必须重定向：部分用例的 teardown 会 rm -r 含只读 git 对象的临时仓库，
@@ -182,7 +191,7 @@ if [[ "${release}" != "all" ]]; then
         deploy_dir="${YP_DEPLOY_DIR}"
         [[ "${deploy_dir}" == /* ]] || deploy_dir="${ROOT_DIR}/${deploy_dir}"
     else
-        deploy_dir="${ROOT_DIR}/work/kas-${release}-${variant}/build/tmp/deploy/images/${machine}"
+        deploy_dir="${ROOT_DIR}/work/kas-${release}-${variant}${machine_sfx}/build/tmp/deploy/images/${machine}"
     fi
     if primary_artifact="$(artifact_primary "${deploy_dir}" "${image}" "${machine}")"; then
         :
@@ -265,6 +274,7 @@ render_crossdiff() {
 # 于是旧归档报告（<date>-<old-sha>.md）指向的文件头部 commit 已经不是它了。
 checksum_name="artifacts-${date_stamp}-${commit}"
 [[ "${variant}" == "general" ]] || checksum_name+="-${variant}"
+checksum_name+="${machine_sfx}"
 
 if ((render_only == 0)) && ((${#artifact_paths[@]} > 0)); then
     checksum_file="${ROOT_DIR}/docs/qa/${release}/${checksum_name}.sha256"
@@ -291,7 +301,7 @@ while IFS='|' read -r aspect degraded_release reason requirement || [[ -n "${asp
     degraded_rows+=("${aspect}|${reason}|${requirement}")
 done <"${degraded_file}"
 
-serial_log="${ROOT_DIR}/work/artifacts/${release}/${variant}/qemu-serial.log"
+serial_log="${ROOT_DIR}/work/artifacts/${release}/${variant}${machine_sfx}/qemu-serial.log"
 serial_exists=0
 serial_login="no"
 serial_bytes=""
@@ -303,7 +313,7 @@ fi
 
 # 缺失构建统计只能记 n/a，不能新增 degraded；config/degraded.txt 是唯一真本，
 # 99_coverage.bats 会双向校验报告降级清单（CI 不执行真构建）。
-build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}.log"
+build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}${machine_sfx}.log"
 build_meta="${build_log%.log}.meta"
 build_duration="n/a"
 tasks_summary="n/a"
@@ -332,6 +342,7 @@ fi
 # 其它 variant 追加 -<variant>，否则同一 release 的两个 variant 会互相覆盖。
 archive_name="${date_stamp}-${commit}"
 [[ "${variant}" == "general" ]] || archive_name+="-${variant}"
+archive_name+="${machine_sfx}"
 ((render_only == 0)) || archive_name+="-render"
 archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
 {
@@ -343,6 +354,7 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
     fi
     printf -- '- Release: `%s`\n' "${release}"
     printf -- '- Variant: `%s`\n' "${variant}"
+    printf -- '- Machine: `%s`\n' "$([[ -n "${machine}" ]] && printf '%s' "${machine}" || printf 'n/a')"
     printf -- '- Commit: `%s`\n' "${commit}"
     printf -- '- Tag: `%s`\n' "${report_tag}"
     printf -- '- SOURCE_FINGERPRINT: `%s`\n' "${fingerprint}"
@@ -386,8 +398,8 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
     fi
     printf '\n## QEMU 串口\n\n'
     if ((serial_exists)); then
-        printf -- '- 串口日志: `work/artifacts/%s/%s/qemu-serial.log`\n' \
-            "${release}" "${variant}"
+        printf -- '- 串口日志: `work/artifacts/%s/%s%s/qemu-serial.log`\n' \
+            "${release}" "${variant}" "${machine_sfx}"
         printf -- '- 启动到 login prompt: `%s`（匹配到 `login:`）\n' "${serial_login}"
         printf -- '- 日志字节数: `%s`\n' "${serial_bytes}"
     else
