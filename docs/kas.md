@@ -229,15 +229,20 @@ custom 比 general 多 6 个 recipe，来自 multilib（lib32）。
    （空 dict 合法；被 schema 拒绝的是 `layers: {meta: {}}` 这种**值**为 `{}` 的写法。）
 2. **`CONF_VERSION` 各版本不同**：dunfell 的 `local.conf.sample` 是 1，
    kirkstone+ 是 2。base 里写死 2 会让 dunfell 直接 `NotImplementedError`。
-3. **5.0+ 禁止 `S = "${WORKDIR}"`**，`file://` 解包改到 `${UNPACKDIR}`，
-   而 3.1/4.0 没有这个变量。解法**不是**去 `??=` 上游的 `UNPACKDIR`——
+3. **6.0+ 禁止 `S = "${WORKDIR}"`**，`file://` 解包改到 `${UNPACKDIR}`，
+   而 3.1/4.0/5.0 没有这个变量。解法**不是**去 `??=` 上游的 `UNPACKDIR`——
    实测那会污染默认值，导致 96 个 recipe 报
    `Using UNPACKDIR = ${WORKDIR} is not supported`。而是定义自己的
-   `YP_SRC_DIR`：base 默认 `${WORKDIR}`，scarthgap/wrynose 覆盖成 `${UNPACKDIR}`。
+   `YP_SRC_DIR`：base 默认 `${WORKDIR}`，只有 wrynose 覆盖成 `${UNPACKDIR}`。
 4. **wrynose 删掉了 `cve-check.bbclass`**，换成 SBOM 驱动的 `sbom-cve-check`；
    且从 5.0 起它在 `classes-recipe/`，配置层 `INHERIT += "cve-check"` 找不到。
    解法：`YP_CVE_ENABLE`（variant 决定开关）+ `YP_CVE_CLASS`（release 决定类名），
-   由 `yp-image.bb` 用 `inherit ${@bb.utils.contains(...)}` 条件继承。
+   由 **distro**（`conf/distro/yp.conf`）用全局 `INHERIT += "${@bb.utils.contains(...)}"`
+   条件打开。不能就近 inherit 到 `yp-image`：`cve-update-nvd2-native.bb` 自带
+   `SkipRecipe` 守卫，类没在全局 INHERIT 里，解析期就报
+   `Nothing PROVIDES 'cve-update-nvd2-native'`。6.0 的 `sbom-cve-check.bbclass`
+   落在 `classes-recipe/` 下、全局 INHERIT 找不到，因此 wrynose 用
+   `YP_CVE_GLOBAL_INHERIT = "0"` 关掉这一层（它的 CVE 本来就是 degraded）。
    **不能在 local.conf 里拼 `IMAGE_CLASSES += " ${YP_CVE_CLASS}"`**：
    `+=` 立即展开，而 kas 的 `local_conf_header` 段顺序是
    base → custom → machine → release，展开时还拿不到 release 定义的值。
@@ -248,12 +253,20 @@ custom 比 general 多 6 个 recipe，来自 multilib（lib32）。
 这 5 条都已变成 `kas-verify.py` 的 `check_version_knobs` 断言，
 并有 5 个反向用例（改坏配置必须报错）证明断言不是空壳。
 
-### 仍未解决：冒号 override 在 dunfell 上静默失效
+### 已解决：冒号 override 在 dunfell 上静默失效
 
-`cpp-hello-cus-pack_0.1.bb` 里还有 `FILES:${PN}`、`do_compile:append()` 这类
-冒号写法。dunfell 3.1 的 bitbake 把 `:` 当作变量名/函数名的一部分，
-**不报错但也不生效**；scarthgap+ 只认冒号写法。所以同一份 recipe 在四版上
-「都能解析」，但 dunfell 上这些行的语义是丢的。
+dunfell 3.1 的 bitbake 把 `:` 当作变量名/函数名的一部分，`FILES:${PN}`、
+`SUMMARY:${PN}` 这类冒号写法**不报错也不生效**；4.0+ 反过来只认冒号。
+两种写法**没有交集**，所以做法是：
 
-不影响 `bitbake -p`，但会影响 dunfell 的打包（`FILES` 不生效）。
-留到 dunfell 真构建（#21）时按版本拆 recipe 或分版本 `.bbappend` 处理。
+1. **变量级**：两种分隔符各写一行（`FILES:${PN}-cus` + `FILES_${PN}-cus`）。
+   未命中的那一行在该版本里就是惰性变量，没人读，无副作用。
+   已覆盖 `FILES`、`SUMMARY`、`PREFERRED_PROVIDER_virtual/*`、
+   `DEFAULTTUNE_virtclass-multilib-lib32`。
+2. **任务级没有退路**：`do_install:append()` 在 3.1 上会被解析成一个没人调用的
+   函数名，**静默失效**，而 `do_install_append()` 在 4.0+ 上同样静默失效。
+   所以任务一律**整体重定义**（见 `cpp-hello-cus-pack` 的 `do_compile`/`do_install`）。
+
+代价是 recipe 里成对出现两行，收益是同一份 recipe 四版语义一致，
+不需要按版本拆 recipe 或分版本 `.bbappend`。`tests/bats/04_layer.bats`
+只对 `conf/` 与 `recipes-core/` 禁冒号写法（`recipes-example/` 是兼容性演示，例外）。

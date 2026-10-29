@@ -31,3 +31,7 @@ do_scancode() {
 }
 
 addtask scancode after do_compile before do_install
+
+# C26：recipe 内 do_scancode 属 P2 未决能力（需要镜像内有 scancode CLI），
+# 默认不执行；打开方式：local.conf 里 YP_SCANCODE_ENABLE = "1"。
+do_scancode[noexec] = "${@'0' if d.getVar('YP_SCANCODE_ENABLE') == '1' else '1'}"
