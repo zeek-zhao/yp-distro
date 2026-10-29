@@ -4,10 +4,18 @@ header:
     - kas/base.yml
 
 local_conf_header:
+  release-name: |
+    # custom variant 的主机名要带 release 名（§4.2）
+    YP_RELEASE_NAME = "wrynose"
   wrynose: |
     # 6.0 移除了 cve-check.bbclass，改为 SBOM 驱动的 sbom-cve-check
     YP_CVE_CLASS = "sbom-cve-check"
-    # 5.0 起 file:// 解包到 ${UNPACKDIR}，且禁止 S = ${WORKDIR}
+    # 6.0 的 sbom-cve-check.bbclass 在 meta/classes-recipe/，全局 INHERIT 找不到，
+    # 因此不在 yp.conf 里打开；wrynose 的 CVE 能力按 config/degraded.txt 记为降级。
+    YP_CVE_GLOBAL_INHERIT = "0"
+    # 6.0 删掉了 debug-tweaks，等价组合是这三项（见 image.bbclass 的 validitems）。
+    YP_IMAGE_FEATURES = "allow-empty-password allow-root-login post-install-logging ssh-server-dropbear"
+    # 6.0 起 file:// 解包到 ${UNPACKDIR}，且禁止 S = ${WORKDIR}
     YP_SRC_DIR = "${UNPACKDIR}"
 
 repos:

@@ -174,3 +174,22 @@ setup() {
     [ "$(printf '%s\n' "${output}" | wc -l)" -eq 1 ]
     [[ "${output}" == *"core-image-minimal-qemux86-64.rootfs.ext4" ]]
 }
+
+# bats test_tags=report
+@test "report archive name carries the variant, general stays unsuffixed" {
+    # #22 要在同一 release 下同时归档 general 与 custom，文件名必须能区分，
+    # 否则后生成的会把前一个覆盖掉。
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --variant custom --render-only
+    [ "${status}" -eq 0 ]
+    local custom_archive="${ROOT_DIR}/${output##*Archive: }"
+    [[ "${custom_archive}" == *-custom-render.md ]]
+    [[ -f "${custom_archive}" ]]
+    rm -f -- "${custom_archive}"
+
+    run "${ROOT_DIR}/scripts/report.sh" --release wrynose --variant general --render-only
+    [ "${status}" -eq 0 ]
+    local general_archive="${ROOT_DIR}/${output##*Archive: }"
+    [[ "${general_archive}" == *-render.md ]]
+    [[ "${general_archive}" != *-general-* ]]
+    rm -f -- "${general_archive}"
+}
