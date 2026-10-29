@@ -314,7 +314,15 @@ fi
 if [[ -f "${build_log}" ]]; then
     tasks_value="$(sed -nE "s/.*NOTE: Tasks Summary: Attempted ([0-9]+) tasks of which ([0-9]+) didn't need to be rerun.*/\1 \/ \2/p" "${build_log}" | tail -n 1)"
     # Current is the total objects in the cache directory, not the number of hits.
+    # 4.0+ 的格式：
+    #   Sstate summary: Wanted 50 Local 20 Mirrors 0 Missed 30 Current 40 (40% match, ...)
+    # 3.1（bitbake 1.46）没有 Local/Mirrors，命中数叫 Found：
+    #   Sstate summary: Wanted 1108 Found 0 Missed 1108 Current 0 (0% match, 0% complete)
+    # 两种都得认，否则 dunfell 的 Sstate hit 会退化成 n/a。
     sstate_value="$(sed -nE 's/.*Sstate summary: Wanted ([0-9]+) Local ([0-9]+) Mirrors [0-9]+ Missed [0-9]+ Current [0-9]+ \(([0-9]+)% match,.*/\2\/\1 (\3%)/p' "${build_log}" | tail -n 1)"
+    if [[ -z "${sstate_value}" ]]; then
+        sstate_value="$(sed -nE 's/.*Sstate summary: Wanted ([0-9]+) Found ([0-9]+) Missed [0-9]+ Current [0-9]+ \(([0-9]+)% match,.*/\2\/\1 (\3%)/p' "${build_log}" | tail -n 1)"
+    fi
     [[ -z "${tasks_value}" ]] || tasks_summary="${tasks_value}"
     [[ -z "${sstate_value}" ]] || sstate_hit="${sstate_value}"
 fi
