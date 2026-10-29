@@ -23,6 +23,7 @@ ARG BATS_SUPPORT_VERSION=0.3.0
 ARG BATS_ASSERT_VERSION=2.1.0
 ARG SHFMT_VERSION=3.14.1
 ARG HADOLINT_VERSION=2.15.1
+ARG ACTIONLINT_VERSION=1.7.7
 ARG GH_VERSION=2.103.3
 ARG YQ_VERSION=4.54.1
 ARG NODE_VERSION=22.23.4
@@ -104,6 +105,14 @@ RUN curl -fsSL "${GH_DL}/hadolint/hadolint/releases/download/v${HADOLINT_VERSION
         -o /usr/local/bin/hadolint \
     && chmod 0755 /usr/local/bin/hadolint \
     && hadolint --version
+
+RUN curl -fsSL "${GH_DL}/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+        -o /tmp/actionlint.tar.gz \
+    && mkdir -p /tmp/actionlint \
+    && tar -xzf /tmp/actionlint.tar.gz -C /tmp/actionlint actionlint \
+    && install -m 0755 /tmp/actionlint/actionlint /usr/local/bin/actionlint \
+    && rm -rf /tmp/actionlint /tmp/actionlint.tar.gz \
+    && actionlint --version
 
 RUN curl -fsSL "${GH_DL}/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
         -o /tmp/gh.tar.gz \
@@ -192,6 +201,7 @@ RUN { \
         printf 'shellcheck=%s\n' "$(shellcheck --version | awk '/^version:/{print $2}')"; \
         printf 'shfmt=%s\n'      "$(shfmt --version | tr -d 'v')"; \
         printf 'hadolint=%s\n'   "$(hadolint --version | awk '{print $4}')"; \
+        printf 'actionlint=%s\n' "$(actionlint --version | head -1)"; \
         printf 'gh=%s\n'         "$(gh --version | head -1 | awk '{print $3}')"; \
         printf 'yq=%s\n'         "$(yq --version | awk '{print $4}')"; \
         printf 'node=%s\n'       "$(node --version | tr -d 'v')"; \
