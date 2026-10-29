@@ -183,3 +183,26 @@ EOF
     ! grep -Fq 'Build log:' "${archive}"
     grep -Fq '无（本版本全部能力按标准实现）' "${archive}"
 }
+
+# bats test_tags=cache
+@test "report.sh falls back to the 3.1 sstate summary format" {
+    # bitbake 1.46 的 summary 没有 Local/Mirrors，命中数叫 Found：
+    #   Sstate summary: Wanted N Found M Missed K Current C (P% match, Q% complete)
+    # 只认 4.0+ 的写法会让 dunfell 的 Sstate hit 一直是 n/a（#47）。
+    cache_fixture
+    git -C "${test_root}" init -q
+    git -C "${test_root}" add config scripts
+    git -C "${test_root}" -c user.name=Test -c user.email=test@example.invalid \
+        -c core.hooksPath=/dev/null commit -qm fixture
+    mkdir -p "${test_root}/work/logs"
+    local log="${test_root}/work/logs/build-dunfell-general.log"
+    # Current(340) 故意远大于 Found(12)：把缓存总数当命中数的实现会渲染成 340/100。
+    cat >"${log}" <<'EOF'
+Sstate summary: Wanted 100 Found 12 Missed 88 Current 340 (12% match, 0% complete)
+EOF
+    run bash "${test_root}/scripts/report.sh" --release dunfell --variant general --render-only
+    [ "${status}" -eq 0 ]
+    local archive="${test_root}/${output##*Archive: }"
+    grep -Fq 'Sstate hit: 12/100 (12%)' "${archive}"
+    rm -- "${log}"
+}
