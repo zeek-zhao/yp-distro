@@ -206,6 +206,56 @@ relative_path() {
     fi
 }
 
+render_crossdiff() {
+    local crossdiff_file="${YP_CROSSDIFF_FILE:-${ROOT_DIR}/config/crossdiff.txt}"
+    if [[ ! -f "${crossdiff_file}" ]]; then
+        printf 'n/a（尚无其它版本归档，无可比对象）\n'
+        return
+    fi
+    awk -F'|' -v current="${release}" '
+        function trim(value) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+            return value
+        }
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        {
+            aspects[++rows] = trim($1)
+            for (i = 2; i <= NF; i++) {
+                field = trim($i)
+                separator = index(field, "=")
+                name = substr(field, 1, separator - 1)
+                values[rows, name] = substr(field, separator + 1)
+                if (!(name in seen)) {
+                    seen[name] = 1
+                    releases[++columns] = name
+                }
+            }
+        }
+        END {
+            if (!rows || !(current in seen) || columns < 2) {
+                print "n/a（尚无其它版本归档，无可比对象）"
+                exit
+            }
+            printf "| aspect | 本版本(%s) |", current
+            for (i = 1; i <= columns; i++)
+                if (releases[i] != current) printf " %s |", releases[i]
+            printf "\n|---|---|"
+            for (i = 1; i < columns; i++) printf "---|"
+            printf "\n"
+            for (row = 1; row <= rows; row++) {
+                value = values[row, current]
+                printf "| `%s` | %s |", aspects[row], (value == "" ? "n/a" : value)
+                for (i = 1; i <= columns; i++) {
+                    if (releases[i] == current) continue
+                    value = values[row, releases[i]]
+                    printf " %s |", (value == "" ? "n/a" : value)
+                }
+                printf "\n"
+            }
+        }
+    ' "${crossdiff_file}"
+}
+
 if ((${#artifact_paths[@]} > 0)); then
     checksum_file="${ROOT_DIR}/docs/qa/${release}/artifacts.sha256"
     {
@@ -331,6 +381,8 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
             printf '| `%s` | %s | %s |\n' "${aspect}" "${reason}" "${requirement}"
         done
     fi
+    printf '\n## 跨版本差异\n\n'
+    render_crossdiff
 } >"${archive}"
 
 if ((render_only == 0)); then
