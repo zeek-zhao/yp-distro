@@ -29,6 +29,11 @@
 | `review` | P2 阶段 |
 | `e2e` | P2 阶段 |
 
+L3（真构建 + 起机）不进 `project.sh` 的占位表，是两个独立入口：
+`scripts/build.sh --release <r> --variant <v>`（串行构建）和
+`scripts/qemu.sh --release <r> --variant <v>`（headless 起机 + 抓串口）。
+镜像名按 `config/variants/<variant>.env` 的 `IMAGE` 取，不写死在脚本里。
+
 ## 典型流程
 
 先查看某 release、variant 和 machine 的最终配置：

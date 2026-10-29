@@ -260,8 +260,13 @@ render_crossdiff() {
 
 # 只有真跑过测试/构建的归档才写 sha256：--render-only 常在测试里被调用，
 # 若无条件重写会把已归档的 artifacts.sha256 的 commit 头改掉（#41）。
+# 校验文件名同归档名：general 用 artifacts.sha256，其它 variant 用
+# artifacts-<variant>.sha256，否则两个 variant 会互相覆盖（#22 要对比两者 SHA）。
+checksum_name="artifacts"
+[[ "${variant}" == "general" ]] || checksum_name="artifacts-${variant}"
+
 if ((render_only == 0)) && ((${#artifact_paths[@]} > 0)); then
-    checksum_file="${ROOT_DIR}/docs/qa/${release}/artifacts.sha256"
+    checksum_file="${ROOT_DIR}/docs/qa/${release}/${checksum_name}.sha256"
     {
         printf '# Source: release=%s variant=%s commit=%s\n' \
             "${release}" "${variant}" "${commit}"
@@ -314,7 +319,10 @@ if [[ -f "${build_log}" ]]; then
     [[ -z "${sstate_value}" ]] || sstate_hit="${sstate_value}"
 fi
 
+# 归档名：general 保持 <date>-<sha>[-render]（历史文件不动），
+# 其它 variant 追加 -<variant>，否则同一 release 的两个 variant 会互相覆盖。
 archive_name="${date_stamp}-${commit}"
+[[ "${variant}" == "general" ]] || archive_name+="-${variant}"
 ((render_only == 0)) || archive_name+="-render"
 archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
 {
@@ -350,7 +358,8 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
         printf -- '- Artifact bytes: `%s`\n' "$(artifact_bytes "${primary_artifact}")"
         printf -- '- Artifact SHA-256: `%s`\n' "$(artifact_sha256 "${primary_artifact}")"
         printf -- '- Image digest: n/a（本地构建无 registry digest）\n'
-        printf -- '- 全部产物 sha256: 见 `artifacts.sha256`（同目录，路径相对仓库根）\n'
+        printf -- '- 全部产物 sha256: 见 `%s.sha256`（同目录，路径相对仓库根）\n' \
+            "${checksum_name}"
     else
         printf -- '- Deploy dir: `%s`\n' \
             "$([[ -n "${deploy_dir}" ]] && relative_path "${deploy_dir}" || printf 'n/a')"
