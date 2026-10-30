@@ -36,12 +36,12 @@ bash scripts/dev.sh bash -lc 'cd /work/work/kas-scarthgap-general/build && \
 # PARALLEL_MAKE="-j 20"
 ```
 
-## 2. 磁盘闸：STOPTASKS + HALT 两档
+## 2. 磁盘闸：STOPTASKS + ABORT 两档
 
 ```bitbake
 BB_DISKMON_DIRS = "STOPTASKS,${TMPDIR},1G,100K STOPTASKS,${DL_DIR},1G,100K \
 STOPTASKS,${SSTATE_DIR},1G,100K STOPTASKS,/tmp,100M,100K \
-HALT,${TMPDIR},100M,1K HALT,${DL_DIR},100M,1K HALT,${SSTATE_DIR},100M,1K HALT,/tmp,10M,1K"
+ABORT,${TMPDIR},100M,1K ABORT,${DL_DIR},100M,1K ABORT,${SSTATE_DIR},100M,1K ABORT,/tmp,10M,1K"
 ```
 
 （`local.conf` 里写在一行，这里为可读性折行。）
@@ -49,13 +49,21 @@ HALT,${TMPDIR},100M,1K HALT,${DL_DIR},100M,1K HALT,${SSTATE_DIR},100M,1K HALT,/t
 | 档位 | 触发 | 行为 |
 |---|---|---|
 | `STOPTASKS` | 剩余 < 1G 或 inode < 100K | 停派新任务，等在跑的收尾 |
-| `HALT` | 剩余 < 100M 或 inode < 1K | 立即中止整个构建 |
+| `ABORT` | 剩余 < 100M 或 inode < 1K | 立即中止整个构建 |
 
 阈值刻意压得很低 —— 这是「别把共享盘写满」的最后一道闸，不是水位管理。
 日常拦截看 `scripts/lib/disk-guard.sh` 的 85% 门禁，那个才会在构建开始前就拒绝。
 
 只写 `STOPTASKS` 会在低水位无限等（永远派不出新任务，也不报错）；
-只写 `HALT` 会一有压力就整锅端。两档都要有。
+只写 `ABORT` 会一有压力就整锅端。两档都要有。
+
+**第二档为什么不是 `HALT`**：`HALT` 是 bitbake 4.0 才加进 DiskSpaceMonitor 的动作，
+3.1（dunfell）只认 `ABORT`/`STOPTASKS`/`WARN`。四版共用一份 `base.yml`，写 `HALT`
+会让 dunfell 在解析阶段直接
+`ERROR: Unknown disk space monitor action: HALT`（实测于 #48 的 dunfell 构建）。
+这份配置 2026-10-30 之前是 `HALT`，P1 的 dunfell 真构建跑在它之前，所以一直没暴露。
+
+宿主机 /tmp 归 systemd 管，`/tmp` 那一档只在小 tmpfs 环境下才会触发，留着无害。
 
 ## 3. buildhistory：跨版本包内容底账
 
