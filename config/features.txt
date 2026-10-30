@@ -9,6 +9,8 @@ spdx-format | dunfell,kirkstone,scarthgap | - | - | ok
 spdx-format | wrynose | - | - | degraded
 cve-tool | dunfell,kirkstone,scarthgap | - | - | ok
 cve-tool | wrynose | - | - | degraded
+cve-db | dunfell,kirkstone,scarthgap | tests/bats/09_cvedb.bats | cvedb | ok
+sdk | all | tests/bats/10_sdk.bats | sdk | ok
 distro-backfill | wrynose | - | - | degraded
 report-archive | all | tests/bats/06_report.bats | report | ok
 shared-cache | all | tests/bats/07_cache.bats | cache | ok

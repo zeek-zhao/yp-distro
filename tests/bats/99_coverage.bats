@@ -188,9 +188,11 @@ _trim() {
     local -A report_aspects=() config_aspects=()
 
     [[ -d "${report_dir}" ]] || skip "需要报告归档"
+    # 只认「<date>-<sha>…md」这类构建报告：SDK 归档（sdk-<date>-<sha>.md）没有
+    # 降级清单节，混进来会让本用例误判“最新报告缺节”。
     while IFS= read -r line; do
         report_files+=("${report_dir}/${line}")
-    done < <(find "${report_dir}" -maxdepth 1 -type f -name '*.md' -printf '%f\n' |
+    done < <(find "${report_dir}" -maxdepth 1 -type f -name '[0-9]*.md' -printf '%f\n' |
         LC_ALL=C sort)
     ((${#report_files[@]} > 0)) || skip "需要报告归档"
     latest_report="${report_files[${#report_files[@]} - 1]}"
