@@ -11,6 +11,13 @@
   镜像产物的校验和及来源信息（`#41` 之前叫固定的 `artifacts.sha256`，同一 release
   重跑会改写旧归档指向的文件，历史文件保留原样）。
 - 报告的「QEMU 串口」记录登录提示匹配状态和日志大小；未运行时明确标注。
+- `docs/qa/<release>/sdk-<date>-<sha>[-<variant>][-<machine>].md` 是一次 SDK/eSDK
+  归档（`scripts/report.sh --sdk`），含体积、SHA-256、安装后 `gcc -dumpversion`
+  与 `devtool` 结果。它**没有**降级清单节，所以 `99_coverage.bats` 挑「最新报告」
+  时只认 `<date>-<sha>…md` 这类构建报告（`find -name '[0-9]*.md'`）。
+- 报告的「CVE 检查」一节只在构建带了 `--cve` 时出现（开关记在
+  `work/logs/build-<rel>-<var>.flags`），内容是离线库版本、库内 CVE 数、
+  镜像清单名与「未修复/已修复/忽略」计数。
 - `config/features.txt` 标注每个能力的 `ok` 或 `degraded` 状态。
 - `config/degraded.txt` 是降级理由及需求条款的唯一来源。
 - 报告按 release 从 `config/degraded.txt` 呈现降级项。

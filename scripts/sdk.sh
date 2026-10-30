@@ -161,17 +161,17 @@ fi
     exit 1
 }
 
-sdk_installer="$(find "${deploy_sdk}" -maxdepth 1 -name "${IMAGE}-${machine}-toolchain-*.sh" \
-    ! -name '*-ext-*' | LC_ALL=C sort | tail -n 1)"
-esdk_installer="$(find "${deploy_sdk}" -maxdepth 1 -name "${IMAGE}-${machine}-toolchain-*-ext-*.sh" |
+sdk_installer="$(find "${deploy_sdk}" -maxdepth 1 -name "*${IMAGE}*${machine}-toolchain-*.sh" \
+    ! -name '*-toolchain-ext-*' | LC_ALL=C sort | tail -n 1)"
+esdk_installer="$(find "${deploy_sdk}" -maxdepth 1 -name "*${IMAGE}*${machine}-toolchain-ext-*.sh" |
     LC_ALL=C sort | tail -n 1)"
 [[ -n "${sdk_installer}" ]] || {
-    printf 'ERROR: 找不到 SDK 安装包（%s/%s-%s-toolchain-*.sh）\n' \
+    printf 'ERROR: 找不到 SDK 安装包（%s/*%s*%s-toolchain-*.sh）\n' \
         "${deploy_sdk}" "${IMAGE}" "${machine}" >&2
     exit 1
 }
 [[ -n "${esdk_installer}" ]] || {
-    printf 'ERROR: 找不到 eSDK 安装包（%s/%s-%s-toolchain-*-ext-*.sh）\n' \
+    printf 'ERROR: 找不到 eSDK 安装包（%s/*%s*%s-toolchain-ext-*.sh）\n' \
         "${deploy_sdk}" "${IMAGE}" "${machine}" >&2
     exit 1
 }
