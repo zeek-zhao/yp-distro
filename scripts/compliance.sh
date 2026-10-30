@@ -630,7 +630,7 @@ image="${IMAGE}"
 SECTIONS_DIR="$(artifact_dir)/compliance.d"
 
 if ((print_sbom)); then
-    sbom_file || die "找不到 ${release}/${variant} 的镜像级 SBOM"
+    sbom_file || die "找不到 ${release}/${variant} 的镜像级 SBOM；先跑 scripts/build.sh --release ${release} --variant ${variant} --spdx"
     exit 0
 fi
 
