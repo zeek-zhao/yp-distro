@@ -34,7 +34,9 @@ L3（真构建 + 起机）不进 `project.sh` 的占位表，是几个独立入�
 `scripts/qemu.sh --release <r> --variant <v> [--machine <m>]`（headless 起机 + 抓串口）、
 `scripts/sdk.sh --release <r> --variant <v>`（SDK/eSDK 构建 + 安装验证）、
 `scripts/cve-db.sh sync|fetch|build|status`（离线 CVE 库，见 `docs/cve.md`）、
-`scripts/scancode.sh sync|status|path`（按需准备 ScanCode CLI，见 `docs/scancode.md`）。
+`scripts/scancode.sh sync|status|path`（按需准备 ScanCode CLI，见 `docs/scancode.md`）、
+`scripts/compliance.sh --release <r> [--variant <v>] [--only sbom|cve|foss]`
+（SBOM / CVE / FOSS 三件证据采集，见 `docs/compliance.md`）。
 镜像名按 `config/variants/<variant>.env` 的 `IMAGE` 取，不写死在脚本里。
 
 `--cve` 只对 `--variant custom` 有效：它把 `kas/features/cve.yml`
@@ -47,6 +49,9 @@ L3（真构建 + 起机）不进 `project.sh` 的占位表，是几个独立入�
 （一项 `INHERIT += "create-spdx"`），产出 SBOM 供合规报告使用（issue #26）。
 默认不打开 —— `do_create_spdx` 会为每个 recipe 各挂一次。
 SDK 归档用 `scripts/report.sh --release <r> --variant <v> --sdk`，见 `docs/sdk.md`。
+合规归档用 `scripts/report.sh --release <r> --variant <v> --compliance`，
+输入是 `scripts/compliance.sh` 写的 `work/artifacts/<release>/<variant>/compliance.json`，
+输出独立文件 `docs/qa/<release>/compliance-<date>-<sha>[-<variant>].md`（不并入主报告）。
 
 ### machine 维度
 

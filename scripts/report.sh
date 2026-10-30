@@ -16,7 +16,12 @@ Usage:
   scripts/report.sh <release|all> [--variant V] [--machine M] [--render-only]
   scripts/report.sh --release R [--variant V] [--machine M] [--render-only]
   scripts/report.sh --release R [--variant V] [--machine M] --sdk
+  scripts/report.sh --release R [--variant V] [--machine M] --compliance
   scripts/report.sh --print-fingerprint
+
+--sdk / --compliance 只出那一类归档，不跑 BATS：
+  sdk        读 work/artifacts/.../sdk.json（scripts/sdk.sh 产出）
+  compliance 读 work/artifacts/.../compliance.json（scripts/compliance.sh 产出）
 EOF
 }
 
@@ -49,6 +54,7 @@ variant="general"
 machine_arg="qemux86-64"
 render_only=0
 sdk_mode=0
+compliance_mode=0
 while (($# > 0)); do
     case "$1" in
         --release)
@@ -73,6 +79,10 @@ while (($# > 0)); do
             ;;
         --sdk)
             sdk_mode=1
+            shift
+            ;;
+        --compliance)
+            compliance_mode=1
             shift
             ;;
         -h | --help)
@@ -109,6 +119,8 @@ fi
 # machine 后缀：默认 qemux86-64 为空，与 build.sh / qemu.sh 规则一致。
 # 日期与 commit 在 --sdk 与常规两条路径都要用，统一提前算。
 machine_sfx="$(machine_suffix "${machine_arg}")"
+variant_sfx=""
+[[ "${variant}" == "general" ]] || variant_sfx="-${variant}"
 date_stamp="$(date +%Y%m%d)"
 commit="$(git -C "${ROOT_DIR}" rev-parse --short HEAD)"
 
@@ -195,6 +207,261 @@ sys.exit(0 if passed else 1)
 PY
     printf 'Archive: %s\n' "${sdk_archive#"${ROOT_DIR}/"}"
     exit "${sdk_status}"
+fi
+
+# ---- 合规证据归档（issue #26）----
+# 独立文件，不并入主报告：主报告已被 140+ 例 BATS 校验，塞进 SBOM/FOSS
+# 这些大块内容后，任何格式调整都会连带打断主报告的用例。
+if ((compliance_mode)); then
+    [[ "${release}" != "all" ]] || die "--compliance 不支持 all，请逐个 release 出归档"
+    compliance_json="${YP_COMPLIANCE_JSON:-${ROOT_DIR}/work/artifacts/${release}/${variant}${machine_sfx}/compliance.json}"
+    [[ -f "${compliance_json}" ]] ||
+        die "缺少 ${compliance_json#"${ROOT_DIR}/"}；先跑 scripts/compliance.sh --release ${release} --variant ${variant}"
+    compliance_archive="${YP_COMPLIANCE_ARCHIVE:-${ROOT_DIR}/docs/qa/${release}/compliance-${date_stamp}-${commit}${variant_sfx}${machine_sfx}.md}"
+    mkdir -p -- "$(dirname -- "${compliance_archive}")"
+    compliance_status=0
+    python3 - "${compliance_json}" "${compliance_archive}" "${release}" "${variant}" \
+        "${machine_arg}" "${report_tag}" "${commit}" "${date_stamp}" \
+        "${YP_DEGRADED_FILE:-${ROOT_DIR}/config/degraded.txt}" <<'PY' || compliance_status=$?
+import json
+import os
+import sys
+
+(
+    json_path,
+    target,
+    release,
+    variant,
+    machine,
+    tag,
+    commit,
+    date_stamp,
+    degraded_file,
+) = sys.argv[1:10]
+
+with open(json_path, encoding="utf-8") as handle:
+    data = json.load(handle)
+sbom = data.get("sbom") or {}
+cve = data.get("cve") or {}
+foss = data.get("foss") or {}
+
+# 合规相关的降级项。distro-backfill 之类与本报告无关，列进来只会稀释结论。
+COMPLIANCE_ASPECTS = {"spdx-format", "cve-tool", "foss-scan"}
+degraded_rows = []
+if os.path.isfile(degraded_file):
+    with open(degraded_file, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            fields = [field.strip() for field in line.split("|")]
+            if len(fields) < 4:
+                continue
+            aspect, row_release, reason, requirement = fields[:4]
+            if aspect in COMPLIANCE_ASPECTS and row_release == release:
+                degraded_rows.append((aspect, reason, requirement))
+
+checks = [
+    ("SBOM 已产出并可解析", bool(sbom.get("available"))),
+    ("CVE 清单已产出（采集工具可随版本分叉）", bool(cve.get("available"))),
+    ("FOSS 批量扫描有结果", bool(foss.get("available"))),
+    ("FOSS 覆盖率 > 0", (foss.get("coverage") or 0) > 0),
+    ("PURL 非空率 >= 90%（CRA 漏洞匹配前提，观测项）", (sbom.get("purl_ratio") or 0) >= 0.9),
+]
+gate = checks[:4]
+passed = all(ok for _, ok in gate)
+
+lines = [
+    "# 合规证据报告",
+    "",
+    "- Kind: `compliance`",
+    "- Release: `%s`" % release,
+    "- Variant: `%s`" % variant,
+    "- Machine: `%s`" % machine,
+    "- Tag: `%s`" % tag,
+    "- Commit: `%s`" % commit,
+    "- Date: `%s`" % date_stamp,
+    "",
+    "> 采集口径：SBOM 与 CVE 在构建期/构建后取，FOSS 是构建后对 `work/downloads`",
+    "> 的源码包做批量扫描。三者都不参与构建增量决策。",
+    "",
+    "## SBOM",
+    "",
+]
+
+if sbom.get("available"):
+    lines += [
+        "| 项 | 值 |",
+        "|---|---|",
+        "| 格式 | `%s` |" % sbom.get("format", "n/a"),
+        "| 文件 | `%s` |" % sbom.get("path", "n/a"),
+        "| 体积 | %s（%s 字节） |"
+        % ("%.1f MB" % (int(sbom.get("bytes") or 0) / 1048576.0), sbom.get("bytes", "n/a")),
+        "| SHA-256 | `%s` |" % sbom.get("sha256", "n/a"),
+        "| 打包形态 | `%s` |" % sbom.get("packaging", "n/a"),
+        "| 包元素 | %s |" % sbom.get("packages", "n/a"),
+        "| 文件元素 | %s |" % sbom.get("files", "n/a"),
+        "| PURL 非空率 | %.1f%%（%s/%s） |"
+        % (
+            (sbom.get("purl_ratio") or 0) * 100,
+            sbom.get("purl_nonempty", "n/a"),
+            sbom.get("packages", "n/a"),
+        ),
+    ]
+    vex = sbom.get("vex")
+    if vex:
+        lines.append(
+            "| VEX | fixed %s / not_affected %s / vulnerability %s |"
+            % (vex.get("fixed", 0), vex.get("not_affected", 0), vex.get("vulnerability", 0))
+        )
+    else:
+        lines.append("| VEX | 本版本无（`vex.bbclass` 只有 5.0/6.0 有） |")
+    licenses = sbom.get("licenses") or {}
+    if licenses:
+        top = "，".join("`%s` %s" % (name, count) for name, count in list(licenses.items())[:8])
+        lines += ["| 许可证 top | %s |" % top]
+else:
+    lines += ["未产出：%s" % sbom.get("reason", "n/a")]
+
+lines += ["", "## CVE", ""]
+if cve.get("available"):
+    lines += [
+        "| 项 | 值 |",
+        "|---|---|",
+        "| 采集工具 | `%s` |" % cve.get("source", "n/a"),
+        "| 清单 | `%s` |" % (cve.get("manifest") or "（逐包清单聚合）"),
+        "| 包数 | %s |" % cve.get("packages", "n/a"),
+        "| 未修复 / 已修复 / 忽略 | %s / %s / %s |"
+        % (cve.get("unpatched", "n/a"), cve.get("patched", "n/a"), cve.get("ignored", "n/a")),
+        "| 数据源 | `%s` |" % cve.get("db", "n/a"),
+    ]
+    if cve.get("db_revision"):
+        lines.append(
+            "| 库版本 | `%s`（%s） |" % (cve.get("db_revision"), cve.get("db_date", "n/a"))
+        )
+    if cve.get("db_built_at"):
+        lines.append("| 库构建时间 | %s |" % cve.get("db_built_at"))
+    if cve.get("scope"):
+        lines.append("| 统计口径 | `%s` |" % cve.get("scope"))
+    if cve.get("source") == "sbom-cve-check":
+        lines += [
+            "",
+            "6.0 没有 `cve-check.bbclass`，这里用构建后 CLI 扫镜像 SBOM 得到清单，",
+            "导出格式选 `yocto-cve-check-manifest`，与前三版 `cve-check` 的字段和",
+            "`status` 取值一致，所以统计口径可以并排看。扫描时开了 `--offline-mode`：",
+            "它会让任何 clone/fetch 直接失败，能跑通即证明全程只读本地库。",
+        ]
+else:
+    lines += ["未产出：%s" % cve.get("reason", "n/a")]
+
+lines += ["", "## FOSS", ""]
+if foss.get("available"):
+    lines += [
+        "| 项 | 值 |",
+        "|---|---|",
+        "| 工具 | `%s` |" % foss.get("tool", "n/a"),
+        "| 源码来源 | `%s` |" % foss.get("source", "n/a"),
+        "| 镜像内软件包 | %s |" % foss.get("declared", "n/a"),
+        "| 本次已扫 | %s（上限 %s） |" % (foss.get("scanned", "n/a"), foss.get("limit", "n/a")),
+        "| 覆盖率 | %.1f%% |" % ((foss.get("coverage") or 0) * 100),
+        "| 扫描文件数 | %s |" % foss.get("files_total", "n/a"),
+        "| 产物 | `%s/`（每包 json/csv/spdx，前 3 个另有 html） |" % foss.get("artifacts", "n/a"),
+    ]
+    if foss.get("failed"):
+        lines.append("| 失败包 | %s |" % "、".join("`%s`" % name for name in foss["failed"][:8]))
+    licenses = foss.get("licenses") or {}
+    if licenses:
+        top = "，".join("`%s` %s" % (name, count) for name, count in list(licenses.items())[:10])
+        lines += ["", "许可证表达式分布（按检出次数）：", "", top]
+    packages = foss.get("packages") or []
+    if packages:
+        lines += [
+            "",
+            "| 包 | 源码包 | 文件数 | 清晰度 | 主要许可证 |",
+            "|---|---|---:|---:|---|",
+        ]
+        for entry in packages[:25]:
+            top = "、".join(list(entry.get("licenses") or {})[:3]) or "-"
+            lines.append(
+                "| `%s` | `%s` | %s | %s | %s |"
+                % (
+                    entry.get("package"),
+                    entry.get("archive", ""),
+                    entry.get("files", 0),
+                    entry.get("clarity", "-"),
+                    top,
+                )
+            )
+        if len(packages) > 25:
+            lines.append("")
+            lines.append("（其余 %d 个包的明细见 `foss-summary.json`）" % (len(packages) - 25))
+    lines += [
+        "",
+        "覆盖率不是 100% 是预期的：`work/downloads` 只覆盖有 `SRC_URI` 归档的上游源码，",
+        "`file://` 与 git 源的包不在其中，缺口按包名如实记账，不做静默补齐。",
+    ]
+else:
+    lines += ["未产出：%s" % foss.get("reason", "n/a")]
+
+lines += [
+    "",
+    "## 格式差异",
+    "",
+    "SPDX 不强行统一（3.1/4.0/5.0 出 2.2，6.0 只出 3.0.1），跨版本只比",
+    "「包名 + 版本 + 许可证」，不比文档内部结构。本节把差异写死，避免把",
+    "口径不同当成回归。",
+    "",
+    "| release | SPDX | 镜像级 SBOM 形态 | VEX | 说明 |",
+    "|---|---|---|---|---|",
+    "| dunfell 3.1.33 | 2.2 | `deploy/spdx/<machine>/` 单文件 | 无 | 无 `vex.bbclass` |",
+    "| kirkstone 4.0.35 | 2.2 | 同上 | 无 | 无 `vex.bbclass` |",
+    "| scarthgap 5.0.20 | 2.2（默认） | `<image>.rootfs.spdx.tar.zst` 归档 | 有 | 可切 3.0.1，未切 |",
+    "| wrynose 6.0.4 | 3.0.1 | `<image>-<machine>.rootfs.spdx.json` 单文件 | 有 | 2.x 输出已被删除 |",
+    "",
+    "本版本实际：格式 `%s`，形态 `%s`。" % (sbom.get("format", "n/a"), sbom.get("packaging", "n/a")),
+    "",
+    "语义差异（不能直接比大小）：",
+    "",
+    "- 2.2 的 `packages` 是文档内 package 元素；3.0.1 的 `software_Package` 把构建期",
+    "  元素也算了进去，数字天然更大，所以两版包数不能当回归指标；",
+    "- 3.0.1 的 VEX 由 `security_Vex*` 关系元素承载（`SPDX_INCLUDE_VEX`），2.2 没有对应表达；",
+    "- 5.0 的镜像级 SBOM 是归档，要解压后才能当输入用，6.0 是可直接喂工具的单文件。",
+    "",
+    "## 降级清单",
+    "",
+]
+if not degraded_rows:
+    lines.append("无（本版本合规相关能力全部按标准实现）")
+else:
+    lines += ["| aspect | 理由 | 需求条款 |", "|---|---|---|"]
+    for aspect, reason, requirement in degraded_rows:
+        lines.append("| `%s` | %s | %s |" % (aspect, reason, requirement))
+
+lines += ["", "## 验收结论", "", "**%s**" % ("PASS" if passed else "FAIL"), ""]
+for label, ok in checks:
+    lines.append("- [%s] %s" % ("x" if ok else " ", label))
+lines.append("")
+
+with open(target, "w", encoding="utf-8") as handle:
+    handle.write("\n".join(lines))
+
+print("SBOM : %s %s 包" % (sbom.get("format", "n/a"), sbom.get("packages", "n/a")))
+print(
+    "CVE  : %s %s/%s/%s"
+    % (
+        cve.get("source", "n/a"),
+        cve.get("unpatched", "n/a"),
+        cve.get("patched", "n/a"),
+        cve.get("ignored", "n/a"),
+    )
+)
+print("FOSS : %s/%s 包（覆盖率 %.1f%%）" % (
+    foss.get("scanned", "n/a"), foss.get("declared", "n/a"), (foss.get("coverage") or 0) * 100))
+print("结论 : %s" % ("PASS" if passed else "FAIL"))
+sys.exit(0 if passed else 1)
+PY
+    printf 'Archive: %s\n' "${compliance_archive#"${ROOT_DIR}/"}"
+    exit "${compliance_status}"
 fi
 
 if ((render_only == 0)); then
@@ -436,6 +703,36 @@ PY
 render_cve() {
     local db_name="" db_path="" lib_rows="n/a" lib_built="n/a"
     local manifest="" manifest_name="n/a" status_counts="n/a"
+    local compliance_json="${ROOT_DIR}/work/artifacts/${release}/${variant}${machine_sfx}/compliance.json"
+
+    # 有 compliance.json 就以它为准：6.0 的结论只能从 sbom-cve-check 来，
+    # 走留在这里的旧分支必然写成「不适用」。#26 之后四版都走这条。
+    if [[ -f "${compliance_json}" ]] &&
+        python3 -c 'import json,sys; d=json.load(open(sys.argv[1], encoding="utf-8")); sys.exit(0 if (d.get("cve") or {}).get("available") else 1)' \
+            "${compliance_json}" 2>/dev/null; then
+        python3 - "${compliance_json}" "${compliance_json#"${ROOT_DIR}/"}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    cve = json.load(handle).get("cve") or {}
+relative = sys.argv[2]
+
+print("| 项 | 值 |")
+print("|---|---|")
+print("| 采集工具 | `%s` |" % cve.get("source", "n/a"))
+print("| 清单 | `%s` |" % (cve.get("manifest") or "（逐包清单聚合）"))
+print("| 包数 | %s |" % cve.get("packages", "n/a"))
+print("| 未修复 / 已修复 / 忽略 | %s / %s / %s |"
+      % (cve.get("unpatched", "n/a"), cve.get("patched", "n/a"), cve.get("ignored", "n/a")))
+if cve.get("db_revision"):
+    print("| 数据源 | `%s`（`%s`） |" % (cve.get("db"), cve.get("db_revision")))
+else:
+    print("| 数据源 | `%s` |" % cve.get("db", "n/a"))
+print("| 明细 | `%s` |" % relative)
+PY
+        return
+    fi
 
     if ((cve_enabled == 0)); then
         printf '未开启（本次构建没有 --cve；CVE 只对 custom variant 有意义）\n'

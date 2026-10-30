@@ -120,7 +120,7 @@ setup() {
     [ "${status}" -eq 0 ]
     archive_path="${ROOT_DIR}/${output##*Archive: }"
     grep -Fq '## 降级清单' "${archive_path}"
-    grep -Fq 'spdx-format' "${archive_path}"
+    grep -Fq 'distro-backfill' "${archive_path}"
 }
 
 # bats test_tags=report

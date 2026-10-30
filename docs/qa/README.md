@@ -15,6 +15,10 @@
   归档（`scripts/report.sh --sdk`），含体积、SHA-256、安装后 `gcc -dumpversion`
   与 `devtool` 结果。它**没有**降级清单节，所以 `99_coverage.bats` 挑「最新报告」
   时只认 `<date>-<sha>…md` 这类构建报告（`find -name '[0-9]*.md'`）。
+- `docs/qa/<release>/compliance-<date>-<sha>[-<variant>][-<machine>].md` 是一次
+  合规证据归档（`scripts/report.sh --compliance`），五节：SBOM / CVE / FOSS /
+  格式差异 / 降级清单。文件名以 `compliance-` 开头，同样不会被
+  `99_coverage.bats` 当成「最新构建报告」。采集与渲染细节见 `docs/compliance.md`。
 - 2026-10-30 已产出 8 组合（4 release × 2 variant）全 PASS 的 SDK 归档；
   实测数据与 dunfell 的 eSDK workaround 见 `docs/sdk.md` 第 6、7 节。
 - 报告的「CVE 检查」一节只在构建带了 `--cve` 时出现（开关记在
