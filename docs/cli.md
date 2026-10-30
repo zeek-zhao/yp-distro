@@ -33,7 +33,8 @@ L3（真构建 + 起机）不进 `project.sh` 的占位表，是几个独立入�
 `scripts/build.sh --release <r> --variant <v> [--machine <m>] [--cve]`（串行构建）、
 `scripts/qemu.sh --release <r> --variant <v> [--machine <m>]`（headless 起机 + 抓串口）、
 `scripts/sdk.sh --release <r> --variant <v>`（SDK/eSDK 构建 + 安装验证）、
-`scripts/cve-db.sh sync|fetch|build|status`（离线 NVD 库，见 `docs/cve.md`）。
+`scripts/cve-db.sh sync|fetch|build|status`（离线 NVD 库，见 `docs/cve.md`）、
+`scripts/scancode.sh sync|status|path`（按需准备 ScanCode CLI，见 `docs/scancode.md`）。
 镜像名按 `config/variants/<variant>.env` 的 `IMAGE` 取，不写死在脚本里。
 
 `--cve` 只对 `--variant custom` 有效：它把 `kas/features/cve.yml`
