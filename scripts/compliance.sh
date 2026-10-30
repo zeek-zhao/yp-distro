@@ -67,7 +67,9 @@ die_usage() {
 ###############################################################################
 deploy_root() { printf '%s' "${YP_DEPLOY_DIR:-${ROOT_DIR}/work/kas-${release}-${variant}${sfx}/build/tmp/deploy}"; }
 artifact_dir() { printf '%s' "${YP_ARTIFACT_DIR:-${ROOT_DIR}/work/artifacts/${release}/${variant}${sfx}}"; }
-sections_dir() { printf '%s/compliance.d' "$(artifact_dir)"; }
+# 各节明细目录。用变量而不是函数：下面有多处 "${SECTIONS_DIR}/x.json" 形式的
+# 引用，函数名当变量展开在 set -u 下直接报 unbound。
+SECTIONS_DIR=""
 
 relpath() {
     local path="$1"
@@ -182,7 +184,7 @@ JSON
     [[ "${sbom}" == "$(artifact_dir)"/* ]] && packaging="tar.zst"
     bytes="$(stat -Lc %s -- "${sbom}")"
     sha="$(sha256sum -- "${sbom}" | awk '{print $1}')"
-    python3 - "${stats_out}" "${sbom}" "${bytes}" "${sha}" "$(relpath "${sbom}")" "${packaging}" <<'PY' >"${sections_dir}/sbom.json"
+    python3 - "${stats_out}" "${sbom}" "${bytes}" "${sha}" "$(relpath "${sbom}")" "${packaging}" <<'PY' >"${SECTIONS_DIR}/sbom.json"
 import json, sys
 stats_path, sbom, size, digest, relative, packaging = sys.argv[1:7]
 with open(stats_path, encoding="utf-8") as handle:
@@ -198,7 +200,7 @@ json.dump({"sbom": stats}, sys.stdout, ensure_ascii=False, sort_keys=True, inden
 sys.stdout.write("\n")
 PY
     rm -f -- "${stats_out}"
-    log_info "SBOM：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["sbom"];print("%s %d 包 %d 文件 %.1f MB PURL %.0f%%" % (d["format"], d["packages"], d["files"], d["bytes"]/1048576, d["purl_ratio"]*100))' "${sections_dir}/sbom.json")"
+    log_info "SBOM：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["sbom"];print("%s %d 包 %d 文件 %.1f MB PURL %.0f%%" % (d["format"], d["packages"], d["files"], d["bytes"]/1048576, d["purl_ratio"]*100))' "${SECTIONS_DIR}/sbom.json")"
 }
 
 ###############################################################################
@@ -246,7 +248,7 @@ JSON
     [[ -s "${manifest}" ]] || die "sbom-cve-check 未产出清单：${manifest}"
     db_rev="$(git -C "${NVD_FKIE}" rev-parse --short HEAD 2>/dev/null || printf 'n/a')"
     db_date="$(git -C "${NVD_FKIE}" log -1 --format=%cI 2>/dev/null || printf 'n/a')"
-    python3 - "${manifest}" "${db_rev}" "${db_date}" "$(relpath "${manifest}")" <<'PY' >"${sections_dir}/cve.json"
+    python3 - "${manifest}" "${db_rev}" "${db_date}" "$(relpath "${manifest}")" <<'PY' >"${SECTIONS_DIR}/cve.json"
 import json, sys
 path, db_rev, db_date, relative = sys.argv[1:5]
 counts = {"Unpatched": 0, "Patched": 0, "Ignored": 0}
@@ -272,7 +274,7 @@ data = {
 json.dump({"cve": data}, sys.stdout, ensure_ascii=False, sort_keys=True, indent=2)
 sys.stdout.write("\n")
 PY
-    log_info "CVE：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["cve"];print("%d 包 %d/%d/%d" % (d["packages"], d["unpatched"], d["patched"], d["ignored"]))' "${sections_dir}/cve.json")"
+    log_info "CVE：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["cve"];print("%d 包 %d/%d/%d" % (d["packages"], d["unpatched"], d["patched"], d["ignored"]))' "${SECTIONS_DIR}/cve.json")"
 }
 
 # 3.1/4.0/5.0：优先读镜像级清单；没有就按 manifest 过滤 deploy/cve/ 下的逐包清单。
@@ -292,7 +294,7 @@ JSON
     python3 - "${manifest:-}" "${cve_dir}" "$(image_manifest || true)" \
         "${release}" "${db_name}" "$([[ -f "${db_path}" ]] && relpath "${db_path}" || printf '缺失')" \
         "$([[ -f "${db_path}.meta.json" ]] && python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("built_at","n/a"))' "${db_path}.meta.json" || printf 'n/a')" \
-        <<'PY' >"${sections_dir}/cve.json"
+        <<'PY' >"${SECTIONS_DIR}/cve.json"
 import glob
 import json
 import os
@@ -366,7 +368,7 @@ data = {
 json.dump({"cve": data}, sys.stdout, ensure_ascii=False, sort_keys=True, indent=2)
 sys.stdout.write("\n")
 PY
-    log_info "CVE：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["cve"];print("%d 包 %d/%d/%d (%s)" % (d["packages"], d["unpatched"], d["patched"], d["ignored"], d.get("scope","-")))' "${sections_dir}/cve.json")"
+    log_info "CVE：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["cve"];print("%d 包 %d/%d/%d (%s)" % (d["packages"], d["unpatched"], d["patched"], d["ignored"], d.get("scope","-")))' "${SECTIONS_DIR}/cve.json")"
 }
 
 step_cve() {
@@ -451,9 +453,9 @@ JSON
         "${bin}" "/work/${rel_art}/foss" "/work/${rel_input}" "${HTML_TOP}" ||
         log_warn "FOSS：扫描脚本返回非零，按已产出的结果汇总"
     python3 "${ROOT_DIR}/scripts/lib/foss-summary.py" \
-        "${art}/foss" "${input}" "${sections_dir}/foss-section.json" \
+        "${art}/foss" "${input}" "${SECTIONS_DIR}/foss-section.json" \
         "${declared}" "${FOSS_LIMIT}" >/dev/null
-    python3 - "${sections_dir}/foss-section.json" "${FOSS_LIMIT}" "${rel_art}/foss" <<'PY' >"${sections_dir}/foss.json"
+    python3 - "${SECTIONS_DIR}/foss-section.json" "${FOSS_LIMIT}" "${rel_art}/foss" <<'PY' >"${SECTIONS_DIR}/foss.json"
 import json, sys
 path, limit, artifacts = sys.argv[1:4]
 with open(path, encoding="utf-8") as handle:
@@ -471,8 +473,8 @@ if not os_ok:
 json.dump({"foss": data}, sys.stdout, ensure_ascii=False, sort_keys=True, indent=2)
 sys.stdout.write("\n")
 PY
-    rm -f -- "${sections_dir}/foss-section.json"
-    log_info "FOSS：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["foss"];print("%d/%d 包，%d 文件，覆盖率 %.1f%%" % (d["scanned"], d["declared"], d["files_total"], d["coverage"]*100))' "${sections_dir}/foss.json")"
+    rm -f -- "${SECTIONS_DIR}/foss-section.json"
+    log_info "FOSS：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["foss"];print("%d/%d 包，%d 文件，覆盖率 %.1f%%" % (d["scanned"], d["declared"], d["files_total"], d["coverage"]*100))' "${SECTIONS_DIR}/foss.json")"
 }
 
 ###############################################################################
@@ -480,12 +482,12 @@ PY
 ###############################################################################
 write_section() {
     local section="$1"
-    cat >"$(sections_dir)/${section}.json"
+    cat >"${SECTIONS_DIR}/${section}.json"
 }
 
 merge_sections() {
     local out="$1"
-    python3 - "${sections_dir}" "${out}" "${release}" "${variant}" "${machine}" "${TAG}" \
+    python3 - "${SECTIONS_DIR}" "${out}" "${release}" "${variant}" "${machine}" "${TAG}" \
         "$(git -C "${ROOT_DIR}" rev-parse --short HEAD)" "$(date +%Y%m%d)" <<'PY'
 import json
 import os
@@ -623,6 +625,9 @@ esac
 
 resolve_all "${release}" "${variant}" "${machine}"
 sfx="$(machine_suffix "${machine}")"
+# resolve_all 只导出大写 IMAGE/MACHINE，脚本内部统一用小写变量。
+image="${IMAGE}"
+SECTIONS_DIR="$(artifact_dir)/compliance.d"
 
 if ((print_sbom)); then
     sbom_file || die "找不到 ${release}/${variant} 的镜像级 SBOM"
@@ -634,10 +639,10 @@ if [[ "${command}" == "status" ]]; then
     exit 0
 fi
 
-mkdir -p -- "$(sections_dir)"
+mkdir -p -- "${SECTIONS_DIR}"
 if ((force)); then
-    rm -rf -- "${sections_dir:?}"
-    mkdir -p -- "$(sections_dir)"
+    rm -rf -- "${SECTIONS_DIR:?}"
+    mkdir -p -- "${SECTIONS_DIR}"
 fi
 
 case "${only}" in
