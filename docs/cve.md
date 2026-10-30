@@ -113,20 +113,34 @@ scripts/build.sh --release scarthgap --variant custom --cve
 耗时极短是因为镜像本身命中 sstate，只有 `do_cve_check` 是真的新跑；
 冷启动时这一层仍然是纯本地读库，不随网络状况波动。
 
-## 6. wrynose（6.0）为什么不适用
+## 6. wrynose（6.0）为什么是另一条通路
 
-6.0 删掉了 `cve-check.bbclass`，改用 `sbom-cve-check`（`meta/classes-recipe/`），
-它的库是**两个 git 仓库**而不是 sqlite：
-`fkie-cad/nvd-json-data-feeds`（`nvd-fkie`）与 `CVEProject/cvelistV5`（`cvelist`），
-由 `sbom-cve-check-update-*-native` 检出到
-`${DEPLOY_DIR}/sbom-cve-check/databases/`，工具侧靠
-`SBOM_CVE_CHECK_DATABASES_DIR` + `--disable-auto-updates` 只读本地目录。
+6.0 删掉了 `cve-check.bbclass`，改用 `sbom-cve-check`（在 `meta/classes-recipe/`，
+所以配置层全局 INHERIT 找不到它）。它的库是**git 仓库**而不是 sqlite：
+`fkie-cad/nvd-json-data-feeds`（db id `nvd-fkie`）与 `CVEProject/cvelistV5`（`cvelist`）。
 
-也就是说 6.0 本来就不走 NVD API，**#48 描述的 4 小时问题在 6.0 上不存在**。
-它的真正代价是首次 clone 那两个仓库，量级在本方案之外。能力矩阵里
-`cve-tool | wrynose` 仍记 `degraded`（理由见 `config/degraded.txt`），
-要真正打开 6.0 的 CVE 检查需要 `OE_FRAGMENTS += "core/yocto/sbom-cve-check"`，
-属于 #26 的范围。
+**但 6.0 不需要接这个 bbclass**（issue #26 实测结论，见 `docs/compliance.md`）：
+`INHERIT += "create-spdx"` 拿到 SBOM 之后，用 `sbom-cve-check` 的 **CLI** 在构建后
+离线扫一次即可。这条路线顺带避开官方 fragment 的两个雷：
+
+- `SRCREV = "${AUTOREV}"` + 默认库依赖 → **每次构建都 clone 两个 GB 级仓库**；
+- `SPDX_INCLUDE_VEX = "all"` → 5.3 之前的实现会让 SPDX 涨到 1 GB 量级。
+
+所以 `scripts/cve-db.sh` 对 wrynose 只做一件事：把 `nvd-fkie` 浅克隆进
+`work/cve-cache/sbom/nvd-fkie`（4.1 GB / 实测 445 秒），`cvelist` 不下载
+（工具侧 `--set-db-cfg cvelist disabled=true` 关掉）。
+
+```bash
+scripts/cve-db.sh --release wrynose     # 等价 --for wrynose
+scripts/cve-db.sh status                # wrynose 行显示分片数与修订
+```
+
+`all` **不含** wrynose：否则每次 `sync` 都会多拉 4.1 GB。
+
+| release | 库 | 建库动作 | 谁读它 |
+|---|---|---|---|
+| dunfell / kirkstone / scarthgap | `work/downloads/CVE_CHECK/nvdcve_*.db` | `nvd-to-sqlite.py` 投影 | 构建期 `do_cve_check` |
+| wrynose | `work/cve-cache/sbom/nvd-fkie` | 仅检出的 git 数据 | 构建后 `sbom-cve-check` CLI |
 
 ## 7. 踩过的坑
 
