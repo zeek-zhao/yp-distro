@@ -11,8 +11,9 @@ setup() {
     local yml_count target_count release variant
     yml_count="$(find "${KAS_DIR}" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
     target_count="$(find "${KAS_DIR}/targets" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
-    # 17 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
-    [ "${yml_count}" -eq 17 ]
+    # 18 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
+    #      + 1 feature（kas/features/cve.yml，--cve 时追加）
+    [ "${yml_count}" -eq 18 ]
     [ "${target_count}" -eq 8 ]
     for release in dunfell kirkstone scarthgap wrynose; do
         for variant in general custom; do
@@ -51,7 +52,7 @@ import yaml
 root = Path(sys.argv[1])
 files = [p for p in sorted((root / "kas").rglob("*.yml"))
          if not p.name.endswith(".lock.yml")]
-assert len(files) == 17, len(files)
+assert len(files) == 18, len(files)
 for path in files:
     assert yaml.safe_load(path.read_text())["header"]["version"] == 14, path
 ' "${ROOT_DIR}"
@@ -165,15 +166,17 @@ for path in files:
 }
 
 # bats test_tags=kas
-@test "disk monitor keeps both STOPTASKS and HALT tiers" {
+@test "disk monitor keeps both STOPTASKS and ABORT tiers" {
     local line
     line="$(grep '^    BB_DISKMON_DIRS = ' "${KAS_DIR}/base.yml")"
     [ -n "${line}" ]
     [[ "${line}" == *"STOPTASKS,\${TMPDIR}"* ]]
     [[ "${line}" == *"STOPTASKS,\${DL_DIR}"* ]]
     [[ "${line}" == *"STOPTASKS,\${SSTATE_DIR}"* ]]
-    [[ "${line}" == *"HALT,\${TMPDIR}"* ]]
-    [[ "${line}" == *"HALT,\${SSTATE_DIR}"* ]]
+    [[ "${line}" == *"ABORT,\${TMPDIR}"* ]]
+    [[ "${line}" == *"ABORT,\${SSTATE_DIR}"* ]]
+    # HALT 是 4.0+ 才有的动作，3.1 见到会直接报错退出
+    [[ "${line}" != *"HALT,"* ]]
 }
 
 # bats test_tags=kas

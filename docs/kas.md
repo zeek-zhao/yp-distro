@@ -23,7 +23,7 @@ variant 配置。release 仓库及 tag 与 `config/*.env` 双轨维护，由
   `SSTATE_DIR = "${TOPDIR}/../../sstate"`，禁止缺失、弱赋值或每版本独立缓存。
 - `check_build_env` 要求 `kas/base.yml` 提供：并行度上限
   `min(oe.utils.cpu_count(), N)`（`BB_NUMBER_THREADS` 与 `PARALLEL_MAKE`
-  的上限必须相等）、`BB_DISKMON_DIRS` 的 STOPTASKS/HALT 两档、按
+  的上限必须相等）、`BB_DISKMON_DIRS` 的 STOPTASKS/ABORT 两档、按
   `<release>-<variant>` 分仓的 `buildhistory`、以及
   `BB_GENERATE_MIRROR_TARBALLS = "1"`。这四项都不进 basehash，写错了
   构建照样成功，所以只能靠断言兜。说明见 [build-env.md](build-env.md)。

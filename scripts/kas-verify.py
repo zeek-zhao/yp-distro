@@ -337,6 +337,75 @@ def verify_target(
 
     check_version_knobs(config, release, variant)
     check_build_env(config, variant)
+    check_cve_db(repo_root, config, variant)
+
+
+def check_cve_db(repo_root: Path, config: dict[str, Any], variant: str) -> None:
+    """#48: CVE 库必须离线化，且默认 8 组合不许被 cve_check 拖慢。
+
+    三件事都必须成立，少一件就会静默退回「首次建库 4 小时」那条路：
+      1. base.yml 里 CVE_DB_UPDATE_INTERVAL = "-1"（永不联网更新库）；
+      2. kas/features/cve.yml 存在，且只做 YP_CVE_ENABLE 这一个开关（overlay 不许
+         带 distro/target/machine/repos，否则它就不再是「同一份 target 加个开关」）；
+      3. custom.yml 默认仍是 0 —— 合规构建靠 --cve 显式打开，而不是让每次构建都跑
+         cve_check。
+    """
+    base_text = _local_conf_text(load_yaml(repo_root / "kas" / "base.yml"))
+    assignments = re.findall(
+        r'^\s*CVE_DB_UPDATE_INTERVAL\s*([?+:.\w]*=)\s*["\']([^"\']*)["\']\s*(?:#.*)?$',
+        base_text,
+        re.MULTILINE,
+    )
+    if assignments != [("=", "-1")]:
+        raise VerificationError(
+            f'#48 kas/base.yml: 必须且只能设置 CVE_DB_UPDATE_INTERVAL = "-1"'
+            f"（实际 {assignments}）；否则 cve-update-nvd2-native 会去 NVD API "
+            "建库，无 key 时实测约 4 小时"
+        )
+
+    feature_path = repo_root / "kas" / "features" / "cve.yml"
+    if not feature_path.is_file():
+        raise VerificationError(
+            "#48 缺少 kas/features/cve.yml：--cve 的开关层不存在"
+        )
+    feature = load_yaml(feature_path)
+    for forbidden in ("distro", "target", "machine", "repos"):
+        if feature.get(forbidden) is not None:
+            raise VerificationError(
+                f"kas/features/cve.yml 只能是 local_conf overlay，"
+                f"不允许设置顶层 {forbidden}"
+            )
+    feature_text = _local_conf_text(feature)
+    if not re.search(
+        r'^\s*YP_CVE_ENABLE\s*=\s*"1"\s*$', feature_text, re.MULTILINE
+    ):
+        raise VerificationError(
+            'kas/features/cve.yml 必须用 = 设置 YP_CVE_ENABLE = "1"'
+            "（kas 段序 features 在最后，用 = 才能覆盖 custom.yml 的 0）"
+        )
+
+    # 8 份 target 都不许 include cve overlay：默认构建必须保持「无 cve_check」。
+    for target in sorted((repo_root / "kas" / "targets").glob("*.yml")):
+        if target.name.endswith(".lock.yml"):
+            continue
+        includes = load_yaml(target).get("header", {}).get("includes", [])
+        for include in includes:
+            if Path(str(include)).name == "cve.yml":
+                raise VerificationError(
+                    f"{target.relative_to(repo_root)}: 默认 target 不许 include "
+                    "kas/features/cve.yml；CVE 必须由 scripts/build.sh --cve 显式追加"
+                )
+
+    if variant == "custom":
+        custom_text = _local_conf_text(load_yaml(repo_root / "kas" / "variants" / "custom.yml"))
+        if not re.search(
+            r'^\s*YP_CVE_ENABLE\s*=\s*"0"\s*$', custom_text, re.MULTILINE
+        ):
+            raise VerificationError(
+                'kas/variants/custom.yml 默认必须是 YP_CVE_ENABLE = "0"：'
+                "cve_check 会为每个 recipe 增加一次 do_cve_check，"
+                "合规构建请显式加 --cve"
+            )
 
 
 def _local_conf_text(config: dict[str, Any]) -> str:
@@ -404,12 +473,19 @@ def check_build_env(config: dict[str, Any], variant: str) -> None:
     if not diskmon:
         raise VerificationError("BB_DISKMON_DIRS 未设置：共享盘写满时不会自动刹停")
     entries = diskmon.group(1).split()
-    for action in ("STOPTASKS", "HALT"):
+    # 第二档必须 ABORT 而不是 HALT：bitbake 3.1（dunfell）的 DiskSpaceMonitor
+    # 不认 HALT，会在解析阶段直接 "Unknown disk space monitor action: HALT"。
+    for action in ("STOPTASKS", "ABORT"):
         if not any(entry.startswith(f"{action},") for entry in entries):
             raise VerificationError(
                 f"BB_DISKMON_DIRS 缺少 {action} 档；只有 STOPTASKS 会无限等，"
-                "只有 HALT 会一有压力就整锅端"
+                "只有 ABORT 会一有压力就整锅端"
             )
+    if any(entry.startswith("HALT,") for entry in entries):
+        raise VerificationError(
+            "BB_DISKMON_DIRS 不能用 HALT：3.1 的 bitbake 不支持，会在解析期报"
+            " Unknown disk space monitor action"
+        )
     for variable in ("${TMPDIR}", "${DL_DIR}", "${SSTATE_DIR}"):
         if not any(variable in entry for entry in entries):
             raise VerificationError(

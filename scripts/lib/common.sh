@@ -64,6 +64,20 @@ machine_suffix() {
     printf -- '-%s' "${machine}"
 }
 
+# cve-check 认的 sqlite 库名各 release 不同，实测自 poky 源码：
+#   3.1 dunfell   meta/classes/cve-check.bbclass  CVE_CHECK_DB_FILE = ${DL_DIR}/CVE_CHECK/nvdcve_2.db
+#   4.0 kirkstone CVE_CHECK_DB_FILENAME = nvdcve_2-2.db
+#   5.0 scarthgap 同 4.0（列结构也一致，可共用一份库）
+# 6.0 wrynose 没有 cve-check.bbclass，用 sbom-cve-check 的 git 型数据库，不适用。
+# build.sh（预检）与 cve-db.sh（产出）必须用同一份规则，否则预检会查错文件。
+cve_db_filename() {
+    case "${1:-}" in
+        dunfell) printf 'nvdcve_2.db' ;;
+        kirkstone | scarthgap) printf 'nvdcve_2-2.db' ;;
+        *) return 1 ;;
+    esac
+}
+
 work_dir() {
     [[ $# -ge 1 && $# -le 2 ]] || die "用法：work_dir <kind> [release]"
 
