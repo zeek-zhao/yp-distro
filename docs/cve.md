@@ -142,6 +142,29 @@ scripts/cve-db.sh status                # wrynose 行显示分片数与修订
 | dunfell / kirkstone / scarthgap | `work/downloads/CVE_CHECK/nvdcve_*.db` | `nvd-to-sqlite.py` 投影 | 构建期 `do_cve_check` |
 | wrynose | `work/cve-cache/sbom/nvd-fkie` | 仅检出的 git 数据 | 构建后 `sbom-cve-check` CLI |
 
+### 实测（2026-10-31，215）
+
+```bash
+scripts/cve-db.sh --release wrynose      # 4.1 GB / 28 个年份分片 / f26b0edd41
+scripts/build.sh --release wrynose --variant custom --cve   # 隐含 --spdx
+```
+
+- 构建日志里 `github.com` 出现 **0 次**（`AUTOREV` 那条路彻底没走），
+  `SPDX_VERSION = "3.0.1"`、`SPDX_INCLUDE_VEX = "current"`（6.0 默认值）。
+- 扫镜像 SBOM（`deploy/images/<machine>/<image>.rootfs.spdx.json`，6.5 MB）：
+
+```bash
+PYTHONPATH=work/tools/sbom-cve-check python3 work/tools/sbom-cve-check/bin/sbom-cve-check \
+  --databases-dir work/cve-cache/sbom --sbom-type spdx3 \
+  --sbom-path <镜像 SBOM> \
+  --disable-auto-updates --offline-mode \
+  --set-db-cfg cvelist disabled=true \
+  --export-type yocto-cve-check-manifest --export-path <输出>
+```
+
+**8.4 s**，导出清单 24 MB，**102 个包 / Unpatched 318 / Patched 16,968 /
+Ignored 41** —— 与探针口径完全一致，说明换到统一缓存路径没有改变结论。
+
 ## 7. 踩过的坑
 
 - **`BB_DISKMON_DIRS` 的 `HALT` 会让 3.1 直接解析失败**
