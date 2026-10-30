@@ -5,11 +5,10 @@ ci-workflows | all | tests/bats/02_workflows.bats | ci | ok
 container-runtime | all | tests/bats/03_container.bats | container | ok
 layer-structure | all | tests/bats/04_layer.bats | layer | ok
 kas-layer | all | tests/bats/05_kas.bats | kas | ok
-spdx-format | dunfell,kirkstone,scarthgap | - | - | ok
-spdx-format | wrynose | - | - | degraded
-cve-tool | dunfell,kirkstone,scarthgap | - | - | ok
-cve-tool | wrynose | - | - | degraded
+spdx-format | all | tests/bats/11_compliance.bats | compliance | ok
+cve-tool | all | tests/bats/11_compliance.bats | compliance | ok
 cve-db | dunfell,kirkstone,scarthgap | tests/bats/09_cvedb.bats | cvedb | ok
+foss-scan | all | tests/bats/11_compliance.bats | compliance | ok
 sdk | all | tests/bats/10_sdk.bats | sdk | ok
 distro-backfill | wrynose | - | - | degraded
 report-archive | all | tests/bats/06_report.bats | report | ok
