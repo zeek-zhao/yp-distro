@@ -91,14 +91,17 @@ JSON
 
 # bats test_tags=compliance
 @test "compliance.sh --print-sbom 缺产物时指向 --spdx 构建" {
-    run bash "${ROOT_DIR}/scripts/compliance.sh" --print-sbom --release wrynose --variant custom
+    # 必须用隔离目录：215 上 work/ 里真有 wrynose 的 SBOM，直接用默认路径会命中
+    run env YP_DEPLOY_DIR="${test_root}/no-deploy" YP_ARTIFACT_DIR="${test_root}/no-art" \
+        bash "${ROOT_DIR}/scripts/compliance.sh" --print-sbom --release wrynose --variant custom
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"--spdx"* ]]
 }
 
 # bats test_tags=compliance
 @test "compliance.sh status 在未采集时报缺失而不是失败" {
-    run bash "${ROOT_DIR}/scripts/compliance.sh" status --release wrynose --variant custom
+    run env YP_ARTIFACT_DIR="${test_root}/no-art" \
+        bash "${ROOT_DIR}/scripts/compliance.sh" status --release wrynose --variant custom
     [ "${status}" -eq 0 ]
     [[ "${output}" == *"compliance.json"* ]]
     [[ "${output}" == *"缺失"* ]]
