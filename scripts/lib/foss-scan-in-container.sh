@@ -49,7 +49,7 @@ while IFS=$'\t' read -r pkg archive; do
     "${scancode_bin}" \
         --license --copyright --package --info --email --url \
         --license-score 70 --license-text --consolidate --classify \
-        --summary --tallies -n 4 --quiet \
+        --summary --tallies -n 8 --quiet \
         --json-pp "${out_dir}/${pkg}.json" \
         --csv "${out_dir}/${pkg}.csv" \
         --spdx-tv "${out_dir}/${pkg}.spdx" \
