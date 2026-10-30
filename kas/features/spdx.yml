@@ -1,0 +1,19 @@
+header:
+  version: 14
+
+# SBOM 开关（issue #26）。
+#
+# 四版的 `create-spdx.bbclass` 都在 `meta/classes/`（实测 poky 3.1.33 / 4.0.35 /
+# 5.0.20 / 6.0.4），所以配置层的全局 INHERIT 有效 —— 这一点与 6.0 的
+# `sbom-cve-check` 不同（那个在 `meta/classes-recipe/`，全局 INHERIT 找不到）。
+#
+# 只在 `scripts/build.sh --spdx` 时追加，`--cve` 会隐含本项（6.0 的 CVE 由构建后的
+# sbom-cve-check CLI 读 SBOM 得出，构建期必须先有 SBOM）。默认 8 组合不受影响：
+# create-spdx 会给每个 recipe 挂一次 `do_create_spdx`，是实打实的额外任务。
+#
+# 不在这里开 `SPDX_INCLUDE_VEX`：它只有 6.0 有，且 5.3 之前的实现会让 SPDX 涨到
+# 1 GB 量级（上游原文「不推荐」）。CRA 的 VEX 属于 P2 之外的钩子，见
+# `docs/compliance.md`。
+local_conf_header:
+  spdx: |
+    INHERIT += "create-spdx"
