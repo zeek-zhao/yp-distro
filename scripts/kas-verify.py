@@ -338,6 +338,45 @@ def verify_target(
     check_version_knobs(config, release, variant)
     check_build_env(config, variant)
     check_cve_db(repo_root, config, variant)
+    check_spdx_feature(repo_root)
+
+
+def check_spdx_feature(repo_root: Path) -> None:
+    """#26: SBOM 开关必须是一层独立 overlay，且默认 8 组合不许被它拖慢。
+
+    1. kas/features/spdx.yml 存在，且只做 local_conf（不许带 repos/target 等）；
+    2. 它必须通过 `INHERIT += "create-spdx"` 打开 —— 四版的 create-spdx.bbclass
+       都在 meta/classes/，全局 INHERIT 有效；写成 INHERIT create-spdx 或塞进
+       release yml 都会让默认构建多出几千个 do_create_spdx；
+    3. 8 份 target 都不许 include 它。
+    """
+    feature_path = repo_root / "kas" / "features" / "spdx.yml"
+    if not feature_path.is_file():
+        raise VerificationError("#26 缺少 kas/features/spdx.yml：--spdx 的开关层不存在")
+    feature = load_yaml(feature_path)
+    for forbidden in ("distro", "target", "machine", "repos"):
+        if feature.get(forbidden) is not None:
+            raise VerificationError(
+                f"kas/features/spdx.yml 只能是 local_conf overlay，"
+                f"不允许设置顶层 {forbidden}"
+            )
+    feature_text = _local_conf_text(feature)
+    if not re.search(r'^\s*INHERIT\s*\+=\s*"create-spdx"\s*$', feature_text, re.MULTILINE):
+        raise VerificationError(
+            'kas/features/spdx.yml 必须用 INHERIT += "create-spdx" 打开 SBOM'
+            "（四版的 create-spdx.bbclass 都在 meta/classes/，配置层 INHERIT 有效）"
+        )
+
+    for target in sorted((repo_root / "kas" / "targets").glob("*.yml")):
+        if target.name.endswith(".lock.yml"):
+            continue
+        includes = load_yaml(target).get("header", {}).get("includes", [])
+        for include in includes:
+            if Path(str(include)).name == "spdx.yml":
+                raise VerificationError(
+                    f"{target.relative_to(repo_root)}: 默认 target 不许 include "
+                    "kas/features/spdx.yml；SBOM 必须由 scripts/build.sh --spdx 显式追加"
+                )
 
 
 def check_cve_db(repo_root: Path, config: dict[str, Any], variant: str) -> None:

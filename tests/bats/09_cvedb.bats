@@ -132,18 +132,28 @@ PY
 }
 
 # bats test_tags=cvedb
-@test "cve-db.sh 的 status 明确指出 wrynose 不适用" {
+@test "cve-db.sh 的 status 里 wrynose 走 nvd-fkie 的 git 库而不是 sqlite" {
     run bash "${ROOT_DIR}/scripts/cve-db.sh" status
     [ "${status}" -eq 0 ]
-    [[ "${output}" == *wrynose* ]]
-    [[ "${output}" == *"sbom-cve-check"* ]]
+    # 前三版是 sqlite（nvdcve_*.db），wrynose 是 nvd-fkie 的 git 缓存；
+    # 两行必须同时存在，否则报告会误以为四版共用一份库。
+    [[ "${output}" == *nvdcve_2-2.db* ]]
+    [[ "${output}" == *nvd-fkie* ]]
 }
 
 # bats test_tags=cvedb
-@test "cve-db.sh 拒绝 wrynose 建库" {
+@test "cve-db.sh 接受 --release wrynose，未知 release 仍被拒绝" {
+    # wrynose 有独立的供给通路（git 缓存），不能再被当成「不支持的 release」；
+    # 缓存缺失时要给出可操作的提示，而不是走到 sqlite 的 build 分支。
     run bash "${ROOT_DIR}/scripts/cve-db.sh" build --release wrynose
+    [[ "${output}" != *"未知 release"* ]]
+    if ((status != 0)); then
+        [[ "${output}" == *"wrynose"* ]]
+    fi
+
+    run bash "${ROOT_DIR}/scripts/cve-db.sh" build --release nosuchrelease
     [ "${status}" -ne 0 ]
-    [[ "${output}" == *"不支持的 release"* ]]
+    [[ "${output}" == *"未知 release"* ]]
 }
 
 # bats test_tags=cvedb
