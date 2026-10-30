@@ -1,0 +1,4 @@
+# Source: release=kirkstone variant=custom commit=7eea1ac
+59d95441c5a76107a1570bfba4e43369178f1373356ef481c4e22f0f038f5e05  work/kas-kirkstone-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.cve
+953eab29603b725c56cac6dbe6bd548b2fc1cdac108200de9c495bdb9d93a2a1  work/kas-kirkstone-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.ext4
+1de7898357f3be30562e71d25e3a32d36ad60d746b2a645b0d2fc380b0638edf  work/kas-kirkstone-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.tar.bz2

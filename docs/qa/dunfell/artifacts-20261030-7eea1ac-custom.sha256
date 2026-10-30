@@ -1,0 +1,4 @@
+# Source: release=dunfell variant=custom commit=7eea1ac
+c93b0048eb52e28618bfd53575e5e2c174fd6c05f0fd2a1edda8de885a984e25  work/kas-dunfell-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.cve
+e5048edebb2f51716ff2675731244075796e4cd1c5859b63a5e4ff25ac174b80  work/kas-dunfell-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.ext4
+d30df213b88133a1fb0207f591d0b9fb7367a54cb82003b76eea1bd9d05d6acc  work/kas-dunfell-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.tar.bz2
