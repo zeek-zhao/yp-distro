@@ -15,6 +15,7 @@ usage() {
 Usage:
   scripts/report.sh <release|all> [--variant V] [--machine M] [--render-only]
   scripts/report.sh --release R [--variant V] [--machine M] [--render-only]
+  scripts/report.sh --release R [--variant V] [--machine M] --sdk
   scripts/report.sh --print-fingerprint
 EOF
 }
@@ -47,6 +48,7 @@ release=""
 variant="general"
 machine_arg="qemux86-64"
 render_only=0
+sdk_mode=0
 while (($# > 0)); do
     case "$1" in
         --release)
@@ -67,6 +69,10 @@ while (($# > 0)); do
             ;;
         --render-only)
             render_only=1
+            shift
+            ;;
+        --sdk)
+            sdk_mode=1
             shift
             ;;
         -h | --help)
@@ -100,17 +106,103 @@ else
     image="${IMAGE}"
 fi
 
+# machine 后缀：默认 qemux86-64 为空，与 build.sh / qemu.sh 规则一致。
+# 日期与 commit 在 --sdk 与常规两条路径都要用，统一提前算。
+machine_sfx="$(machine_suffix "${machine_arg}")"
+date_stamp="$(date +%Y%m%d)"
+commit="$(git -C "${ROOT_DIR}" rev-parse --short HEAD)"
+
+if ((sdk_mode)); then
+    [[ "${release}" != "all" ]] || die "--sdk 不支持 all，请逐个 release 出归档"
+    # 路径可用环境变量顶掉：BATS 用例要在不污染 work/artifacts 与 docs/qa 的前提下
+    # 验证渲染逻辑（与 YP_DEPLOY_DIR / YP_DEGRADED_FILE 同一套路）。
+    sdk_json="${YP_SDK_JSON:-${ROOT_DIR}/work/artifacts/${release}/${variant}${machine_sfx}/sdk.json}"
+    [[ -f "${sdk_json}" ]] || die "缺少 ${sdk_json#"${ROOT_DIR}/"}；先跑 scripts/sdk.sh --release ${release} --variant ${variant}"
+    command -v python3 >/dev/null 2>&1 || die "找不到 python3（渲染 SDK 归档需要）"
+    if [[ -n "${YP_SDK_ARCHIVE:-}" ]]; then
+        sdk_archive="${YP_SDK_ARCHIVE}"
+    else
+        sdk_archive="${ROOT_DIR}/docs/qa/${release}/sdk-${date_stamp}-${commit}"
+        [[ "${variant}" == "general" ]] || sdk_archive+="-${variant}"
+        sdk_archive+="${machine_sfx}.md"
+    fi
+    mkdir -p -- "$(dirname -- "${sdk_archive}")"
+    sdk_status=0
+    python3 - "${sdk_json}" "${sdk_archive}" "${sdk_json#"${ROOT_DIR}/"}" <<'PY' || sdk_status=$?
+import json
+import sys
+
+source, target, source_rel = sys.argv[1:4]
+with open(source, encoding="utf-8") as handle:
+    data = json.load(handle)
+
+sdk = data.get("sdk", {})
+esdk = data.get("esdk", {})
+build_seconds = data.get("build_seconds")
+checks = [
+    ("SDK 安装脚本可执行且 source 后 gcc 可用", sdk.get("installed") and sdk.get("gcc") not in ("", "n/a")),
+    ("eSDK 安装后 devtool 可用", esdk.get("installed") and esdk.get("devtool") == "ok"),
+]
+passed = all(ok for _, ok in checks)
+
+lines = [
+    "# SDK / eSDK 归档",
+    "",
+    "- Release: `%s`" % data.get("release"),
+    "- Variant: `%s`" % data.get("variant"),
+    "- Machine: `%s`" % data.get("machine"),
+    "- Commit: `%s`" % data.get("commit"),
+    "- Tag: `%s`" % data.get("tag"),
+    "- 数据来源: `%s`" % source_rel,
+    "- 构建耗时: %s" % ("%ss" % build_seconds if build_seconds is not None else "n/a"),
+    "",
+    "## 产物",
+    "",
+    "| 类型 | 文件 | 字节 | SHA-256 |",
+    "|---|---|---:|---|",
+]
+for label, item in (("SDK", sdk), ("eSDK", esdk)):
+    lines.append(
+        "| %s | `%s` | %s | `%s` |"
+        % (label, item.get("file", "n/a"), item.get("bytes", "n/a"), item.get("sha256", "n/a"))
+    )
+
+lines += [
+    "",
+    "## 安装验证",
+    "",
+    "| 检查项 | 结果 |",
+    "|---|---|",
+]
+lines.append("| SDK 安装后 `gcc -dumpversion` | `%s` |" % sdk.get("gcc", "n/a"))
+lines.append("| eSDK 安装后 `devtool --help` | `%s` |" % esdk.get("devtool", "n/a"))
+lines.append("")
+lines.append("## 验收结论")
+lines.append("")
+lines.append("**%s**" % ("PASS（需求 §7.3：不允许降级）" if passed else "FAIL"))
+lines.append("")
+for label, ok in checks:
+    lines.append("- [%s] %s" % ("x" if ok else " ", label))
+lines.append("")
+
+with open(target, "w", encoding="utf-8") as handle:
+    handle.write("\n".join(lines))
+
+print("SDK  : %s gcc=%s" % (sdk.get("file", "n/a"), sdk.get("gcc", "n/a")))
+print("eSDK : %s devtool=%s" % (esdk.get("file", "n/a"), esdk.get("devtool", "n/a")))
+print("结论 : %s" % ("PASS" if passed else "FAIL"))
+sys.exit(0 if passed else 1)
+PY
+    printf 'Archive: %s\n' "${sdk_archive#"${ROOT_DIR}/"}"
+    exit "${sdk_status}"
+fi
+
 if ((render_only == 0)); then
     command -v bats >/dev/null 2>&1 || die "找不到 bats"
     command -v python3 >/dev/null 2>&1 || die "找不到 python3（解析 JUnit 报告需要）"
 fi
 
-# machine 后缀：默认 qemux86-64 为空，与 build.sh / qemu.sh 规则一致。
-machine_sfx="$(machine_suffix "${machine_arg}")"
-
-date_stamp="$(date +%Y%m%d)"
 start_time="$(date --iso-8601=seconds)"
-commit="$(git -C "${ROOT_DIR}" rev-parse --short HEAD)"
 fingerprint="$(source_fingerprint)"
 hostname="$(hostname)"
 mkdir -p "${ROOT_DIR}/docs/qa/${release}"
@@ -288,6 +380,121 @@ if ((render_only == 0)) && ((${#artifact_paths[@]} > 0)); then
     } >"${checksum_file}"
 fi
 
+# ---- CVE 检查（issue #48 / #26）----
+# 是否开启记录在 build.sh 写的 .flags 里：没跑过 --cve 的构建不能凭空写出 CVE 结论。
+build_flags_file="${ROOT_DIR}/work/logs/build-${release}-${variant}${machine_sfx}.flags"
+cve_enabled=0
+if [[ -f "${build_flags_file}" ]] && grep -qx 'cve=1' "${build_flags_file}"; then
+    cve_enabled=1
+fi
+
+count_cve_status() {
+    local manifest="$1"
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'n/a'
+        return 0
+    }
+    python3 - "${manifest}" <<'PY' 2>/dev/null || printf 'n/a'
+import json, sys
+counts = {"Unpatched": 0, "Patched": 0, "Ignored": 0}
+with open(sys.argv[1], encoding="utf-8") as handle:
+    report = json.load(handle)
+for package in report.get("package", []):
+    for issue in package.get("issue", []):
+        status = issue.get("status", "Unpatched")
+        counts[status] = counts.get(status, 0) + 1
+print("%d / %d / %d" % (counts["Unpatched"], counts["Patched"], counts["Ignored"]))
+PY
+}
+
+count_db_cves() {
+    local db="$1"
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'n/a'
+        return 0
+    }
+    python3 - "$db" <<'PY' 2>/dev/null || printf 'n/a'
+import sqlite3, sys
+conn = sqlite3.connect("file:%s?mode=ro" % sys.argv[1], uri=True)
+print(conn.execute("SELECT count(*) FROM NVD").fetchone()[0])
+PY
+}
+
+db_built_at() {
+    local meta="$1"
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'n/a'
+        return 0
+    }
+    python3 - "$meta" <<'PY' 2>/dev/null || printf 'n/a'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    print(json.load(handle).get("built_at", "n/a"))
+PY
+}
+
+render_cve() {
+    local db_name="" db_path="" lib_rows="n/a" lib_built="n/a"
+    local manifest="" manifest_name="n/a" status_counts="n/a"
+
+    if ((cve_enabled == 0)); then
+        printf '未开启（本次构建没有 --cve；CVE 只对 custom variant 有意义）\n'
+        return
+    fi
+
+    if db_name="$(cve_db_filename "${release}")"; then
+        db_path="${ROOT_DIR}/work/downloads/CVE_CHECK/${db_name}"
+    else
+        # 6.0 没有 cve-check.bbclass，走 sbom-cve-check 的 git 型数据库。
+        printf '6.0 不适用：wrynose 用 sbom-cve-check（nvd-json-data-feeds / cvelistV5），不读 sqlite 库\n'
+        return
+    fi
+    if [[ -f "${db_path}" ]]; then
+        lib_rows="$(count_db_cves "${db_path}")"
+        if [[ -f "${db_path}.meta.json" ]]; then
+            lib_built="$(db_built_at "${db_path}.meta.json")"
+        fi
+    fi
+
+    if [[ -n "${deploy_dir}" ]]; then
+        # 镜像清单名跨版本不同：3.1 的 IMAGE_NAME 自带时间戳、也没有
+        # IMAGE_NAME_SUFFIX（<image>-<machine>-<ts>.json）；3.2+ 是
+        # <image>-<machine>.rootfs.json。三种都试，别只认一种。
+        local candidate newest=""
+        for candidate in \
+            "${deploy_dir}/${image}-${machine}.rootfs.json" \
+            "${deploy_dir}/${image}-${machine}.json"; do
+            if [[ -f "${candidate}" ]]; then
+                manifest="${candidate}"
+                break
+            fi
+        done
+        if [[ -z "${manifest}" ]]; then
+            for candidate in "${deploy_dir}/${image}-${machine}-"*.json; do
+                [[ -f "${candidate}" ]] || continue
+                case "${candidate}" in *.testdata.json) continue ;; esac
+                if [[ -z "${newest}" || "${candidate}" -nt "${newest}" ]]; then
+                    newest="${candidate}"
+                fi
+            done
+            manifest="${newest}"
+        fi
+        if [[ -n "${manifest}" ]]; then
+            manifest_name="$(basename "${manifest}")"
+            status_counts="$(count_cve_status "${manifest}")"
+        fi
+    fi
+
+    printf '| 项 | 值 |\n|---|---|\n'
+    printf '| 开关 | `--cve`（kas/features/cve.yml） |\n'
+    printf '| 离线库 | `%s` |\n' \
+        "$([[ -f "${db_path}" ]] && relative_path "${db_path}" || printf '缺失')"
+    printf '| 库内 CVE 数 | %s |\n' "${lib_rows}"
+    printf '| 库构建时间 | %s |\n' "${lib_built}"
+    printf '| 镜像 CVE 清单 | `%s` |\n' "${manifest_name}"
+    printf '| 未修复 / 已修复 / 忽略 | %s |\n' "${status_counts}"
+}
+
 degraded_file="${YP_DEGRADED_FILE:-${ROOT_DIR}/config/degraded.txt}"
 [[ -f "${degraded_file}" ]] || die "降级配置不存在：${degraded_file}"
 degraded_rows=()
@@ -405,6 +612,8 @@ archive="${ROOT_DIR}/docs/qa/${release}/${archive_name}.md"
     else
         printf -- '- 串口日志: n/a（本次未执行 QEMU）\n'
     fi
+    printf '\n## CVE 检查\n\n'
+    render_cve
     printf '\n## 降级清单\n\n'
     if ((${#degraded_rows[@]} == 0)); then
         printf '无（本版本全部能力按标准实现）\n'
