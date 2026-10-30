@@ -44,13 +44,15 @@ while IFS=$'\t' read -r pkg archive; do
     if ((index < html_top)); then
         extra=(--html "${out_dir}/${pkg}.html")
     fi
+    # 输出格式参数用 `--spdx-tv` 而不是 `--spdx`：32.x 只有 `--spdx-tv` / `--spdx-rdf`，
+    # 写 `--spdx` 会直接 Usage 报错退出（rc=126，日志里只留一行 Usage，极易误判成权限问题）。
     "${scancode_bin}" \
         --license --copyright --package --info --email --url \
         --license-score 70 --license-text --consolidate --classify \
         --summary --tallies -n 4 --quiet \
         --json-pp "${out_dir}/${pkg}.json" \
         --csv "${out_dir}/${pkg}.csv" \
-        --spdx "${out_dir}/${pkg}.spdx" \
+        --spdx-tv "${out_dir}/${pkg}.spdx" \
         ${extra[@]+"${extra[@]}"} \
         "${src}" >>"${log}" 2>&1
     rc=$?
