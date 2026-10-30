@@ -20,6 +20,12 @@ local_conf_header:
     YP_CVE_CLASS ??= "cve-check"
     # 只有能从全局 INHERIT 找到类的版本才在 yp.conf 里打开（6.0 例外）。
     YP_CVE_GLOBAL_INHERIT ??= "1"
+    # CVE 库离线化（issue #48）：cve-update-nvd2-native 默认走 NVD 2.0 REST API，
+    # 无 API key 时限流 5 次/30 秒、2000 条一页，首次建库约 25 万条 → 实测 4 小时。
+    # -1 = 永不更新，库必须由 scripts/cve-db.sh 从 olbat/nvdcve 离线构建后放进
+    # ${DL_DIR}/CVE_CHECK/。库缺失时构建会直接失败，而不是静默挂 4 小时。
+    # 想去掉这一层回到官方 API：删掉这行，并把 4 小时算进计划。
+    CVE_DB_UPDATE_INTERVAL = "-1"
     # custom variant 的调试特性。debug-tweaks 在 6.0 被拆掉（IMAGE_FEATURES[validitems]
     # 里已经没有它），所以由各 release 覆盖这个值，custom.yml 只做一层引用。
     YP_IMAGE_FEATURES ??= "debug-tweaks ssh-server-dropbear"
@@ -36,10 +42,14 @@ local_conf_header:
     BB_NUMBER_THREADS = "${@min(oe.utils.cpu_count(), 20)}"
     PARALLEL_MAKE = "-j ${@min(oe.utils.cpu_count(), 20)}"
 
-    # 磁盘/inode 守护：先 STOPTASKS 停派新任务，继续恶化就 HALT 中止整个构建。
+    # 磁盘/inode 守护：先 STOPTASKS 停派新任务，继续恶化就 ABORT 中止整个构建。
+    # 注意第二档必须是 ABORT 不能是 HALT：bitbake 3.1（dunfell）的
+    # DiskSpaceMonitor 只认 ABORT/STOPTASKS/WARN，写 HALT 会直接
+    # "ERROR: Unknown disk space monitor action: HALT" 把解析阶段打挂。
+    # 四版共用一个值就只能选 ABORT（4.0+ 也仍然支持）。
     # 阈值刻意很低，这是「别把共享盘写满」的最后一道闸；日常水位看
     # scripts/lib/disk-guard.sh 的 85% 门禁（那个才是主动拦截）。
-    BB_DISKMON_DIRS = "STOPTASKS,${TMPDIR},1G,100K STOPTASKS,${DL_DIR},1G,100K STOPTASKS,${SSTATE_DIR},1G,100K STOPTASKS,/tmp,100M,100K HALT,${TMPDIR},100M,1K HALT,${DL_DIR},100M,1K HALT,${SSTATE_DIR},100M,1K HALT,/tmp,10M,1K"
+    BB_DISKMON_DIRS = "STOPTASKS,${TMPDIR},1G,100K STOPTASKS,${DL_DIR},1G,100K STOPTASKS,${SSTATE_DIR},1G,100K STOPTASKS,/tmp,100M,100K ABORT,${TMPDIR},100M,1K ABORT,${DL_DIR},100M,1K ABORT,${SSTATE_DIR},100M,1K ABORT,/tmp,10M,1K"
 
     # buildhistory：记录每个 recipe 的包内容/依赖与镜像文件清单，构建结束自动
     # git commit（含 metadata-revs，可回溯到当时的 layer 版本）。

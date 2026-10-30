@@ -1,0 +1,18 @@
+header:
+  version: 14
+
+# CVE 合规构建开关（issue #48 / #26）。
+#
+# 只在 `scripts/build.sh --cve` 时被追加到 target 之后，所以默认的 8 组合
+# （general/custom × 4 版本）完全不受影响：cve_check 会给每个 recipe 挂一次
+# do_cve_check，是实打实的额外耗时。要出合规报告时显式打开。
+#
+# 为什么必须是 `=` 而不是 `+=`：kas 的 local_conf_header 段序是
+# base -> release -> machine -> variant -> features，本文件最后合并，
+# 用 `=` 才能覆盖 kas/variants/custom.yml 里的 YP_CVE_ENABLE = "0"。
+#
+# 前置条件：scripts/cve-db.sh sync 已把离线库放进
+# work/downloads/CVE_CHECK/（build.sh --cve 会先做这个预检）。
+local_conf_header:
+  cve: |
+    YP_CVE_ENABLE = "1"

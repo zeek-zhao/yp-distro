@@ -10,7 +10,10 @@ usage() {
     cat <<'EOF'
 Usage:
   scripts/build.sh --release <r> --variant general|custom [--machine <m>]
-                   [--image-mode release|dev] [--dry-run]
+                   [--image-mode release|dev] [--cve] [--dry-run]
+
+--cve  额外打开 custom variant 的 CVE 检查（issue #48/#26）。
+       需要先用 scripts/cve-db.sh sync 把离线 NVD 库放进 work/downloads/CVE_CHECK/。
 EOF
 }
 
@@ -25,6 +28,7 @@ variant=""
 machine=qemux86-64
 image_mode=release
 dry_run=0
+with_cve=0
 while (($# > 0)); do
     case "$1" in
         --release | --variant | --machine | --image-mode)
@@ -39,6 +43,10 @@ while (($# > 0)); do
             ;;
         --dry-run)
             dry_run=1
+            shift
+            ;;
+        --cve)
+            with_cve=1
             shift
             ;;
         -h | --help)
@@ -69,6 +77,20 @@ esac
 [[ -f "${ROOT_DIR}/config/machines/${machine}.env" ]] ||
     invalid_args "machine 配置不存在：config/machines/${machine}.env"
 
+# CVE 检查只有 custom variant 能开（general 用 poky distro，没有那条 INHERIT），
+# 而且它需要的离线库必须事先建好 —— 否则 bitbake 会在
+# cve-update-nvd2-native 上等 4 小时（#48）。
+cve_db=""
+if ((with_cve)); then
+    [[ "${variant}" == "custom" ]] ||
+        invalid_args "--cve 只能用于 --variant custom"
+    command -v cve_db_filename >/dev/null 2>&1 ||
+        invalid_args "scripts/lib/common.sh 未提供 cve_db_filename"
+    cve_db="$(cve_db_filename "${release}")" || invalid_args "${release} 不支持 CVE 检查"
+    dir_cve_db="${ROOT_DIR}/work/downloads/CVE_CHECK/${cve_db}"
+    [[ -f "${dir_cve_db}" ]] || invalid_args "缺少离线 NVD 库 ${dir_cve_db#"${ROOT_DIR}/"}；先跑 scripts/cve-db.sh sync"
+fi
+
 cd -- "${ROOT_DIR}"
 mkdir -p work
 lock_file="${ROOT_DIR}/work/build.lock"
@@ -86,6 +108,9 @@ machine_sfx="$(machine_suffix "${machine}")"
 kas_configs="/work/kas/targets/${release}-${variant}.yml"
 [[ "${machine}" == "qemux86-64" ]] ||
     kas_configs+=":/work/kas/machines/${machine}.yml"
+# CVE 用一层小 overlay 追加，不把开关写死进 8 份 target：
+# 同一份 target 既能出「标准构建」也能出「合规构建」，两者只差这一个文件。
+((with_cve == 0)) || kas_configs+=":/work/kas/features/cve.yml"
 kas_work_dir="/work/work/kas-${release}-${variant}${machine_sfx}"
 build_command="mkdir -p ${kas_work_dir} /work/work/downloads /work/work/sstate && KAS_CLONE_DEPTH=1 KAS_WORK_DIR=${kas_work_dir} kas build ${kas_configs}"
 if [[ "${image_mode}" == release ]]; then
@@ -102,6 +127,11 @@ fi
 mkdir -p work/downloads work/sstate work/logs "work/kas-${release}-${variant}${machine_sfx}"
 build_log="${ROOT_DIR}/work/logs/build-${release}-${variant}${machine_sfx}.log"
 build_meta="${build_log%.log}.meta"
+# 报告要区分「标准构建」与「合规构建」：meta 只放秒数（report.sh 按纯数字解析），
+# 开关单独放 .flags，避免把 meta 的格式搞坏。
+build_flags="${build_log%.log}.flags"
+printf 'release=%s\nvariant=%s\nmachine=%s\nimage_mode=%s\ncve=%s\n' \
+    "${release}" "${variant}" "${machine}" "${image_mode}" "${with_cve}" >"${build_flags}"
 start_seconds="$(date +%s)"
 printf 'Build start: %s\n' "$(date --iso-8601=seconds)" | tee "${build_log}"
 if "${command_args[@]}" "${build_command}" 2>&1 | tee -a "${build_log}"; then
