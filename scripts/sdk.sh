@@ -196,34 +196,40 @@ install_sdk() {
     bash "${sdk_installer}" -y -d "${sdk_dir}" >"${work_dir}/sdk-install.log" 2>&1
 }
 
+# 环境脚本可能有多个（custom 的 multilib 会多出一个
+# environment-setup-x86-pokymllib32-linux）。**multilib 那个不把 <triple>-gcc
+# 与 devtool 放进 PATH**，只 source 第一个会误判成「工具缺失」——实测
+# kirkstone:custom 就是这样报 devtool=missing。所以逐个试，取第一个能用的。
+# 每次都放进子 shell，避免上一个 source 出来的 PATH 泄漏到下一个。
 check_sdk() {
-    local setup
-    setup="$(find "${sdk_dir}" -maxdepth 1 -name 'environment-setup-*' ! -name '*-ext-*' |
-        head -n 1)"
-    [[ -n "${setup}" ]] || {
-        printf 'no environment-setup script\n'
+    local setup found=""
+    while IFS= read -r setup; do
+        found="$( set +u; . "${setup}" >/dev/null 2>&1
+            if command -v gcc >/dev/null 2>&1; then
+                gcc -dumpversion 2>/dev/null
+            elif [[ -n "${CC:-}" ]]; then
+                # shellcheck disable=SC2086
+                ${CC} -dumpversion 2>/dev/null
+            fi )"
+        [[ -n "${found}" ]] && break
+    done < <(find "${sdk_dir}" -maxdepth 1 -name 'environment-setup-*' ! -name '*-ext-*' | LC_ALL=C sort)
+    [[ -n "${found}" ]] || {
+        printf 'no usable environment-setup script\n'
         return 1
     }
-    # shellcheck disable=SC1090
-    ( set +u; . "${setup}" >/dev/null 2>&1
-      # SDK 里裸 gcc 不一定在 PATH 上：交叉编译器是 <triple>-gcc，$CC 指向它。
-      if command -v gcc >/dev/null 2>&1; then
-          gcc -dumpversion 2>/dev/null
-      elif [[ -n "${CC:-}" ]]; then
-          # shellcheck disable=SC2086
-          ${CC} -dumpversion 2>/dev/null
-      fi )
+    printf '%s' "${found}"
 }
 
 check_esdk() {
     local setup
-    setup="$(find "${esdk_dir}" -maxdepth 1 -name 'environment-setup-*' | head -n 1)"
-    [[ -n "${setup}" ]] || {
-        printf 'no environment-setup script\n'
-        return 1
-    }
-    ( set +u; . "${setup}" >/dev/null 2>&1
-      devtool --help >/dev/null 2>&1 && printf 'ok' || printf 'missing' )
+    while IFS= read -r setup; do
+        if ( set +u; . "${setup}" >/dev/null 2>&1
+             devtool --help >/dev/null 2>&1 ); then
+            printf 'ok'
+            return 0
+        fi
+    done < <(find "${esdk_dir}" -maxdepth 1 -name 'environment-setup-*' | LC_ALL=C sort)
+    printf 'missing'
 }
 
 sdk_install_ok=false
