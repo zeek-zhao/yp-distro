@@ -2,3 +2,4 @@
 spdx-format | wrynose | SPDX 2.x 产物已在 6.0 移除，只能产出新的 SBOM 格式 | §7.3
 cve-tool | wrynose | cve-check.bbclass 已在 6.0 移除，改用 sbom-cve-check | §7.3
 distro-backfill | wrynose | DISTRO_FEATURES_BACKFILL 已在 6.0 移除 | §7.3
+do-scancode | all | scancode 是 Python 应用做不成可行的 native recipe；recipe 内扫描与构建后批量扫描覆盖完全等价，却要多付 146 个 recipe x 4.5s 的进程启动开销，故只保留 demo 形态、默认关闭、不进任何镜像 | C26 / §7.3
