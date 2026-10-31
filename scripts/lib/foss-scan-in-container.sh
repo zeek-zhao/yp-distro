@@ -50,17 +50,25 @@ run_scan() {
         ${extra[@]+"${extra[@]}"} \
         "${src}" >>"${log}" 2>&1
     rc=$?
-    if ((rc != 0)) || [[ ! -s "${out_dir}/${pkg}.json" ]]; then
-        if ((attempt == 1)); then
-            printf 'SCAN %-32s 第 1 次 rc=%s，重试\n' "${pkg}" "${rc}" | tee -a "${log}"
-            run_scan "${pkg}" "${src}" 2
-            return $?
+    # 成败以**产物**为准，不以 rc 为准：实测 curl 的 json/csv/spdx/html 全部生成、
+    # json 能正常解析，rc 却是 1（ScanCode 32.x 的内部告警会让进程非零退出）。
+    # 早先按 rc 判定，导致 curl 在每版都被记成失败，覆盖率被低估一个包。
+    if [[ -s "${out_dir}/${pkg}.json" ]] &&
+        python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "${out_dir}/${pkg}.json" 2>/dev/null; then
+        if ((rc != 0)); then
+            printf 'SCAN %-32s ok（rc=%s，产物齐备）\n' "${pkg}" "${rc}" | tee -a "${log}"
+        else
+            printf 'SCAN %-32s ok\n' "${pkg}" | tee -a "${log}"
         fi
-        printf 'SCAN %-32s 失败 rc=%s\n' "${pkg}" "${rc}" | tee -a "${log}"
-        return 1
+        return 0
     fi
-    printf 'SCAN %-32s ok\n' "${pkg}" | tee -a "${log}"
-    return 0
+    if ((attempt == 1)); then
+        printf 'SCAN %-32s 第 1 次 rc=%s，重试\n' "${pkg}" "${rc}" | tee -a "${log}"
+        run_scan "${pkg}" "${src}" 2
+        return $?
+    fi
+    printf 'SCAN %-32s 失败 rc=%s\n' "${pkg}" "${rc}" | tee -a "${log}"
+    return 1
 }
 
 index=0
