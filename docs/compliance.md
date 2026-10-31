@@ -32,9 +32,17 @@ ScanCode 扫源码包），渲染很便宜。改版式时只需要 `report.sh --
    `spdx/3.0.1/<ns>/by-spdxid-hash/...` 的逐包文档，喂给 CVE 工具会报
    `SpdxDocument does not contain an Sbom node`。真正的 SBOM 是
    `deploy/images/<machine>/<image>-<machine>.rootfs.spdx.json`。
-3. **5.0 的 SBOM 要解包才能用**。`compliance.sh` 遇到 `.tar.zst` 会取出包内
-   的 `*.rootfs-<ts>.spdx.json` 落到 `work/artifacts/.../sbom/`，
-   归档里记录的 SHA-256 是**解出来的那份**，不是压缩包本身。
+3. **四版的镜像级 SBOM 四种形态**，靠候选列表 + 解包统一，不按 release 分支：
+
+   | release | 形态 | 包内文件名 |
+   |---|---|---|
+   | dunfell 3.1.33 | `<image>-<machine>.spdx.tar.gz` | `<image>-<ts>.spdx.json`（**没有** `.rootfs` 中缀） |
+   | kirkstone 4.0.35 | `<image>-<machine>.spdx.json` 单文件 | — |
+   | scarthgap 5.0.20 | `<image>-<machine>.rootfs.spdx.tar.zst` | `<image>.rootfs-<ts>.spdx.json` |
+   | wrynose 6.0.4 | `<image>-<machine>.rootfs.spdx.json` 单文件 | — |
+
+   解包出来的那份落到 `work/artifacts/.../sbom/`，归档里记录的 SHA-256
+   是**解出来的那份**，不是压缩包本身。
 
 ## 3. CVE：采集分叉、报告归一
 
