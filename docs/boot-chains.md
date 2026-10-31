@@ -7,9 +7,9 @@ v0.3.0 的出口条件之一是「U-Boot 链与 `-kernel` 链都能到 login」�
 
 | | `-kernel` 直启（默认） | U-Boot 链（`YP_UBOOT=1`） |
 |---|---|---|
-| 谁加载内核 | qemu 的 `-kernel` 参数 | U-Boot 从磁盘读 `extlinux.conf` 再加载 |
+| 谁加载内核 | qemu 的 `-kernel` 参数直接交给 CPU | U-Boot 经 QFW（fw_cfg）读 `-kernel` 的内核再引导 |
 | 有没有 bootloader 段 | 没有，墙钟从内核第一条 printk 算起 | 有，从上电到 `Starting kernel` 都是 U-Boot 的时间 |
-| 产物 | `bzImage` + rootfs | `u-boot.rom` + 带 `/boot` 布局的 rootfs |
+| 产物 | `bzImage` + rootfs | `u-boot.rom`（`-bios` 加载）+ 同样的 `bzImage`/rootfs |
 | 用在哪 | 日常构建、报告基线、启动优化 | 只用于量「bootloader 引入多少开销」 |
 
 **为什么必须两条都留**：只有 U-Boot 链，历史数据全部不可比（v0.3.0 之前的基线都是
@@ -34,12 +34,14 @@ bash scripts/build.sh --release wrynose --variant custom --uboot
 
 写这一节是因为按 ARM 的经验会直接踩空：
 
-1. **x86 的 U-Boot 是 ROM，不是 `u-boot.bin`**。`qemu-x86_defconfig` 产出
+1. **x86 的 U-Boot 是 ROM，不是 `u-boot.bin`**。`qemu-x86_64_defconfig` 产出
    `u-boot.rom`，由 qemu 的 `-bios` 加载；而 ARM 是 `-kernel u-boot.bin` 之后
    U-Boot 再 `bootm` 加载内核。两者在串口日志上的形态完全不同。
-2. **U-Boot 要从磁盘引导，镜像必须有 `/boot` 布局**：内核、initrd、
-   `extlinux/extlinux.conf` 三样齐备，U-Boot 的 distro-boot 才会找到它。
-   这属于**镜像布局改动**（需要 wic 或手工分区），不是一行变量。
+2. **内核经 QFW（fw_cfg）交给 U-Boot，不改磁盘布局**。qemu 命令行仍保留
+   `-kernel bzImage -append ...`，U-Boot 的 standard boot 用 QFW bootmeth 自动从
+   fw_cfg 读内核/initrd/cmdline 并引导（`booti` 先、`bootz` 回退）。defconfig 已开
+   `CONFIG_BOOTSTD_FULL` + `CONFIG_CMD_QFW`。**不需要** `/boot` 分区或
+   `extlinux.conf`——那是「distro-boot 从磁盘找 extlinux」的另一条路径，本项目不用。
 3. **FIT 对 x86 不适用**。`kernel-fitimage` 产出的是 ARM/PowerPC 的容器格式，
    x86 的 bzImage 不在里面打包。所以 `yp-uboot.inc` 只设 `UBOOT_*`，不含 FIT。
    想要 FIT，得在 `qemuarm64` 上做——那是另一条独立的验证路径。
