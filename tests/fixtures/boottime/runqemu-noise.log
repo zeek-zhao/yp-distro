@@ -1,0 +1,8 @@
+runqemu - INFO - Running MACHINE=qemux86-64 bitbake -e
+runqemu - INFO - Overriding variables from qemuboot.conf
+runqemu - INFO - Continuing with the following parameters:
+
+[    0.000000] Booting Linux on physical CPU 0x0
+[    0.901233] systemd[1]: systemd 259.5 running in system mode
+
+qemux86-64 login: 

@@ -1,6 +1,21 @@
-# feature_id | 适用 release | bats 文件 | bats tag
-entry-unified | all | tests/bats/00_project.bats | entry
-docker-images | all | tests/bats/01_dockerfile.bats | dockerfile
-ci-workflows | all | tests/bats/02_workflows.bats | ci
-container-runtime | all | tests/bats/03_container.bats | container
-layer-structure | all | tests/bats/04_layer.bats | layer
+# feature_id | 适用 release | bats 文件 | bats tag | status
+entry-unified | all | tests/bats/00_project.bats | entry | ok
+docker-images | all | tests/bats/01_dockerfile.bats | dockerfile | ok
+ci-workflows | all | tests/bats/02_workflows.bats | ci | ok
+container-runtime | all | tests/bats/03_container.bats | container | ok
+layer-structure | all | tests/bats/04_layer.bats | layer | ok
+kas-layer | all | tests/bats/05_kas.bats | kas | ok
+spdx-format | all | tests/bats/11_compliance.bats | compliance | ok
+cve-tool | all | tests/bats/11_compliance.bats | compliance | ok
+cve-db | dunfell,kirkstone,scarthgap | tests/bats/09_cvedb.bats | cvedb | ok
+foss-scan | all | tests/bats/11_compliance.bats | compliance | ok
+sdk | all | tests/bats/10_sdk.bats | sdk | ok
+distro-backfill | wrynose | - | - | degraded
+report-archive | all | tests/bats/06_report.bats | report | ok
+shared-cache | all | tests/bats/07_cache.bats | cache | ok
+cross-version-diff | all | tests/bats/08_crossdiff.bats | crossdiff | ok
+do-scancode | all | tests/bats/11_scancode.bats | scancode | degraded
+distro-features | all | tests/bats/12_distro.bats | distro | ok
+kvm-accel | all | tests/bats/03_container.bats | container | ok
+yp-service | wrynose | tests/bats/13_service.bats | service | ok
+boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok

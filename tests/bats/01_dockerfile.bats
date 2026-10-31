@@ -112,3 +112,33 @@ EOF
     [ "${status}" -ne 0 ]
     rm -f "${tmp_file}"
 }
+
+# bats test_tags=dockerfile
+@test "release images install hadolint and actionlint" {
+    # #46：release 镜像要跑 scripts/report.sh，里面有两例分别调 hadolint 与
+    # actionlint。镜像缺这两个工具时归档只能临时补装，"镜像本身可复现"就没了。
+    local release
+    for release in dunfell kirkstone scarthgap wrynose; do
+        grep -q '^ARG HADOLINT_VERSION=' "${ROOT_DIR}/docker/${release}/Dockerfile"
+        grep -q '^ARG ACTIONLINT_VERSION=' "${ROOT_DIR}/docker/${release}/Dockerfile"
+        grep -q 'HADOLINT_VERSION=${HADOLINT_VERSION}' \
+            "${ROOT_DIR}/docker/${release}/Dockerfile"
+        grep -q 'ACTIONLINT_VERSION=${ACTIONLINT_VERSION}' \
+            "${ROOT_DIR}/docker/${release}/Dockerfile"
+    done
+    grep -q 'install-linters.sh' "${ROOT_DIR}/docker/${release}/Dockerfile"
+    grep -q 'hadolint-Linux-x86_64' "${ROOT_DIR}/docker/common/install-linters.sh"
+    grep -q 'rhysd/actionlint' "${ROOT_DIR}/docker/common/install-linters.sh"
+    # 指纹进构建日志，否则"装了但版本不对"会静默通过
+    grep -q 'hadolint=${HADOLINT_VERSION} reported=' \
+        "${ROOT_DIR}/docker/common/install-linters.sh"
+    grep -q 'actionlint=${ACTIONLINT_VERSION} reported=' \
+        "${ROOT_DIR}/docker/common/install-linters.sh"
+}
+
+# bats test_tags=dockerfile
+@test "dev image installs actionlint and records it in the fingerprint" {
+    grep -q '^ARG ACTIONLINT_VERSION=' "${ROOT_DIR}/docker/dev/Dockerfile"
+    grep -q 'rhysd/actionlint' "${ROOT_DIR}/docker/dev/Dockerfile"
+    grep -q "actionlint=" "${ROOT_DIR}/docker/dev/Dockerfile"
+}

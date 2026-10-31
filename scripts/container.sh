@@ -104,12 +104,31 @@ sstate_dir=/work/work/sstate
 home_dir="/work/work/home/${release}"
 passwd_file="${ROOT_DIR}/work/home/.passwd"
 
+# KVM 加速探测：宿主 jenkins 不在 kvm 组，所以宿主直跑 QEMU 拿不到 /dev/kvm，
+# 容器内必须用 --device + --group-add 才拿得到。拿不到不阻断构建（降级 TCG），
+# 但状态必须显式传给容器与报告 —— 否则以后有人拿 TCG 的启动时间跟 KVM 的比较。
+kvm_device="${YP_KVM_DEVICE:-/dev/kvm}"
+kvm_status="ok"
+kvm_reason=""
+kvm_gid=""
+if [[ ! -e "${kvm_device}" ]]; then
+    kvm_status="unavailable"
+    kvm_reason="宿主无 ${kvm_device}"
+else
+    kvm_gid="$(stat -c '%g' "${kvm_device}" 2>/dev/null || true)"
+    if [[ -z "${kvm_gid}" ]]; then
+        kvm_status="unavailable"
+        kvm_reason="${kvm_device} 属组未知"
+    fi
+fi
+
 if [[ "${mode}" == check ]]; then
     printf 'RELEASE=%s\nVARIANT=%s\nMACHINE=%s\nDISTRO=%s\nIMAGE=%s\nTAG=%s\n' \
         "${release}" "${variant}" "${machine}" "${DISTRO}" "${IMAGE}" "${TAG}"
     printf 'Resolved image: %s\nHost uid/gid: %s:%s\nDL_DIR=%s\nSSTATE_DIR=%s\n' \
         "${resolved_image}" "${host_uid}" "${host_gid}" "${dl_dir}" "${sstate_dir}"
     printf '%s\n' "${disk_output}"
+    printf 'KVM=%s%s\n' "${kvm_status}" "${kvm_reason:+ (${kvm_reason})}"
     exit 0
 fi
 
@@ -125,9 +144,17 @@ run_args=(
     -v "${HOST_REPO_DIR}:/work"
     -v "${HOST_REPO_DIR}/work/home/.passwd:/etc/passwd:ro"
     -e "HOME=${home_dir}"
+    # 这两个变量是给人工排查看的契约声明；真值由 kas/base.yml 决定，
+    # bitbake 不从环境导入它们。
     -e "DL_DIR=${dl_dir}"
     -e "SSTATE_DIR=${sstate_dir}"
 )
+
+if [[ "${kvm_status}" == ok ]]; then
+    run_args+=(--device "${kvm_device}" --group-add "${kvm_gid}")
+fi
+# 无论有没有 KVM 都要传：容器内的 qemu.sh 与报告靠它决定写 kvm 还是 tcg 口径。
+run_args+=(-e "YP_KVM=${kvm_status}")
 
 if [[ -S /var/run/docker.sock ]]; then
     run_args+=(

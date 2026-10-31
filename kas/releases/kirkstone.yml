@@ -1,0 +1,16 @@
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+repos:
+  poky:
+    url: https://git.yoctoproject.org/poky
+    tag: yocto-4.0.35
+    layers:
+      meta:
+      meta-poky:
+
+local_conf_header:
+  release-name: |
+    YP_RELEASE_NAME = "kirkstone"

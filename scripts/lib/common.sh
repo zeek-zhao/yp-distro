@@ -36,6 +36,20 @@ load_machine() {
     _load_config machines "$1"
 }
 
+# 镜像层（minimal|base|full）→ 具体镜像配方名。真本在 config/images.conf，
+# 脚本里不重复写死包名 —— 加一层只改那份配置。
+resolve_image() {
+    [[ $# -eq 1 ]] || die "用法：resolve_image <minimal|base|full>"
+
+    local logical="$1" resolved
+    [[ -n "${logical}" ]] || die "镜像层不能为空"
+    resolved="$(sed -n "s/^${logical}[[:space:]]\+//p" "${ROOT_DIR}/config/images.conf" | head -1)"
+    if [[ -z "${resolved}" ]]; then
+        die "未知镜像层：${logical}（可选：minimal base full）"
+    fi
+    printf '%s' "${resolved}"
+}
+
 resolve_all() {
     [[ $# -eq 3 ]] || die "用法：resolve_all <release> <variant> <machine>"
 
@@ -51,6 +65,31 @@ resolve_all() {
     [[ -n "${TAG}" ]] || die "release 配置缺少对应的 tag"
 
     export RELEASE REPO_MODE TAG VARIANT DISTRO IMAGE MACHINE
+}
+
+# machine 维度后缀：默认 machine（qemux86-64）不加后缀，保证既有 8 组合的
+# 工作区、产物目录、归档名完全不变；非默认 machine 用 -<machine> 隔离，
+# 否则同一 release/variant 的两套构建会共用一个 TMPDIR 并互相覆盖产物。
+machine_suffix() {
+    local machine="${1:-${MACHINE:-qemux86-64}}"
+    if [[ -z "${machine}" || "${machine}" == "qemux86-64" ]]; then
+        return 0
+    fi
+    printf -- '-%s' "${machine}"
+}
+
+# cve-check 认的 sqlite 库名各 release 不同，实测自 poky 源码：
+#   3.1 dunfell   meta/classes/cve-check.bbclass  CVE_CHECK_DB_FILE = ${DL_DIR}/CVE_CHECK/nvdcve_2.db
+#   4.0 kirkstone CVE_CHECK_DB_FILENAME = nvdcve_2-2.db
+#   5.0 scarthgap 同 4.0（列结构也一致，可共用一份库）
+# 6.0 wrynose 没有 cve-check.bbclass，用 sbom-cve-check 的 git 型数据库，不适用。
+# build.sh（预检）与 cve-db.sh（产出）必须用同一份规则，否则预检会查错文件。
+cve_db_filename() {
+    case "${1:-}" in
+        dunfell) printf 'nvdcve_2.db' ;;
+        kirkstone | scarthgap) printf 'nvdcve_2-2.db' ;;
+        *) return 1 ;;
+    esac
 }
 
 work_dir() {

@@ -1,0 +1,10 @@
+# 跨版本差异真本。每行：aspect | <release>=<取值> | ...
+# 取值必须是可核验的事实（源码路径/变量值），不要写主观描述。
+# 只有真跑过的版本才填；新增版本时同步加列。取值中不得包含 |。
+distro-version | scarthgap=5.0.20 | wrynose=6.0.4 | kirkstone=4.0.35 | dunfell=3.1.33
+spdx-format | scarthgap=2.2 + 3.0.1 | wrynose=3.0.1 only | kirkstone=2.2 (create-spdx.bbclass) | dunfell=2.2 (create-spdx.bbclass)
+cve-class | scarthgap=cve-check | wrynose=sbom-cve-check | kirkstone=cve-check | dunfell=cve-check
+distro-backfill | scarthgap=生效（pulseaudio sysvinit gobject-introspection-data ldconfig） | wrynose=仅改名墓碑 | kirkstone=生效（pulseaudio sysvinit gobject-introspection-data ldconfig） | dunfell=生效（pulseaudio sysvinit gobject-introspection-data ldconfig）
+kernel | scarthgap=linux-yocto 6.6 | wrynose=linux-yocto 6.18 | kirkstone=linux-yocto 5.15 | dunfell=linux-yocto 5.4
+gcc | scarthgap=13.% | wrynose=15.% | kirkstone=11.% | dunfell=9.%
+image-fstypes | scarthgap=tar.bz2 ext4 | wrynose=tar.zst ext4.zst | kirkstone=tar.bz2 ext4 | dunfell=tar.bz2 ext4

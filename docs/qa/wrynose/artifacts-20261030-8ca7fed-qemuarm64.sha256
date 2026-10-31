@@ -1,0 +1,5 @@
+# Source: release=wrynose variant=general commit=8ca7fed
+7a352b4c74810b62eb55838e6e80879cc5999f7b42c30ca7351b7e37bbb57975  work/kas-wrynose-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs-20261029163534.ext4.zst
+3205ef465304ae5a091b352c6d42e75bba440aa7ba252ded7d12570992081f54  work/kas-wrynose-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs-20261029163534.tar.zst
+7a352b4c74810b62eb55838e6e80879cc5999f7b42c30ca7351b7e37bbb57975  work/kas-wrynose-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs.ext4.zst
+3205ef465304ae5a091b352c6d42e75bba440aa7ba252ded7d12570992081f54  work/kas-wrynose-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs.tar.zst

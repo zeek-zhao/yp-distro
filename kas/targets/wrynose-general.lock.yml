@@ -1,0 +1,10 @@
+header:
+    version: 14
+overrides:
+    repos:
+        bitbake:
+            commit: 51fd94a67fa17650a9ff623492005972bbc7d26f
+        meta-yocto:
+            commit: 7c25b11156553145fa6b241a2d4f65d94438f804
+        openembedded-core:
+            commit: 0f03c732a0a2d0506b41b1abe60b3f368b2300dc

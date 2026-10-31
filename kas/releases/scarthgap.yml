@@ -1,0 +1,21 @@
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+local_conf_header:
+  release-name: |
+    # custom variant 的主机名要带 release 名（§4.2）
+    YP_RELEASE_NAME = "scarthgap"
+  scarthgap: |
+    # 5.0 没有 UNPACKDIR（该变量 6.0 才引入），file:// 仍解包到 ${WORKDIR}，
+    # S = ${WORKDIR} 也仍然合法（base.bbclass 的 do_unpack[cleandirs] 对此有专门分支）。
+    # 所以这里不要覆盖 YP_SRC_DIR —— 覆盖成 ${UNPACKDIR} 会让 S 变成字面量并炸在 mkdirhier。
+
+repos:
+  poky:
+    url: https://git.yoctoproject.org/poky
+    tag: yocto-5.0.20
+    layers:
+      meta:
+      meta-poky:

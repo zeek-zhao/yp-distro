@@ -1,0 +1,10 @@
+# 启动链切换用的 kas overlay：#61
+#   bash scripts/build.sh --release wrynose --variant custom --uboot
+# 单独成文件而不是写进 8 份 target：同一份 target 既能出 -kernel 链也能出
+# U-Boot 链，两者只差这一层，对比才有意义。
+header:
+  version: 14
+
+local_conf_header:
+  yp-uboot: |
+    YP_UBOOT = "1"

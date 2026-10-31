@@ -23,10 +23,12 @@ ARG BATS_SUPPORT_VERSION=0.3.0
 ARG BATS_ASSERT_VERSION=2.1.0
 ARG SHFMT_VERSION=3.14.1
 ARG HADOLINT_VERSION=2.15.1
+ARG ACTIONLINT_VERSION=1.7.7
 ARG GH_VERSION=2.103.3
 ARG YQ_VERSION=4.54.1
 ARG NODE_VERSION=22.23.4
 ARG COPILOT_CLI_VERSION=1.0.105
+ARG KAS_VERSION=4.6
 
 # ── 用户映射（215 上 jenkins uid/gid = 2000；构建时由 dev.sh 传入实际值）──
 ARG DEV_UID=2000
@@ -60,10 +62,25 @@ RUN sed -i \
         jq unzip zip xz-utils tar file rsync less nano \
         vim tmux sudo bash-completion bc time \
         python3 python3-pip python3-venv \
+    # chrpath / cpio / diffstat / gawk / zstd：poky 的 HOSTTOOLS 最小集。
+    # 本镜像**不跑构建**，但远程 AI CLI（wf3 的 copilot 会话）需要 `bitbake -e`
+    # 做只读解析验证；而 sanity 的 HOSTTOOLS 检查在解析末尾就执行，缺一个整条
+    # 命令直接失败。不给这些工具，AI 只能盲改文件、无法自验 —— 实测代价是它会
+    # 去研究 base.bbclass 试图用 hack 绕过检查，那比多装十几 MB 危险得多。
+    # 各版列表不同：kirkstone/scarthgap 还要 lz4c（lz4 包），wrynose 不要。
+        chrpath cpio diffstat gawk zstd lz4 \
         shellcheck \
         build-essential pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# poky 还要求 pzstd / unzstd，Ubuntu 24.04 没有 pzstd 包。
+# unzstd 是 zstd 按 argv[0] 判定的解压别名，软链即可；pzstd 用并行模式近似，
+# 只为满足存在性检查 —— dev 容器不真构建，不会走到 pzstd 的真解压路径。
+RUN ln -sf /usr/bin/zstd /usr/local/bin/unzstd \
+    && printf '#!/bin/sh\nexec zstd -T0 "$@"\n' > /usr/local/bin/pzstd \
+    && chmod +x /usr/local/bin/pzstd \
+    && for t in chrpath cpio diffstat gawk zstd lz4c pzstd unzstd; do command -v "$t" >/dev/null || exit 1; done
 
 RUN locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8
@@ -104,6 +121,14 @@ RUN curl -fsSL "${GH_DL}/hadolint/hadolint/releases/download/v${HADOLINT_VERSION
     && chmod 0755 /usr/local/bin/hadolint \
     && hadolint --version
 
+RUN curl -fsSL "${GH_DL}/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+        -o /tmp/actionlint.tar.gz \
+    && mkdir -p /tmp/actionlint \
+    && tar -xzf /tmp/actionlint.tar.gz -C /tmp/actionlint actionlint \
+    && install -m 0755 /tmp/actionlint/actionlint /usr/local/bin/actionlint \
+    && rm -rf /tmp/actionlint /tmp/actionlint.tar.gz \
+    && actionlint --version
+
 RUN curl -fsSL "${GH_DL}/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
         -o /tmp/gh.tar.gz \
     && tar -xzf /tmp/gh.tar.gz -C /tmp \
@@ -126,6 +151,14 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDE
     && pycodestyle --version \
     && pytest --version \
     && yamllint --version
+
+###############################################################################
+# 4b. kas —— Yocto 配置层工具（仅用于 kas/*.yml 的静态解析校验，不跑 bitbake）
+#     ubuntu 24.04 是 PEP668 受管环境；以 root 装到 /usr/local/bin
+###############################################################################
+RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDEX}" \
+        "kas==${KAS_VERSION}" \
+    && kas --version
 
 ###############################################################################
 # 5. Node + 远程 AI CLI（WF3 的编码端；215 宿主不装 node）
@@ -183,10 +216,12 @@ RUN { \
         printf 'shellcheck=%s\n' "$(shellcheck --version | awk '/^version:/{print $2}')"; \
         printf 'shfmt=%s\n'      "$(shfmt --version | tr -d 'v')"; \
         printf 'hadolint=%s\n'   "$(hadolint --version | awk '{print $4}')"; \
+        printf 'actionlint=%s\n' "$(actionlint --version | head -1)"; \
         printf 'gh=%s\n'         "$(gh --version | head -1 | awk '{print $3}')"; \
         printf 'yq=%s\n'         "$(yq --version | awk '{print $4}')"; \
         printf 'node=%s\n'       "$(node --version | tr -d 'v')"; \
         printf 'copilot=%s\n'    "$(copilot --version 2>/dev/null | head -1)"; \
+        printf 'kas=%s\n'        "$(kas --version | awk '{print $2}')"; \
         printf 'docker=host-mounted\n'; \
     } > /etc/yocto-dev-versions \
     && cat /etc/yocto-dev-versions

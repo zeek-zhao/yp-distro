@@ -179,3 +179,34 @@ EOF
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"foo"* ]]
 }
+
+# bats test_tags=container
+@test "preflight reports kvm acceleration capability without failing" {
+    mock_release_image
+    run --separate-stderr bash "${CONTAINER_SCRIPT}" --release scarthgap --check
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"KVM="* ]]
+}
+
+# bats test_tags=container
+@test "kvm device is forwarded when the host exposes it" {
+    mock_release_image
+    if [[ ! -e /dev/kvm ]]; then
+        skip "宿主无 /dev/kvm，本机无法覆盖透传路径"
+    fi
+    run --separate-stderr bash "${CONTAINER_SCRIPT}" --release scarthgap --dry-run
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"--device /dev/kvm"* ]]
+    [[ "${output}" == *"--group-add"* ]]
+    [[ "${output}" == *"YP_KVM=ok"* ]]
+}
+
+# bats test_tags=container
+@test "missing kvm degrades to tcg without blocking preflight" {
+    mock_release_image
+    run --separate-stderr env YP_KVM_DEVICE=/nonexistent/kvm \
+        bash "${CONTAINER_SCRIPT}" --release scarthgap --dry-run
+    [ "${status}" -eq 0 ]
+    [[ "${output}" != *"--device"* ]]
+    [[ "${output}" == *"YP_KVM=unavailable"* ]]
+}
