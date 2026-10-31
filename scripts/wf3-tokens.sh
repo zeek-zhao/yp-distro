@@ -124,6 +124,9 @@ do_report() {
 import sys, json
 
 ledger, f_task, f_issue, f_last, as_json = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+# 注意：从 shell 传进来的是字符串 "0"/"1"，"0" 在 Python 里是真值，
+# 必须显式比较，否则无参数调用也会走 JSON 分支
+as_json = (as_json == "1")
 COLS = ["ts","task","issue","session_start","model","in","out","cache_r","cache_w",
         "total","credits","premium","dur_ms","rc"]
 
