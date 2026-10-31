@@ -24,7 +24,16 @@ UBOOT_IMAGE ??= "u-boot.rom"
 UBOOT_SUFFIX ??= "rom"
 
 # 空字符串 = 不指定 bootloader provider，qemu 仍走 -kernel 直启。
+# 注意：qemux86-64.conf 已 `PREFERRED_PROVIDER_virtual/bootloader ?= "u-boot"`，
+# 所以这里不必再设 provider —— 关键是下面两点（EXTRA_IMAGEDEPENDS + QB_DEFAULT_BIOS）
+# 让 u-boot 真正被编译并被 runqemu 加载。只设 provider 不拉依赖，u-boot 不会编。
 PREFERRED_PROVIDER_virtual/bootloader = "${@'u-boot' if d.getVar('YP_UBOOT') == '1' else ''}"
+
+# YP_UBOOT=1 时让镜像依赖 u-boot：ext4.zst 不走 wic，do_image_wic 的 recrdeptask
+# do_deploy 不触发，所以必须靠 EXTRA_IMAGEDEPENDS 显式把 u-boot 拉进来编译并
+# deploy 到 DEPLOY_DIR_IMAGE（u-boot.rom），否则 virtual/bootloader 只是声明、
+# 实际不编 —— 首版就踩了这个空（4003 任务里一个 u-boot 都没有）。
+EXTRA_IMAGEDEPENDS += "${@'u-boot' if d.getVar('YP_UBOOT') == '1' else ''}"
 
 # YP_UBOOT=1 时让 runqemu 用 -bios u-boot.rom 启动（而不是裸 -kernel 直启）。
 # runqemu 的 check_bios 只认 QB_DEFAULT_BIOS 的 basename，为空/ none 才不加 -bios；
