@@ -284,7 +284,7 @@ ensure_scv() {
 # 6.0：构建后跑 CLI。--offline-mode 是「全程没联网」的机器化证据：
 # 开了它 clone/fetch 直接失败，能跑通就说明只读了本地库。
 cve_wrynose() {
-    local sbom manifest counts db_rev db_date
+    local sbom manifest db_rev db_date
     sbom="$(sbom_file)" || {
         write_section cve <<'JSON'
 {"available": false, "reason": "6.0 的 CVE 结论来自 SBOM，缺 SPdx 产物时无法扫描"}
@@ -453,7 +453,8 @@ scancode_bin_in_container() {
 ensure_scancode() {
     local bin
     bin="$(scancode_bin_in_container)" || die "scancode.sh 不认识 release ${release}"
-    local host_dir="${ROOT_DIR}/work/tools/$(basename -- "$(dirname -- "${bin}")")"
+    local host_dir
+    host_dir="${ROOT_DIR}/work/tools/$(basename -- "$(dirname -- "${bin}")")"
     if [[ ! -x "${host_dir}/scancode" ]]; then
         log_info "ScanCode 未就绪，先准备（约 140~220 MB，只一次）"
         bash "${ROOT_DIR}/scripts/scancode.sh" sync --release "${release}"
