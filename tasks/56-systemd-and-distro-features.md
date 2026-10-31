@@ -173,22 +173,54 @@ bash scripts/dev.sh scripts/report.sh --release wrynose --variant custom
 
 ## 执行边界（先读这一节）
 
-你在容器内执行，**没有 docker socket**（`scripts/build.sh` 会被嵌套 docker guard 拒绝），也没有 HOSTTOOLS。所以：
+你在容器内执行（`yocto-dev:local`），**没有 docker socket**，所以 `scripts/build.sh` / `scripts/qemu.sh` 会被嵌套 docker guard 拦下 —— **真构建与起机不要试**，属 L3，由人在宿主触发。
+
+镜像里已经装好 poky 的 HOSTTOOLS 最小集（`chrpath cpio diffstat gawk zstd pzstd unzstd`），所以 **`bitbake -e` 可以在容器内真跑**，这是你的主要验证手段。
+
+### 容器内怎么跑 bitbake -e
+
+不要用 `kas shell`（会重走一遍 clone/lock 解析，慢且可能改 work/ 状态）。直接 source 已有的 build 目录。**四版路径不同**：6.0 在 `openembedded-core`，3.1/4.0/5.0 在 `poky`。
+
+```bash
+# wrynose（6.0）
+cd /work && source work/kas-wrynose-custom/openembedded-core/oe-init-build-env \
+    work/kas-wrynose-custom/build >/dev/null 2>&1
+bitbake -e yp-image | grep -E '^(INIT_MANAGER|VIRTUAL-RUNTIME_init_manager)='
+```
+
+一次查四版（可直接存成 `/tmp/df4.sh` 反复用）：
+
+```bash
+for r in dunfell kirkstone scarthgap wrynose; do
+  cd /work
+  if [ -d "work/kas-$r-custom/openembedded-core" ]; then
+    src=work/kas-$r-custom/openembedded-core
+  else
+    src=work/kas-$r-custom/poky
+  fi
+  printf '%-12s ' "$r"
+  ( source "$src/oe-init-build-env" "work/kas-$r-custom/build" >/dev/null 2>&1
+    bitbake -e yp-image 2>/dev/null | grep -E '^INIT_MANAGER=' | head -1 ) || echo "(失败)"
+done
+```
+
+注意每次 `source oe-init-build-env` 都会改 `PATH` 与 `BBPATH`，**在子 shell 里做**（上面用 `( … )`），否则四版串味。
 
 **你负责的（必须做完）**
 
 1. 改 `layers/meta-yp/conf/distro/yp.conf` 与 `include/yp-common.inc`
 2. 新建 `docs/distro-features.md`、`docs/syntax-matrix.md`（若不存在）、`tests/bats/12_distro.bats`
-3. 解析级验证：A-1 / A-2 / B-1 / B-2（`kas shell -c "bitbake -e ..."` 在容器内可跑）
+3. 解析级验证：A-1 / A-2 / B-1 / B-2（用上面命令）
 4. BATS：`bats -r tests/bats/12_distro.bats`
 5. 全量 L1：`bash scripts/report.sh --release wrynose --variant custom`（只读 `work/`，不构建）
 
 **不要尝试的（会被拦，纯浪费时间）**
 
-- `scripts/build.sh` / `scripts/qemu.sh` 任何形态 —— 真构建与起机属 L3，由人在宿主触发
+- `scripts/build.sh` / `scripts/qemu.sh` 任何形态
 - `docker` 任何命令
+- **为了让命令跑通去改 `HOSTTOOLS` / `HOSTTOOLS_NONFATAL` / `base.bbclass` / `sanity`** —— 工具已经装好了，缺工具说明镜像该重建，不是该在 conf 里糊。这类改动会污染仓库并且让判断标准失效。
 
-**遇到需要真构建的验收项**（A-3、B-4，以及 A3 里 3.1 的 `systemd-udevd` 实测）：**不要跳过，也不要假装通过**。在回复末尾单列一节：
+**遇到需要真构建的验收项**（A-3、B-4，以及 3.1 的 `systemd-udevd` 实测）：**不要跳过，也不要假装通过**。在回复末尾单列一节：
 
 ```
 ## 待人工验证（L3）

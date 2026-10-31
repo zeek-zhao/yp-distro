@@ -134,7 +134,7 @@ spawn_session() {
     # 经 copilot-wrap.sh 启动：清掉 PAT 类变量，强制走 OAuth 登录态
     # --usage-output-file 落用量 JSON，退出后 ingest 进台账（幂等）
     # 外层 sleep 让 pane 在 copilot 退出后仍保留，便于事后查看输出
-    inner="cd '${ROOT_DIR}' && bash scripts/dev.sh bash '${CT_WRAP}' --model '${COPILOT_MODEL}' --trust-folder --allow-all-tools --usage-output-file '$(ct_usage_file "${id}")' ${COPILOT_EXTRA} ${flag} \"\$(cat '${card}')\"; rc=\$?; bash scripts/wf3-tokens.sh ingest '${id}' \"\$rc\"; echo; echo \"[wf3] copilot 退出，rc=\${rc}\"; echo '[wf3] 日志 logs/wf3-${id}.log；用量 scripts/wf3.sh tokens --task ${id}；结束会话 scripts/wf3.sh stop ${id}'; sleep 86400"
+    inner="cd '${ROOT_DIR}' && bash scripts/dev.sh bash '${CT_WRAP}' --model '${COPILOT_MODEL}' --trust-folder --allow-all-tools --usage-output-file '$(ct_usage_file "${id}")' ${COPILOT_EXTRA} ${flag} \"\$(cat '${card}')\"; rc=\$?; bash scripts/wf3-tokens.sh ingest '${id}' \"\$rc\"; bash scripts/wf3-tokens.sh publish; echo; echo \"[wf3] copilot 退出，rc=\${rc}\"; echo '[wf3] 日志 logs/wf3-${id}.log；用量 scripts/wf3.sh tokens --task ${id}；结束会话 scripts/wf3.sh stop ${id}'; sleep 86400"
 
     tmux new-session -d -s "${sess}" -x 200 -y 50 -c "${ROOT_DIR}" "${inner}"
     tmux set-option -t "${sess}" remain-on-exit on >/dev/null
@@ -166,6 +166,9 @@ do_run() {
     rc="${PIPESTATUS[0]}"
     set -e
     bash "${ROOT_DIR}/scripts/wf3-tokens.sh" ingest "${id}" "${rc}" || true
+    # 顺手刷新仓库里的台账与看板：metrics/token-usage.tsv + docs/tokens.html
+    # 只写文件、不提交 —— 提交时机由人决定，避免每个任务一条 commit 噪音
+    bash "${ROOT_DIR}/scripts/wf3-tokens.sh" publish || true
     return "${rc}"
 }
 

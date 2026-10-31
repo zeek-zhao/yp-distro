@@ -62,10 +62,24 @@ RUN sed -i \
         jq unzip zip xz-utils tar file rsync less nano \
         vim tmux sudo bash-completion bc time \
         python3 python3-pip python3-venv \
+    # chrpath / cpio / diffstat / gawk / zstd：poky 的 HOSTTOOLS 最小集。
+    # 本镜像**不跑构建**，但远程 AI CLI（wf3 的 copilot 会话）需要 `bitbake -e`
+    # 做只读解析验证；而 sanity 的 HOSTTOOLS 检查在解析末尾就执行，缺一个整条
+    # 命令直接失败。不给这些工具，AI 只能盲改文件、无法自验 —— 实测代价是它会
+    # 去研究 base.bbclass 试图用 hack 绕过检查，那比多装 10MB 危险得多。
+        chrpath cpio diffstat gawk zstd \
         shellcheck \
         build-essential pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# poky 还要求 pzstd / unzstd，Ubuntu 24.04 没有 pzstd 包。
+# unzstd 是 zstd 按 argv[0] 判定的解压别名，软链即可；pzstd 用并行模式近似，
+# 只为满足存在性检查 —— dev 容器不真构建，不会走到 pzstd 的真解压路径。
+RUN ln -sf /usr/bin/zstd /usr/local/bin/unzstd \
+    && printf '#!/bin/sh\nexec zstd -T0 "$@"\n' > /usr/local/bin/pzstd \
+    && chmod +x /usr/local/bin/pzstd \
+    && for t in chrpath cpio diffstat gawk zstd pzstd unzstd; do command -v "$t" >/dev/null || exit 1; done
 
 RUN locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8
