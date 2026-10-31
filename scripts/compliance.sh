@@ -91,14 +91,19 @@ image_manifest() {
     return 1
 }
 
-# 镜像级 SBOM。三种形态，按 release 命中同一种，但这里统一用「候选 + 形态判断」，
-# 免得以后换版本又要改（3.1/4.0 目前看是 spdx/<machine>/ 直放，5.0 是 .tar.zst）。
+# 镜像级 SBOM。四版的形态各不相同（都实测过）：
+#   3.1 dunfell   <image>-<machine>.spdx.tar.gz       包内 <image>.spdx.json
+#   4.0 kirkstone <image>-<machine>.spdx.json         单文件（没有 .rootfs 中缀）
+#   5.0 scarthgap <image>-<machine>.rootfs.spdx.tar.zst 包内 <image>.rootfs-<ts>.spdx.json
+#   6.0 wrynose   <image>-<machine>.rootfs.spdx.json  单文件
+# 所以走「候选列表 + 归档解包」，不按 release 分支写死。
 sbom_file() {
     local deploy imgs candidate
     deploy="$(deploy_root)"
     imgs="${deploy}/images/${machine}"
     for candidate in \
         "${imgs}/${image}-${machine}.rootfs.spdx.json" \
+        "${imgs}/${image}-${machine}.spdx.json" \
         "${deploy}/spdx/${machine}/${image}-${machine}.rootfs.spdx.json" \
         "${deploy}/spdx/${image}-${machine}.rootfs.spdx.json"; do
         [[ -f "${candidate}" ]] && {
@@ -106,8 +111,10 @@ sbom_file() {
             return 0
         }
     done
-    # 5.0：镜像级 SBOM 打成 tar.zst，包内是 <image>.rootfs-<ts>.spdx.json
-    for candidate in "${imgs}/${image}-${machine}.rootfs.spdx.tar.zst" \
+    for candidate in \
+        "${imgs}/${image}-${machine}.rootfs.spdx.tar.zst" \
+        "${imgs}/${image}-${machine}.spdx.tar.zst" \
+        "${imgs}/${image}-${machine}.spdx.tar.gz" \
         "${imgs}/${image}-${machine}.rootfs.spdx.tar.gz"; do
         [[ -f "${candidate}" ]] || continue
         extract_sbom_from_archive "${candidate}" && return 0
@@ -123,13 +130,16 @@ sbom_file() {
 }
 
 extract_sbom_from_archive() {
-    local archive="$1" dest member name
+    local archive="$1" dest member name listing
     dest="$(artifact_dir)/sbom"
     mkdir -p -- "${dest}"
     case "${archive}" in
-        *.tar.zst) member="$(tar --zstd -tf "${archive}" 2>/dev/null | grep -E '\.rootfs(-[0-9]+)?\.spdx\.json$' | LC_ALL=C sort | tail -n 1)" ;;
-        *) member="$(tar -tzf "${archive}" 2>/dev/null | grep -E '\.rootfs(-[0-9]+)?\.spdx\.json$' | LC_ALL=C sort | tail -n 1)" ;;
+        *.tar.zst) listing="$(tar --zstd -tf "${archive}" 2>/dev/null)" ;;
+        *) listing="$(tar -tzf "${archive}" 2>/dev/null)" ;;
     esac
+    # 包内既有镜像 SBOM 也有逐 recipe 的（recipe-*.spdx.json），只认以镜像名开头的那个。
+    member="$(printf '%s\n' "${listing}" |
+        grep -E "(^|/)${image}[-.][^/]*\.spdx\.json$" | LC_ALL=C sort | head -n 1)"
     [[ -n "${member}" ]] || return 1
     name="$(basename -- "${member}")"
     case "${archive}" in
@@ -179,9 +189,18 @@ JSON
     stats_out="$(mktemp)"
     python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${sbom}" >"${stats_out}"
     local bytes sha packaging="single-json"
-    # 5.0 把镜像级 SBOM 打成 <image>.rootfs.spdx.tar.zst，6.0 是单文件；
-    # 报告里要写清这个形态差异，否则「为什么 5.0 的 SBOM 只有一个压缩包」没法解释。
-    [[ "${sbom}" == "$(artifact_dir)"/* ]] && packaging="tar.zst"
+    # 5.0 把镜像级 SBOM 打成 tar.zst、3.1 打成 tar.gz，4.0/6.0 是单文件；
+    # 报告里要写清形态差异，否则「为什么 3.1 的 SBOM 只剩一个压缩包」没法解释。
+    if [[ "${sbom}" == "$(artifact_dir)"/* ]]; then
+        local imgs
+        imgs="$(deploy_root)/images/${machine}"
+        if [[ -f "${imgs}/${image}-${machine}.rootfs.spdx.tar.zst" ||
+            -f "${imgs}/${image}-${machine}.spdx.tar.zst" ]]; then
+            packaging="tar.zst"
+        else
+            packaging="tar.gz"
+        fi
+    fi
     bytes="$(stat -Lc %s -- "${sbom}")"
     sha="$(sha256sum -- "${sbom}" | awk '{print $1}')"
     python3 - "${stats_out}" "${sbom}" "${bytes}" "${sha}" "$(relpath "${sbom}")" "${packaging}" <<'PY' >"${SECTIONS_DIR}/sbom.json"
