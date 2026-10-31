@@ -171,6 +171,36 @@ bash scripts/dev.sh scripts/report.sh --release wrynose --variant custom
 
 ---
 
+## 执行边界（先读这一节）
+
+你在容器内执行，**没有 docker socket**（`scripts/build.sh` 会被嵌套 docker guard 拒绝），也没有 HOSTTOOLS。所以：
+
+**你负责的（必须做完）**
+
+1. 改 `layers/meta-yp/conf/distro/yp.conf` 与 `include/yp-common.inc`
+2. 新建 `docs/distro-features.md`、`docs/syntax-matrix.md`（若不存在）、`tests/bats/12_distro.bats`
+3. 解析级验证：A-1 / A-2 / B-1 / B-2（`kas shell -c "bitbake -e ..."` 在容器内可跑）
+4. BATS：`bats -r tests/bats/12_distro.bats`
+5. 全量 L1：`bash scripts/report.sh --release wrynose --variant custom`（只读 `work/`，不构建）
+
+**不要尝试的（会被拦，纯浪费时间）**
+
+- `scripts/build.sh` / `scripts/qemu.sh` 任何形态 —— 真构建与起机属 L3，由人在宿主触发
+- `docker` 任何命令
+
+**遇到需要真构建的验收项**（A-3、B-4，以及 A3 里 3.1 的 `systemd-udevd` 实测）：**不要跳过，也不要假装通过**。在回复末尾单列一节：
+
+```
+## 待人工验证（L3）
+- A-3 wrynose 真起机 + grep 'Reached target'
+- A-3 3.1 起机 + ps | grep -c systemd-udevd
+- B-4 改完 features 后镜像仍能起机
+```
+
+然后继续把其余部分做完。**解析级全绿 + 文档齐 + BATS 过**，本卡在你这侧就算完成。
+
+---
+
 ## 不要做的事
 
 - **不要改 `work/` 下的 poky / openembedded-core**：那是 kas 检出的上游仓库，下次 `kas build` 会被覆盖，且污染 `SOURCE_FINGERPRINT`。所有改动只落 `layers/meta-yp/`、`tests/bats/`、`docs/`。
