@@ -20,8 +20,15 @@ IMAGE_INSTALL += "cpp-hello"
 # ---- 演示层特性（#59）----
 # full 是演示与开发层，允许 root 空密码登录：自动取证、串口 demo 都要它。
 # 这条是「有意为之的降级」，已在 config/degraded.txt 登记；minimal / base 不开。
-# 注意 6.0 把 debug-tweaks 拆成了具体项，所以这里写拆开后的两个名字。
-IMAGE_FEATURES += "allow-empty-password allow-root-login"
+#
+# 6.0 把 debug-tweaks 拆成了三个正交项，名字相近但作用不同，选错会静默失效：
+#   empty-root-password    阻止 zap_empty_root_password 把 root:: 改成 root:*:，
+#                          即「保留空密码」—— serial-getty 空密码登录靠的是它；
+#   allow-empty-password   只改 sshd/dropbear 的 PermitEmptyPasswords，对串口无效；
+#   allow-root-login       允许 root 登录（本来就没禁），单独写等于没写。
+# 所以串口空密码登录只要 empty-root-password 一个就够，不能拿 allow-empty-password
+# 顶替（那是 #59 首版踩过的坑：写了它串口仍弹 Password: 且拒空密码）。
+IMAGE_FEATURES += "empty-root-password"
 
 # sshd 由 distro 的 YP_SSH 决定（见 yp-common.inc），默认 dropbear —— 那是
 # core-image-minimal 通过 packagegroup-core-ssh-dropbear 已经装进来的。
