@@ -73,7 +73,8 @@ done
 # 镜像名以 config/variants/<variant>.env 为准（general=core-image-minimal，custom=yp-image），
 # 与 kas target 的 target 字段保持一致。
 variant_env="${ROOT_DIR}/config/variants/${variant}.env"
-IMAGE="$(sed -n 's/^IMAGE=//p' "${variant_env}" | head -1)"
+# YP_IMAGE 允许直接指定镜像配方名（三层镜像验证时用），否则取 variant 配置。
+IMAGE="${YP_IMAGE:-$(sed -n 's/^IMAGE=//p' "${variant_env}" | head -1)}"
 [[ -n "${IMAGE}" ]] || die "${variant_env} 缺少 IMAGE"
 
 log_dir="${ROOT_DIR}/work/logs"

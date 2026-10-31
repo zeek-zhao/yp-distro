@@ -36,6 +36,20 @@ load_machine() {
     _load_config machines "$1"
 }
 
+# 镜像层（minimal|base|full）→ 具体镜像配方名。真本在 config/images.conf，
+# 脚本里不重复写死包名 —— 加一层只改那份配置。
+resolve_image() {
+    [[ $# -eq 1 ]] || die "用法：resolve_image <minimal|base|full>"
+
+    local logical="$1" resolved
+    [[ -n "${logical}" ]] || die "镜像层不能为空"
+    resolved="$(sed -n "s/^${logical}[[:space:]]\+//p" "${ROOT_DIR}/config/images.conf" | head -1)"
+    if [[ -z "${resolved}" ]]; then
+        die "未知镜像层：${logical}（可选：minimal base full）"
+    fi
+    printf '%s' "${resolved}"
+}
+
 resolve_all() {
     [[ $# -eq 3 ]] || die "用法：resolve_all <release> <variant> <machine>"
 
