@@ -171,6 +171,121 @@ JSON
 }
 
 # bats test_tags=compliance
+@test "report.sh --compliance 索引型 SBOM 用聚合口径而不是「1 包」" {
+    local index_json="${test_root}/compliance-index.json"
+    cat >"${index_json}" <<'JSON'
+{
+  "release": "kirkstone",
+  "variant": "custom",
+  "machine": "qemux86-64",
+  "tag": "yocto-4.0.35",
+  "commit": "abcdef1",
+  "date": "20260101",
+  "sbom": {
+    "available": true,
+    "format": "SPDX-2.2",
+    "spec_version": "SPDX-2.2",
+    "kind": "spdx2-index",
+    "path": "work/artifacts/kirkstone/custom/sbom/yp-image-qemux86-64.spdx.json",
+    "packaging": "single-json",
+    "bytes": 153738,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "packages": 1,
+    "files": 0,
+    "external_documents": 334,
+    "components": 167,
+    "purl_nonempty": 0,
+    "purl_ratio": 0.0,
+    "licenses": {"NOASSERTION": 1},
+    "vex": null,
+    "aggregate": {
+      "documents": 167,
+      "resolved_by_name": 0,
+      "missing": [],
+      "missing_count": 0,
+      "packages": 167,
+      "files": 1204,
+      "purl_nonempty": 0,
+      "purl_ratio": 0.0,
+      "licenses": {"GPL-2.0-only": 40, "MIT": 12}
+    }
+  },
+  "cve": {"available": true, "source": "cve-check", "packages": 65,
+          "unpatched": 2862, "patched": 11097, "ignored": 2737, "db": "sqlite"},
+  "foss": {"available": true, "declared": 167, "selected": 10, "scanned": 9,
+           "limit": 10, "coverage": 0.0539, "files_total": 20000,
+           "artifacts": "work/artifacts/kirkstone/custom/foss",
+           "tool": "scancode-toolkit", "source": "work/downloads",
+           "packages": []}
+}
+JSON
+    run env YP_COMPLIANCE_JSON="${index_json}" YP_COMPLIANCE_ARCHIVE="${compliance_archive}" \
+        bash "${ROOT_DIR}/scripts/report.sh" --release kirkstone --variant custom --compliance
+    [ "${status}" -eq 0 ]
+    report_output="${output}"
+    run grep -F '索引型' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+    run grep -F '镜像组件（CONTAINS 对位）' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+    run grep -F '聚合包元素' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+    # 分母必须是聚合包数，不能是文档里的 1
+    run grep -F '0.0%（0/167）' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+    # 摘要行同样不能只剩「1 包」
+    [[ "${report_output}" != *"SPDX-2.2 1 包"* ]]
+    [[ "${report_output}" == *"索引型 167 组件"* ]]
+}
+
+# bats test_tags=compliance
+@test "report.sh --compliance 索引型对位不全时判 FAIL" {
+    local index_json="${test_root}/compliance-index-miss.json"
+    cat >"${index_json}" <<'JSON'
+{
+  "release": "scarthgap",
+  "variant": "custom",
+  "machine": "qemux86-64",
+  "tag": "yocto-5.0.20",
+  "commit": "abcdef1",
+  "date": "20260101",
+  "sbom": {
+    "available": true,
+    "format": "SPDX-2.2",
+    "kind": "spdx2-index",
+    "path": "work/artifacts/scarthgap/custom/sbom/yp-image.spdx.json",
+    "packaging": "tar.zst",
+    "bytes": 171488,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "packages": 1,
+    "files": 0,
+    "external_documents": 366,
+    "components": 183,
+    "purl_nonempty": 0,
+    "purl_ratio": 0.0,
+    "licenses": {"NOASSERTION": 1},
+    "vex": null,
+    "aggregate": {"documents": 171, "resolved_by_name": 0, "missing": ["base-files"],
+                  "missing_count": 12, "packages": 171, "files": 900,
+                  "purl_nonempty": 0, "purl_ratio": 0.0, "licenses": {}}
+  },
+  "cve": {"available": true, "source": "cve-check", "packages": 70,
+          "unpatched": 1, "patched": 2, "ignored": 3, "db": "sqlite"},
+  "foss": {"available": true, "declared": 183, "selected": 10, "scanned": 10,
+           "limit": 10, "coverage": 0.0546, "files_total": 28000,
+           "artifacts": "work/artifacts/scarthgap/custom/foss",
+           "tool": "scancode-toolkit", "source": "work/downloads", "packages": []}
+}
+JSON
+    run env YP_COMPLIANCE_JSON="${index_json}" YP_COMPLIANCE_ARCHIVE="${compliance_archive}" \
+        bash "${ROOT_DIR}/scripts/report.sh" --release scarthgap --variant custom --compliance
+    [ "${status}" -ne 0 ]
+    run grep -F '**FAIL' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+    run grep -F '缺 12 份' "${compliance_archive}"
+    [ "${status}" -eq 0 ]
+}
+
+# bats test_tags=compliance
 @test "report.sh --compliance 拒绝 all" {
     run bash "${ROOT_DIR}/scripts/report.sh" --release all --compliance
     [ "${status}" -ne 0 ]
@@ -230,6 +345,90 @@ JSON
     run python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${bogus}"
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"无法识别"* ]]
+}
+
+# bats test_tags=compliance
+@test "sbom-stats.py 认索引型文档并按 documentNamespace 对位聚合" {
+    # 3.1/4.0/5.0 的镜像文档只有 1 个 image 包，组件靠 externalDocumentRefs 指出去。
+    # 这里故意放一份 zlib-dbg（文件名前缀能猜中但命名空间对不上）来锁死「不能按
+    # 文件名猜」这条：猜的话会把 zlib 记成已解析，实际它没有对应文档。
+    local dir="${test_root}/spdx/qemux86-64/packages" index="${test_root}/index.spdx.json"
+    mkdir -p "${dir}"
+    cat >"${dir}/acl.spdx.json" <<'JSON'
+{
+  "spdxVersion": "SPDX-2.2",
+  "name": "acl",
+  "documentNamespace": "http://spdx.org/spdxdoc/acl-1111",
+  "packages": [
+    {"name": "acl", "licenseDeclared": "GPL-2.0-or-later",
+     "externalRefs": [{"referenceType": "purl", "referenceLocator": "pkg:generic/acl@2.3.1"}]}
+  ],
+  "files": [{}, {}]
+}
+JSON
+    cat >"${dir}/zlib-dbg.spdx.json" <<'JSON'
+{
+  "spdxVersion": "SPDX-2.2",
+  "name": "zlib-dbg",
+  "documentNamespace": "http://spdx.org/spdxdoc/zlib-dbg-9999",
+  "packages": [{"name": "zlib-dbg", "licenseDeclared": "Zlib"}],
+  "files": []
+}
+JSON
+    cat >"${index}" <<'JSON'
+{
+  "spdxVersion": "SPDX-2.2",
+  "name": "yp-image-qemux86-64-20260101",
+  "packages": [{"name": "yp-image"}],
+  "externalDocumentRefs": [
+    {"externalDocumentId": "DocumentRef-acl", "spdxDocument": "http://spdx.org/spdxdoc/acl-1111"},
+    {"externalDocumentId": "DocumentRef-zlib", "spdxDocument": "http://spdx.org/spdxdoc/zlib-2222"}
+  ],
+  "relationships": [
+    {"relationshipType": "CONTAINS",
+     "relatedSpdxElement": "DocumentRef-acl:SPDXRef-Package-acl"},
+    {"relationshipType": "CONTAINS",
+     "relatedSpdxElement": "DocumentRef-zlib:SPDXRef-Package-zlib"},
+    {"relationshipType": "GENERATED_FROM",
+     "relatedSpdxElement": "DocumentRef-acl:SPDXRef-Package-acl"}
+  ],
+  "files": []
+}
+JSON
+    run python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${index}" --spdx-dir "${test_root}/spdx"
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *'"kind": "spdx2-index"'* ]]
+    # 只数 CONTAINS，GENERATED_FROM 那种重复引用不算组件
+    [[ "${output}" == *'"components": 2'* ]]
+    [[ "${output}" == *'"external_documents": 2'* ]]
+    [[ "${output}" == *'"documents": 1'* ]]
+    [[ "${output}" == *'"packages": 1'* ]]
+    [[ "${output}" == *'"missing_count": 1'* ]]
+    [[ "${output}" == *'"zlib"'* ]]
+    [[ "${output}" == *'"purl_ratio": 1.0'* ]]
+}
+
+# bats test_tags=compliance
+@test "sbom-stats.py 不传 --spdx-dir 时索引型只报形态不聚合" {
+    local index="${test_root}/index.spdx.json"
+    cat >"${index}" <<'JSON'
+{
+  "spdxVersion": "SPDX-2.2",
+  "name": "yp-image",
+  "packages": [{"name": "yp-image"}],
+  "externalDocumentRefs": [
+    {"externalDocumentId": "DocumentRef-acl", "spdxDocument": "http://spdx.org/spdxdoc/acl-1111"}
+  ],
+  "relationships": [
+    {"relationshipType": "CONTAINS", "relatedSpdxElement": "DocumentRef-acl:SPDXRef-Package-acl"}
+  ]
+}
+JSON
+    run python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${index}"
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *'"kind": "spdx2-index"'* ]]
+    [[ "${output}" == *'"components": 1'* ]]
+    [[ "${output}" != *'"aggregate"'* ]]
 }
 
 # bats test_tags=compliance

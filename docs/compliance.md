@@ -44,6 +44,37 @@ ScanCode 扫源码包），渲染很便宜。改版式时只需要 `report.sh --
    解包出来的那份落到 `work/artifacts/.../sbom/`，归档里记录的 SHA-256
    是**解出来的那份**，不是压缩包本身。
 
+### 2.1 索引型 vs 自包含（决定包数怎么读）
+
+形态统一了，**内容口径还没统一**。实测四版的镜像级文档分两类：
+
+| release | 文档内 `packages` | `externalDocumentRefs` | 组件怎么数 |
+|---|---:|---:|---|
+| dunfell 3.1.33 | 1（只有 image 包） | 314 | 跟随 `CONTAINS` 聚合 157 份 per-recipe 文档 |
+| kirkstone 4.0.35 | 1 | 334 | 同上，167 份 |
+| scarthgap 5.0.20 | 1 | 366 | 同上，183 份 |
+| wrynose 6.0.4 | 574（`software_Package`） | 0 | 文档自包含，直接数 |
+
+3.1/4.0/5.0 的镜像文档是**索引**：`packages` 里只有一个 image 包，真正的组件靠
+`externalDocumentRefs` + `CONTAINS` 关系指向 `deploy/spdx/` 下成千上万份
+per-recipe 文档。照抄 `packages` 会得到「1 个包」的假象 —— 这也是早期归档里
+SBOM 一节只剩一行数的原因。
+
+`scripts/lib/sbom-stats.py` 的处理：
+
+- `kind = spdx2-index` 时，`components` = 唯一 `CONTAINS` 目标的个数（= 镜像内
+  二进制包数，与 `<image>.rootfs.manifest` 行数一致：157/167/183）；
+- 传了 `--spdx-dir` 就做聚合，输出的 `aggregate` 才是可比口径（包、文件、许可证、
+  PURL）。顶层 `purl_ratio` 也换成聚合值，避免调用方各自再判一次 `kind`；
+- **对位不能用文件名猜**：同一 recipe 在目录里同时有 `<pkg>`、`<pkg>-dev`、
+  `<pkg>-dbg`、`<pkg>-doc`，按前缀取第一个会挑错对象（实测 5.0 因此漏了 12 个）。
+  改成用 `externalDocumentRefs[].spdxDocument`（等于目标文档的 `documentNamespace`，
+  带 UUID）精确匹配，文件名只用来缩小候选集。四版实测对位率 100%。
+
+各版目录层级还不一样，所以 `spdx_doc_dir()` 只返回 `deploy/spdx` 根目录：
+4.0 是 `spdx/<machine>/packages/`，5.0 是 `spdx/2.2/<machine>/packages/`
+且另有一份 `by-hash/` 平行树（`sstate:...:` 目录名带冒号，路径不好猜）。
+
 ## 3. CVE：采集分叉、报告归一
 
 6.0 没有 `cve-check.bbclass`，改用构建后 CLI：
@@ -99,15 +130,18 @@ VEX 只有 5.0/6.0 有（`vex.bbclass`），且与 `cve-check` 互斥。本项�
 
 | 节 | 内容 |
 |---|---|
-| SBOM | 格式、文件、体积、SHA-256、打包形态、包/文件元素、PURL 非空率、VEX、许可证 top |
+| SBOM | 格式、文件、体积、SHA-256、打包形态、文档形态、组件/聚合包、PURL 非空率、VEX、许可证 top |
 | CVE | 采集工具、清单、包数、未修复/已修复/忽略、数据源与库版本、统计口径 |
 | FOSS | 工具、已扫/镜像内包数、覆盖率、文件数、许可证分布、逐包明细（前 25） |
 | 格式差异 | 四版 SPDX 形态对照 + 本版本实际情况 + 语义差异说明 |
 | 降级清单 | 只列合规相关项（`spdx-format` / `cve-tool` / `foss-scan`） |
 
-验收门（不通过则退出码非零）：SBOM 可解析、CVE 有清单、FOSS 有结果、
-FOSS 覆盖率 > 0。PURL 非空率 >= 90% 作为**观测项**列出，不设门 ——
-CRA 语境下它决定漏洞匹配是否有效，但本项目当前只做「有就行」。
+验收门（不通过则退出码非零）：SBOM 可解析、索引型的外部引用全部对位、
+CVE 有清单、FOSS 有结果、FOSS 覆盖率 > 0。PURL 非空率 >= 90% 作为**观测项**
+列出，不设门 —— CRA 语境下它决定漏洞匹配是否有效，但本项目当前只做「有就行」。
+
+索引型那条门是必要的：3.1/4.0/5.0 的组件面完全由外部文档决定，少对位一份
+就意味着 SBOM 描述的镜像与真实镜像不一致，掩盖它的代价远大于报告里多一个红项。
 
 ## 6. 与 CRA 的关系（留钩子，不实现）
 
@@ -130,6 +164,10 @@ CRA 语境下它决定漏洞匹配是否有效，但本项目当前只做「有�
   也没有做许可证兼容性判定。
 - 3.1/4.0 的 `--spdx` 是真正新增的任务量（每 recipe 一个 `do_create_spdx`），
   首次开启会明显拉长构建时间，sstate 命中后回到正常水平。
+- **PURL 只有 6.0 默认产出**（`SPDX_PACKAGE_URL`）。3.1/4.0/5.0 的 per-recipe
+  文档里没有 `purl` 外部引用，所以前三版的 PURL 非空率实测是 0%，这是能力差异
+  不是采集失败。要做 CRA 意义上的漏洞匹配，前三版得靠外部补 PURL（或只依赖
+  CPE 匹配）。
 - **3.1 的 SPDX 需要一份许可证别名补丁**（`yp-spdx-legacy-license.bbclass`）：
   dunfell 的 create-spdx 回移版本不把 `GPLv2+` 归一成 `GPL-2.0-or-later`，
   直接拿 `GPL-2+` 去 `common-licenses` 找文件，找不到就

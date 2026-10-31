@@ -76,6 +76,21 @@ relpath() {
     [[ "${path}" == "${ROOT_DIR}/"* ]] && printf '%s' "${path#"${ROOT_DIR}/"}" || printf '%s' "${path}"
 }
 
+# per-recipe SPDX 文档根目录。3.1/4.0/5.0 的镜像级文档是索引型（1 个 image 包 +
+# N 个 externalDocumentRefs），组件清单散在 deploy/spdx/ 下，聚合统计要拿它当输入。
+# 各版层级还不一样：4.0 是 spdx/<machine>/packages/，5.0 是 spdx/2.2/<machine>/packages/
+# 且另有一份 by-hash/ 平行树。所以这里只返回根目录，具体对位交给
+# sbom-stats.py 用 documentNamespace（带 UUID）精确匹配，不按路径猜。
+spdx_doc_dir() {
+    local deploy base found
+    deploy="$(deploy_root)"
+    base="${deploy}/spdx"
+    [[ -d "${base}" ]] || return 1
+    found="$(find "${base}" -maxdepth 4 -type f -name '*.spdx.json' 2>/dev/null | head -n 1)"
+    [[ -n "${found}" ]] || return 1
+    printf '%s' "${base}"
+}
+
 # 镜像内软件包清单：两代命名不同（3.1/4.0 没有 .rootfs 中缀）。
 image_manifest() {
     local deploy candidate
@@ -177,6 +192,29 @@ image_cve_manifest() {
 ###############################################################################
 # SBOM
 ###############################################################################
+# 摘要行必须区分索引型（3.1/4.0/5.0）与自包含（6.0）：索引型文档里的 packages
+# 只有 1 个 image 包，直接打「1 包」会被当成采集坏了。
+sbom_summary() {
+    python3 - "$1" <<'PY'
+import json, sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    block = json.load(handle)["sbom"]
+size = block["bytes"] / 1048576
+if block.get("kind") == "spdx2-index":
+    agg = block.get("aggregate") or {}
+    miss = agg.get("missing_count", 0)
+    print("%s 索引型 %s 组件（聚合 %s 包，%s 份外部文档%s）%.1f MB PURL %.0f%%"
+          % (block["format"], block.get("components"), agg.get("packages", "-"),
+             agg.get("documents", "-"), "" if not miss else "，缺 %d 份" % miss,
+             size, block["purl_ratio"] * 100))
+else:
+    print("%s %d 包 %d 文件 %.1f MB PURL %.0f%%"
+          % (block["format"], block["packages"], block["files"], size,
+             block["purl_ratio"] * 100))
+PY
+}
+
 step_sbom() {
     local sbom stats_out section
     if ! sbom="$(sbom_file)"; then
@@ -187,7 +225,14 @@ JSON
         return 0
     fi
     stats_out="$(mktemp)"
-    python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${sbom}" >"${stats_out}"
+    # 索引型文档（3.1/4.0/5.0）必须跟随 externalDocumentRefs 聚合，否则包数为 1。
+    local spdx_dir=""
+    spdx_dir="$(spdx_doc_dir || true)"
+    if [[ -n "${spdx_dir}" ]]; then
+        python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${sbom}" --spdx-dir "${spdx_dir}" >"${stats_out}"
+    else
+        python3 "${ROOT_DIR}/scripts/lib/sbom-stats.py" "${sbom}" >"${stats_out}"
+    fi
     local bytes sha packaging="single-json"
     # 5.0 把镜像级 SBOM 打成 tar.zst、3.1 打成 tar.gz，4.0/6.0 是单文件；
     # 报告里要写清形态差异，否则「为什么 3.1 的 SBOM 只剩一个压缩包」没法解释。
@@ -219,7 +264,7 @@ json.dump({"sbom": stats}, sys.stdout, ensure_ascii=False, sort_keys=True, inden
 sys.stdout.write("\n")
 PY
     rm -f -- "${stats_out}"
-    log_info "SBOM：$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["sbom"];print("%s %d 包 %d 文件 %.1f MB PURL %.0f%%" % (d["format"], d["packages"], d["files"], d["bytes"]/1048576, d["purl_ratio"]*100))' "${SECTIONS_DIR}/sbom.json")"
+    log_info "SBOM：$(sbom_summary "${SECTIONS_DIR}/sbom.json")"
 }
 
 ###############################################################################
@@ -562,9 +607,18 @@ for name in ("sbom", "cve", "foss"):
         print("%-5s unavailable: %s" % (name, block.get("reason", "")))
         continue
     if name == "sbom":
-        print("sbom  %s %d 包 %d 文件 %.1f MB PURL %.0f%%"
-              % (block["format"], block["packages"], block["files"],
-                 block["bytes"] / 1048576, block["purl_ratio"] * 100))
+        size = block["bytes"] / 1048576
+        if block.get("kind") == "spdx2-index":
+            agg = block.get("aggregate") or {}
+            miss = agg.get("missing_count", 0)
+            print("sbom  %s 索引型 %s 组件（聚合 %s 包，%s 份外部文档%s）%.1f MB PURL %.0f%%"
+                  % (block["format"], block.get("components"), agg.get("packages", "-"),
+                     agg.get("documents", "-"), "" if not miss else "，缺 %d 份" % miss,
+                     size, block["purl_ratio"] * 100))
+        else:
+            print("sbom  %s %d 包 %d 文件 %.1f MB PURL %.0f%%"
+                  % (block["format"], block["packages"], block["files"], size,
+                     block["purl_ratio"] * 100))
     elif name == "cve":
         print("cve   %s %d 包 未修复 %d / 已修复 %d / 忽略 %d"
               % (block["source"], block["packages"], block["unpatched"],
