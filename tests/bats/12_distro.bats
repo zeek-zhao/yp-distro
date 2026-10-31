@@ -19,7 +19,8 @@ setup() {
 
 # bats test_tags=distro
 @test "distro removes only the selected features with both override syntaxes" {
-    local remove_list='x11 wayland opengl 3g bluetooth nfs zeroconf'
+    # ptest 是 #59 加的：镜像不带 ptest 子包，否则 -ptest 的 locale-base-* 依赖会判致命 QA
+    local remove_list='x11 wayland opengl 3g bluetooth nfs zeroconf ptest'
     grep -qx "DISTRO_FEATURES:remove = \"${remove_list}\"" "${COMMON_INC}"
     grep -Fqx "        d.setVar(\"DISTRO_FEATURES_remove\", \"${remove_list}\")" "${COMMON_INC}"
     grep -Fqx '    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():' "${COMMON_INC}"

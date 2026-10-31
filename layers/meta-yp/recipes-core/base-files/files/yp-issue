@@ -1,0 +1,7 @@
+@DISTRO_NAME@ @DISTRO_VERSION@ (@DISTRO_CODENAME@) \n \l
+
+Welcome to @DISTRO_NAME@ @DISTRO_VERSION@
+  machine : @MACHINE@
+  variant : @VARIANT@
+  built   : @DATE@
+  support : docs/ 与 docs/qa/ 内的验收记录
