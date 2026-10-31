@@ -1,0 +1,15 @@
+[Unit]
+Description=YP demo: plain make build system
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/yp-demo-make --json
+# 只用 3.1 的 systemd 247 也认的三档：no / on-failure / always
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+# 三层镜像统一以 multi-user.target 为默认
+WantedBy=multi-user.target
