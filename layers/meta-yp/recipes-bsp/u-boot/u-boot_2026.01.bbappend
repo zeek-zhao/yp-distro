@@ -9,6 +9,11 @@
 #   会永远匹配不上 → tarball 与 git URL 粘连成一条坏 URL（上一版的坑）。
 #   写死 v2026.01 正好对上展开后的字面量，精确删掉 git 项、保留 file:// 补丁。
 
+# file:// 项（qemu-x86-nographic.cfg）在本 bbappend 的 files/ 子目录，需显式
+# 声明 FILESEXTRAPATHS，否则 OE 只在上游 oecore 的 recipe 目录找（报 file could
+# not be found）。
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
 # 精确删除展开后的 git URL（注意末尾无空格，是 SRC_URI 的一个完整 token）。
 SRC_URI:remove = "git://source.denx.de/u-boot/u-boot.git;protocol=https;branch=master;tag=v2026.01"
 
