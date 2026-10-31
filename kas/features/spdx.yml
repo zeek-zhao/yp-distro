@@ -17,3 +17,7 @@ header:
 local_conf_header:
   spdx: |
     INHERIT += "create-spdx"
+    # 3.1 的回移版本不会把 `GPL-2+` 归一成 `GPL-2.0-or-later`，会直接
+    # `Cannot find any text for license GPL-2+` 让 do_create_spdx 失败；
+    # 这个类按 recipe 的 LICENSE 生成 `+` 许可证的别名正文，4.0+ 上是空操作。
+    INHERIT += "yp-spdx-legacy-license"
