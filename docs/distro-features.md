@@ -111,12 +111,29 @@ ERROR: Unable to parse .../bitbake/lib/bb/__init__.py
 `LAYERSERIES_CORENAMES` 守卫**。运行时赋值绕过了「字面语法检查」，
 这是唯一能在单文件里同时满足四版的办法。
 
-### L3 待验证
+### L3 实测（2026-10-31）
 
-真构建 + 起机（本卡解析级已完成，以下是需要宿主执行的）：
+四版真构建 + 真起机，完整命令与原始输出见 `docs/qa/l3-systemd-boot.md`。
 
-- wrynose：`bash scripts/build.sh --release wrynose --variant custom` +
-  `qemu.sh`，串口日志 `grep -c 'Reached target'` ≥ 1
-- 3.1：起机后 `ps | grep -c systemd-udevd`，确认 `VIRTUAL-RUNTIME_dev_manager`
-  缺失是否真的影响 udev
-- 改完 features 后镜像仍能起机（`x11`/`wayland` 裁掉后不引入构建失败）
+| release | PID 1 | `Reached target` | FAILED | `systemd-udevd` |
+|---|---|---|---|---|
+| 3.1 dunfell | systemd 244.5+ | 20 | 0 | PID 112 |
+| 4.0 kirkstone | systemd 250.14+ | 22 | 0 | PID 177 |
+| 5.0 scarthgap | systemd 255.21 | 21 | 0 | PID 161 |
+| 6.0 wrynose | systemd 259.5 | 21 | 0 | 串口登录受限，见下 |
+
+**3.1 缺 `VIRTUAL-RUNTIME_dev_manager` 不影响 udev。** 3.1 的
+`init-manager-systemd.inc` 确实没设这一项，但 `systemd` 配方自身
+`RRECOMMENDS` 了 `udev`，镜像里 `systemd-udevd` 正常起在 PID 112，`udevadm`
+也在位。**不要为 3.1 补这一项** —— 补了就是与 poky 默认值分叉，而实测没有收益。
+
+**wrynose 拿不到 `ps` 输出。** 6.0 把 `debug-tweaks` 拆成
+`allow-empty-password allow-root-login post-install-logging`，但 `serial-getty`
+仍然弹 `Password:`，空密码被拒（`Login timed out`）。改用两条等价证据：
+启动日志里 udev 的 Control/Kernel/Varlink socket 均已监听且规则已装载，
+镜像里含 435 个 systemd 单元/相关文件、`systemd-udevd` 与 `udevadm` 二进制在位。
+**不为了取证方便去改交付镜像的 `IMAGE_FEATURES`。**
+
+**裁掉七项后镜像仍可起机。** 四版镜像里
+`libX11|libxcb|libwayland|libGL\.|bluez|avahi|libnfs` 残留均为 0，
+且四版都起到 `login:`。
