@@ -112,14 +112,49 @@ kas shell -c "bitbake -e yp-image" | grep -E '^DISTRO_FEATURES=' | fold -w 120
 
 ### B3 落地删除项
 
-写进 `layers/meta-yp/conf/distro/include/yp-common.inc`。**两种分隔符各写一行**（3.1 只认 `_`，4.0+ 只认 `:`）：
+写进 `layers/meta-yp/conf/distro/include/yp-common.inc`。
 
-```bitbake
-DISTRO_FEATURES:remove = "x11 wayland opengl 3g bluetooth nfs zeroconf"
-DISTRO_FEATURES_remove = "x11 wayland opengl 3g bluetooth nfs zeroconf"
+**⚠️ 这条本卡初版写错了，以下是实测修正**（初版说「两种分隔符各写一行」，是错的）：
+
+`DISTRO_FEATURES_remove`（下划线）在 4.0+ 上**不是无害冗余，而是致命解析错误**：
+
+```
+ERROR: Variable DISTRO_FEATURES_remove ... contains an operation using the old
+override syntax.
+ERROR: Unable to parse .../bitbake/lib/bb/__init__.py
 ```
 
+「两种各写一行」只在 3.1 方向成立（`:` 在 3.1 静默失效），反方向是硬失败。
+所以只能这样：
+
+```bitbake
+# 4.0+ 字面量
+DISTRO_FEATURES:remove = "x11 wayland opengl 3g bluetooth nfs zeroconf"
+
+# 3.1 用运行时赋值，绕过「字面语法检查」
+python __anonymous () {
+    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("DISTRO_FEATURES_remove", "x11 wayland opengl 3g bluetooth nfs zeroconf")
+}
+```
+
+`LAYERSERIES_CORENAMES` 在四版实测分别解析为 `dunfell` / `kirkstone` /
+`scarthgap` / `wrynose`，是可靠的版本判据。
+
 **禁止**直接 `DISTRO_FEATURES = "..."` 重写：那会把 poky 与 machine 追加的条目一起抹掉，包括刚加进去的 `systemd`。
+
+### B3b 新 BATS 必须登记进能力矩阵
+
+新增 `tests/bats/*.bats` 后**必须在 `config/features.txt` 加一行**，否则
+`99_coverage.bats::every non-meta BATS file is referenced by a feature` 必红。
+格式：
+
+```
+distro-features | all | tests/bats/12_distro.bats | distro | ok
+```
+
+**不要**给新测试打 `meta` 标签来跳过这个检查（`meta` 是给元测试用的，打了就等于
+自称「这个文件不需要被能力矩阵覆盖」）。也不要改 `99_coverage.bats` 去加跳过规则。
 
 ### B4 保留项确认
 
@@ -175,7 +210,25 @@ bash scripts/dev.sh scripts/report.sh --release wrynose --variant custom
 
 你在容器内执行（`yocto-dev:local`），**没有 docker socket**，所以 `scripts/build.sh` / `scripts/qemu.sh` 会被嵌套 docker guard 拦下 —— **真构建与起机不要试**，属 L3，由人在宿主触发。
 
-镜像里已经装好 poky 的 HOSTTOOLS 最小集（`chrpath cpio diffstat gawk zstd pzstd unzstd`），所以 **`bitbake -e` 可以在容器内真跑**，这是你的主要验证手段。
+镜像里已经装好 poky 的 HOSTTOOLS 最小集（`chrpath cpio diffstat gawk zstd lz4 pzstd unzstd`），所以 **`bitbake -e` 可以在容器内真跑**，这是你的主要验证手段。
+
+**但 3.1 不行**：dev 镜像是 Ubuntu 24.04 + Python 3.12，dunfell 的 bitbake 1.46 会卡在
+`import pyinotify`（依赖 Python 3.12 已移除的 `asyncore`）。3.1 的解析验证只能用
+`ghcr.io/zeek-zhao/yocto/dunfell:local`（Python 3.8）：
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v /work:/work -w /work -e HOME=/tmp/h \
+  --entrypoint bash ghcr.io/zeek-zhao/yocto/dunfell:local -lc '
+mkdir -p /tmp/h
+cd /work && source work/kas-dunfell-custom/poky/oe-init-build-env work/kas-dunfell-custom/build >/dev/null 2>&1
+bitbake -e yp-image | grep -E "^(INIT_MANAGER|VIRTUAL-RUNTIME_init_manager|LAYERSERIES_CORENAMES)="'
+```
+
+同类地，kirkstone / scarthgap 若在 dev 镜像里报缺 `lz4c`，用
+`ghcr.io/zeek-zhao/yocto/<rel>:local` 验证。
+
+**如果容器内起不了 docker**（socket 没透传，或 `container.sh` 的嵌套 guard 拦了）：
+不要折腾，把 3.1 / 4.0 / 5.0 的解析验证标成「待人工验证（L3）」，只把 6.0 的做完。
 
 ### 容器内怎么跑 bitbake -e
 
@@ -237,7 +290,13 @@ done
 
 - **不要改 `work/` 下的 poky / openembedded-core**：那是 kas 检出的上游仓库，下次 `kas build` 会被覆盖，且污染 `SOURCE_FINGERPRINT`。所有改动只落 `layers/meta-yp/`、`tests/bats/`、`docs/`。
 - **不要动 `INIT_MANAGER` 之外的东西**：不改 `IMAGE_FEATURES`、不改 `ROOT_HOME`、不引入外部 `meta-systemd` 之类层。
-- **不要改 `config/features.txt`**：这是能力矩阵，由报告链路管，本卡只影响 `DISTRO_FEATURES`。
+- **不要改动 `config/features.txt` 里已有的行**：那是既有能力的声明，本卡只允许**追加**一行
+  `distro-features`（见 B3b）。改已有行等于偷偷改历史结论。
+- **绝对不要为了让门禁变红变绿而去改门禁本身**：`tests/bats/99_coverage.bats`、
+  `.githooks/*`、`scripts/report.sh` 的判定逻辑都不许动。如果某个断言过不去，
+  要么是代码错了，要么是新东西没登记 —— 两条路都不通向「改断言」。
+  上一个版本就发生过：给 `99_coverage.bats` 加一条 `meta` 跳过规则，再给新测试
+  打 `meta` 标签，正好让新测试不被检查。这类改动会被回退，且会让人怀疑整份报告。
 - **不要顺手统一四版的 append 语法**：`_append`/`:append` 的差异是 3.1 的硬限制，不是笔误。
 - **不要在阶段 A 未全绿时开始阶段 B**：两个阶段的验收指标相反，混做会得出错误结论。
 
