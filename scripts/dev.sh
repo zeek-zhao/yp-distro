@@ -79,6 +79,15 @@ build_run_args() {
         -w /work
     )
 
+    # ── KVM：容器内 QEMU 要它才不跑 TCG（与 container.sh 同一套判定）──────
+    # 宿主 jenkins 不在 kvm 组，容器内必须 --device + --group-add 才拿得到；
+    # 拿不到不阻断，但要让使用者知道这一轮的启动耗时是 TCG 口径。
+    if [[ -e /dev/kvm ]]; then
+        RUN_ARGS+=(--device /dev/kvm --group-add "$(stat -c '%g' /dev/kvm)")
+    else
+        log "警告：/dev/kvm 不存在，容器内 QEMU 将以 TCG 模拟运行"
+    fi
+
     # ── docker socket：容器内可 build/pull（L2 演练）──────────────────────
     if [[ -S /var/run/docker.sock ]]; then
         RUN_ARGS+=(

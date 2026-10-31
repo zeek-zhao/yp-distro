@@ -44,7 +44,10 @@ usage() {
 # ------------------------------------------------------------------ ingest --
 do_ingest() {
     local id="${1:-}" rc="${2:-0}"
-    [[ -n "${id}" ]] || { printf '[tokens] 用法：wf3-tokens.sh ingest <TASK-ID> [rc]\n' >&2; return 1; }
+    [[ -n "${id}" ]] || {
+        printf '[tokens] 用法：wf3-tokens.sh ingest <TASK-ID> [rc]\n' >&2
+        return 1
+    }
     local uf="${USAGE_DIR}/usage-${id}.json"
     if [[ ! -f "${uf}" ]]; then
         printf '[tokens] 没有 usage 文件：%s（任务可能没跑起来，或 copilot 版本不支持 --usage-output-file）\n' "${uf}" >&2
@@ -115,11 +118,26 @@ do_report() {
     local task="" issue="" last="" as_json=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --task)  task="${2:-}"; shift 2 ;;
-            --issue) issue="${2:-}"; shift 2 ;;
-            --last)  last="${2:-10}"; shift 2 ;;
-            --json)  as_json=1; shift ;;
-            *) printf '[tokens] 未知参数：%s\n' "$1" >&2; exit 2 ;;
+            --task)
+                task="${2:-}"
+                shift 2
+                ;;
+            --issue)
+                issue="${2:-}"
+                shift 2
+                ;;
+            --last)
+                last="${2:-10}"
+                shift 2
+                ;;
+            --json)
+                as_json=1
+                shift
+                ;;
+            *)
+                printf '[tokens] 未知参数：%s\n' "$1" >&2
+                exit 2
+                ;;
         esac
     done
     if [[ ! -f "${LEDGER}" ]]; then
@@ -235,21 +253,39 @@ do_publish() {
     mkdir -p "${pub_dir}"
     cp "${LEDGER}" "${pub}"
     local n
-    n=$(wc -l < "${pub}")
+    n=$(wc -l <"${pub}")
     printf '[tokens] 台账已发布：metrics/token-usage.tsv（%s 行）\n' "${n}"
     # 以 metrics/ 那份为输入，而不是 logs/：看板上写的数据源就是仓库里能找到的那份
-    ( cd "${ROOT_DIR}" && python3 scripts/tokens-dashboard.py metrics/token-usage.tsv docs/tokens.html ) \
-        || { printf '[tokens] 看板渲染失败\n' >&2; return 1; }
+    (cd "${ROOT_DIR}" && python3 scripts/tokens-dashboard.py metrics/token-usage.tsv docs/tokens.html) ||
+        {
+            printf '[tokens] 看板渲染失败\n' >&2
+            return 1
+        }
     printf '[tokens] 提示：把 metrics/ 与 docs/tokens.html 一起提交，仓库里就有进度可查\n'
 }
 
 # -------------------------------------------------------------------- main --
-[[ $# -ge 1 ]] || { do_report; exit 0; }
+[[ $# -ge 1 ]] || {
+    do_report
+    exit 0
+}
 case "$1" in
-    ingest)  shift; do_ingest "$@" ;;
-    publish) shift; do_publish "$@" ;;
-    report|"") shift || true; do_report "$@" ;;
-    -h|--help|help) usage 0 ;;
-    --*)     do_report "$@" ;;
-    *)       printf '[tokens] 未知子命令：%s\n' "$1" >&2; exit 2 ;;
+    ingest)
+        shift
+        do_ingest "$@"
+        ;;
+    publish)
+        shift
+        do_publish "$@"
+        ;;
+    report | "")
+        shift || true
+        do_report "$@"
+        ;;
+    -h | --help | help) usage 0 ;;
+    --*) do_report "$@" ;;
+    *)
+        printf '[tokens] 未知子命令：%s\n' "$1" >&2
+        exit 2
+        ;;
 esac

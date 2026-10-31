@@ -15,3 +15,7 @@ report-archive | all | tests/bats/06_report.bats | report | ok
 shared-cache | all | tests/bats/07_cache.bats | cache | ok
 cross-version-diff | all | tests/bats/08_crossdiff.bats | crossdiff | ok
 do-scancode | all | tests/bats/11_scancode.bats | scancode | degraded
+distro-features | all | tests/bats/12_distro.bats | distro | ok
+kvm-accel | all | tests/bats/03_container.bats | container | ok
+yp-service | wrynose | tests/bats/13_service.bats | service | ok
+boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok

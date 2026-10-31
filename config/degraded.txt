@@ -1,3 +1,4 @@
 # aspect | release | 理由 | 需求条款
 distro-backfill | wrynose | DISTRO_FEATURES_BACKFILL 已在 6.0 移除 | §7.3
 do-scancode | all | scancode 是 Python 应用做不成可行的 native recipe；recipe 内扫描与构建后批量扫描覆盖完全等价，却要多付 146 个 recipe x 4.5s 的进程启动开销，故只保留 demo 形态、默认关闭、不进任何镜像 | C26 / §7.3
+empty-root-login | wrynose | full 层为演示与自动取证放开 root 空密码登录；minimal/base 不开，交付层的登录策略由各层自己决定 | §4.2

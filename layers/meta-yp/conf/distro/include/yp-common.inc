@@ -1,5 +1,38 @@
-DISTRO_VERSION = "0.1.0"
-DISTRO_CODENAME = "yp-phase0"
+# 版本与代号已移到 include/yp-release.inc（单一真本）。
 MAINTAINER = "YP maintainers"
 
+# QEMU 无图形/蜂窝/蓝牙/NFS/服务发现需求。
+# 只用冒号语法：`DISTRO_FEATURES_remove`（下划线）在 4.0+ 是**致命解析错误**
+# （bitbake: "contains an operation using the old override syntax"），
+# 不是可叠加的冗余保险 —— 实测在 wrynose 上直接 Unable to parse。
+# 3.1 只认下划线，走单独的 conf（见 yp-dunfell.conf），不能塞进本文件。
+DISTRO_FEATURES:remove = "x11 wayland opengl 3g bluetooth nfs zeroconf ptest"
+
+# BitBake 6.x rejects even inactive legacy _remove assignments, so set it only on 3.1.
+python __anonymous () {
+    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("DISTRO_FEATURES_remove", "x11 wayland opengl 3g bluetooth nfs zeroconf ptest")
+}
+
 # Future DISTRO_FEATURES additions belong here and must use +=.
+
+# ---- 运行时配套（#59）----
+# locale 只留 C.UTF-8。poky 默认生成一长串，镜像里九成用不到，
+# 而 `locale -a` 的输出长度会让「这是不是我的发行版」变成猜谜。
+# 只动 GLIBC_GENERATE_LOCALES，不动 IMAGE_LINGUAS：后者决定 locale-base-* 分包，
+# 置空会让 gawk/tcl8/bash 的 -ptest 子包 rdepends 落空，do_package_qa 直接判
+# build-deps 致命错误（实测）。前者只控制 libc-package 生成哪些 locale 数据，
+# 足以让 locale -a 收敛到 C / C.utf8 / POSIX。
+GLIBC_GENERATE_LOCALES = "C.UTF-8"
+
+# 时区固定 UTC：日志时间戳与宿主对得上，跨机器比对串口日志时不用换算。
+# 写 UTC 而不是 Etc/UTC —— 两者等价，但验收脚本 grep 的是 UTC。
+DEFAULT_TIMEZONE = "UTC"
+
+# ---- 远端登录面（#59）----
+# 默认 dropbear：core-image-minimal 的 packagegroup 已经按 VIRTUAL-RUNTIME_ssh
+# 装它，换 openssh 必须同时排掉 packagegroup-core-ssh-dropbear，否则 rpm 直接
+# 报 package conflicts —— 所以不做自动切换，只把这个前置条件写在这里。
+# 想换：YP_SSH=openssh-sshd，并在镜像里去掉 ssh-server-dropbear。
+YP_SSH ??= "dropbear"
+VIRTUAL-RUNTIME_ssh = "${YP_SSH}"
