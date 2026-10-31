@@ -20,6 +20,12 @@
 
 YP_LEGACY_LICENSE_DIR ??= "${TOPDIR}/yp-legacy-licenses"
 
+# 目录必须在解析期就存在：dunfell 的 license.bbclass 会用 os.listdir 遍历
+# LICENSE_PATH 求 AVAILABLE_LICENSES，目录不存在直接
+# `Unable to parse Var <AVAILABLE_LICENSES[:=]>`（实测踩过一次）。
+# 用 `:=` 的立即展开在这里执行一次 makedirs，比匿名函数更早。
+YP_LEGACY_LICENSE_INIT := "${@os.makedirs(d.getVar('YP_LEGACY_LICENSE_DIR'), exist_ok=True) or ''}"
+
 LICENSE_PATH += "${YP_LEGACY_LICENSE_DIR}"
 
 python yp_alias_spdx_licenses() {
