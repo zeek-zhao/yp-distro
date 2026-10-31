@@ -18,4 +18,7 @@ SRC_URI:prepend = "https://ftp.denx.de/pub/u-boot/u-boot-${PV}.tar.bz2 "
 SRC_URI[sha256sum] = "b60d5865cefdbc75da8da4156c56c458e00de75a49b80c1a2e58a96e30ad0d54"
 
 # tarball 解压目录是 u-boot-${PV}，而 git fetcher 默认 ${WORKDIR}/git。
-S = "${WORKDIR}/u-boot-${PV}"
+# 注意：wrynose 6.0 有 UNPACKDIR 机制，S 必须相对 UNPACKDIR 而非 WORKDIR
+# （do_unpack 校验：S should be set relative to UNPACKDIR）。此 bbappend 只被
+# u-boot 2026.01（wrynose 6.0）匹配，其余版本是 2020/2022/2024.01，不受影响。
+S = "${UNPACKDIR}/u-boot-${PV}"
