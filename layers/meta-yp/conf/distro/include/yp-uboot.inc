@@ -19,9 +19,18 @@
 YP_UBOOT ??= "0"
 
 UBOOT_MACHINE ??= "qemu-x86_64_defconfig"
-UBOOT_BINARY ??= "u-boot.rom"
-UBOOT_IMAGE ??= "u-boot.rom"
-UBOOT_SUFFIX ??= "rom"
+
+# x86 QEMU 的 U-Boot BIOS 产物是 u-boot.rom（含 reset vector 的 binman 镜像），
+# 不是 u-boot.bin（裸二进制，QEMU 的 -bios 拒绝加载，报 "could not load PC
+# BIOS"）。qemu-x86_64_defconfig 经 BOARD_SPECIFIC_OPTIONS select X86_RESET_VECTOR
+# + BOARD_ROMSIZE_KB_2048，make all 时 binman 会产出 u-boot.rom。
+#
+# 为什么用 = 而不是 ??= / ?=：
+#   uboot-config.bbclass 里 UBOOT_SUFFIX ??= "bin"、UBOOT_BINARY ?= "u-boot.${UBOOT_SUFFIX}"，
+#   两者都比 ??= 强，会把弱默认覆盖回 u-boot.bin。必须用 = 强制钉死，do_deploy
+#   才会复制 u-boot.rom 而非 u-boot.bin。
+UBOOT_BINARY = "u-boot.rom"
+UBOOT_SUFFIX = "rom"
 
 # 空字符串 = 不指定 bootloader provider，qemu 仍走 -kernel 直启。
 # 注意：qemux86-64.conf 已 `PREFERRED_PROVIDER_virtual/bootloader ?= "u-boot"`，
