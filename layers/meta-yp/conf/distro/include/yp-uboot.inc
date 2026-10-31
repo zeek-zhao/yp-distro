@@ -25,15 +25,29 @@ UBOOT_SUFFIX ??= "rom"
 
 # 空字符串 = 不指定 bootloader provider，qemu 仍走 -kernel 直启。
 # 注意：qemux86-64.conf 已 `PREFERRED_PROVIDER_virtual/bootloader ?= "u-boot"`，
-# 所以这里不必再设 provider —— 关键是下面两点（EXTRA_IMAGEDEPENDS + QB_DEFAULT_BIOS）
-# 让 u-boot 真正被编译并被 runqemu 加载。只设 provider 不拉依赖，u-boot 不会编。
-PREFERRED_PROVIDER_virtual/bootloader = "${@'u-boot' if d.getVar('YP_UBOOT') == '1' else ''}"
+# 所以不必再设 provider（machine 默认就是 u-boot）。关键是下面两点
+# （EXTRA_IMAGEDEPENDS + QB_DEFAULT_BIOS）让 u-boot 真正被编译并被 runqemu 加载。
+# 只设 provider 不拉依赖，u-boot 不会编；反之 EXTRA_IMAGEDEPENDS 拉了依赖，
+# machine 的 ?= u-boot 默认就会解析到正确的 provider。
+# 首版这里用 Python 表达式 `= "${@'u-boot' if YP_UBOOT=='1' else ''}"` 把
+# virtual/bootloader 显式设空，会与 multilib 的 provider 自动重写冲突
+# （PREFERRED_PROVIDER_virtual/lib32-bootloader 被指向不存在的 lib32-u-boot，
+#  报 Nothing PROVIDES 'u-boot'）。所以这里不碰 PREFERRED_PROVIDER。
 
-# YP_UBOOT=1 时让镜像依赖 u-boot：ext4.zst 不走 wic，do_image_wic 的 recrdeptask
-# do_deploy 不触发，所以必须靠 EXTRA_IMAGEDEPENDS 显式把 u-boot 拉进来编译并
-# deploy 到 DEPLOY_DIR_IMAGE（u-boot.rom），否则 virtual/bootloader 只是声明、
-# 实际不编 —— 首版就踩了这个空（4003 任务里一个 u-boot 都没有）。
-EXTRA_IMAGEDEPENDS += "${@'u-boot' if d.getVar('YP_UBOOT') == '1' else ''}"
+# YP_UBOOT=1 时让镜像依赖 bootloader：ext4.zst 不走 wic，do_image_wic 的 recrdeptask
+# do_deploy 不触发，所以必须靠 EXTRA_IMAGEDEPENDS 显式拉进来编译并 deploy 到
+# DEPLOY_DIR_IMAGE（u-boot.rom），否则 virtual/bootloader 只是声明、实际不编。
+# 用 virtual/bootloader 而不是硬编码 u-boot：custom 开了 multilib lib32，硬编码
+# u-boot 会被 provider 重写成不存在的 lib32-u-boot（u-boot 在 NON_MULTILIB_RECIPES
+# 里不做 lib32 变体），报 Nothing PROVIDES 'u-boot'。
+EXTRA_IMAGEDEPENDS += "${@'virtual/bootloader' if d.getVar('YP_UBOOT') == '1' else ''}"
+
+# multilib 的 preferred_ml_updates 会把 PREFERRED_PROVIDER_virtual/bootloader 自动
+# 镜像成 PREFERRED_PROVIDER_virtual/lib32-bootloader = lib32-u-boot。但 u-boot 在
+# NON_MULTILIB_RECIPES 里不生成 lib32 变体，导致 lib32-u-boot 不存在、provider
+# 解析失败（Nothing PROVIDES 'virtual/bootloader'）。这里把 lib32 的 bootloader
+# provider 也钉回 u-boot 本体，绕开 multilib 的错误镜像。
+PREFERRED_PROVIDER_virtual/lib32-bootloader = "${@'u-boot' if d.getVar('YP_UBOOT') == '1' else ''}"
 
 # YP_UBOOT=1 时让 runqemu 用 -bios u-boot.rom 启动（而不是裸 -kernel 直启）。
 # runqemu 的 check_bios 只认 QB_DEFAULT_BIOS 的 basename，为空/ none 才不加 -bios；
