@@ -26,6 +26,43 @@ mkdir -p -- "${out_dir}"
 log="${out_dir}/scancode.log"
 : >"${log}"
 
+# 首次调用会触发包装脚本的自动 configure（重建 venv + 从 thirdparty 装 wheel），
+# 实测这一枪经常以 rc=126 结束（报的还是 "File name too long" 这种误导性错误），
+# 紧接着重跑同一条命令就正常。所以先空跑一次 --version 把 venv 预热出来。
+"${scancode_bin}" --version >>"${log}" 2>&1 || true
+
+# 跑一个包；第 1 次失败就在同一容器里重试一次（原因见上）。
+run_scan() {
+    local pkg="$1" src="$2" attempt="$3" rc
+    local -a extra=()
+    if ((index < html_top)); then
+        extra=(--html "${out_dir}/${pkg}.html")
+    fi
+    # 输出格式参数用 `--spdx-tv` 而不是 `--spdx`：32.x 只有 `--spdx-tv` / `--spdx-rdf`，
+    # 写 `--spdx` 会直接 Usage 报错退出。
+    "${scancode_bin}" \
+        --license --copyright --package --info --email --url \
+        --license-score 70 --license-text --consolidate --classify \
+        --summary --tallies -n 8 --quiet \
+        --json-pp "${out_dir}/${pkg}.json" \
+        --csv "${out_dir}/${pkg}.csv" \
+        --spdx-tv "${out_dir}/${pkg}.spdx" \
+        ${extra[@]+"${extra[@]}"} \
+        "${src}" >>"${log}" 2>&1
+    rc=$?
+    if ((rc != 0)) || [[ ! -s "${out_dir}/${pkg}.json" ]]; then
+        if ((attempt == 1)); then
+            printf 'SCAN %-32s 第 1 次 rc=%s，重试\n' "${pkg}" "${rc}" | tee -a "${log}"
+            run_scan "${pkg}" "${src}" 2
+            return $?
+        fi
+        printf 'SCAN %-32s 失败 rc=%s\n' "${pkg}" "${rc}" | tee -a "${log}"
+        return 1
+    fi
+    printf 'SCAN %-32s ok\n' "${pkg}" | tee -a "${log}"
+    return 0
+}
+
 index=0
 ok=0
 failed=0
@@ -40,28 +77,10 @@ while IFS=$'\t' read -r pkg archive; do
         *) tar -xf "${archive}" -C "${src}" 2>/dev/null || true ;;
     esac
     # 解包失败（空目录）也照样扫：产物里 files=0 比静默跳过更可追溯。
-    extra=()
-    if ((index < html_top)); then
-        extra=(--html "${out_dir}/${pkg}.html")
-    fi
-    # 输出格式参数用 `--spdx-tv` 而不是 `--spdx`：32.x 只有 `--spdx-tv` / `--spdx-rdf`，
-    # 写 `--spdx` 会直接 Usage 报错退出（rc=126，日志里只留一行 Usage，极易误判成权限问题）。
-    "${scancode_bin}" \
-        --license --copyright --package --info --email --url \
-        --license-score 70 --license-text --consolidate --classify \
-        --summary --tallies -n 8 --quiet \
-        --json-pp "${out_dir}/${pkg}.json" \
-        --csv "${out_dir}/${pkg}.csv" \
-        --spdx-tv "${out_dir}/${pkg}.spdx" \
-        ${extra[@]+"${extra[@]}"} \
-        "${src}" >>"${log}" 2>&1
-    rc=$?
-    if ((rc == 0)) && [[ -s "${out_dir}/${pkg}.json" ]]; then
+    if run_scan "${pkg}" "${src}" 1; then
         ((ok += 1))
-        printf 'SCAN %-32s ok\n' "${pkg}" | tee -a "${log}"
     else
         ((failed += 1))
-        printf 'SCAN %-32s rc=%s\n' "${pkg}" "${rc}" | tee -a "${log}"
     fi
     rm -rf -- "${src}"
     ((index += 1))

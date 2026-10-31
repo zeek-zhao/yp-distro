@@ -501,7 +501,14 @@ PY
 ###############################################################################
 write_section() {
     local section="$1"
-    cat >"${SECTIONS_DIR}/${section}.json"
+    # 节文件统一是 {"<section>": {...}} 的形状（merge_sections 直接 update 顶层键），
+    # 失败分支给的是裸对象，这里补上外层键，否则合并后 compliance.json 里
+    # "sbom" 会整个消失，只留下一个孤零零的 available=false。
+    {
+        printf '{"%s": ' "${section}"
+        cat
+        printf '}\n'
+    } >"${SECTIONS_DIR}/${section}.json"
 }
 
 merge_sections() {
