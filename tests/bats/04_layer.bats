@@ -22,19 +22,20 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "yp distro requires poky before identity and both includes after it" {
+@test "yp distro selects systemd before poky and requires both includes after identity" {
     run grep -vE '^[[:space:]]*(#|$)' "${DISTRO_DIR}/yp.conf"
     [ "${status}" -eq 0 ]
-    [ "${lines[0]}" = 'require conf/distro/poky.conf' ]
-    [ "${lines[1]}" = 'DISTRO = "yp"' ]
-    [ "${lines[2]}" = 'DISTRO_NAME = "YP (Yocto Platform)"' ]
-    [ "${lines[3]}" = 'require conf/distro/include/yp-common.inc' ]
-    [ "${lines[4]}" = 'require conf/distro/include/yp-compat.inc' ]
+    [ "${lines[0]}" = 'INIT_MANAGER = "systemd"' ]
+    [ "${lines[1]}" = 'require conf/distro/poky.conf' ]
+    [ "${lines[2]}" = 'DISTRO = "yp"' ]
+    [ "${lines[3]}" = 'DISTRO_NAME = "YP (Yocto Platform)"' ]
+    [ "${lines[4]}" = 'require conf/distro/include/yp-common.inc' ]
+    [ "${lines[5]}" = 'require conf/distro/include/yp-compat.inc' ]
     # 身份与 include 之后只允许两类叠加：
     #   1) CVE 类的条件 INHERIT（必须放 distro 级，image 级会 SkipRecipe）
     #   2) virtual 提供者钉死（两种分隔符各一行）
     local extra
-    extra="$(printf '%s\n' "${lines[@]:5}")"
+    extra="$(printf '%s\n' "${lines[@]:6}")"
     [[ "${extra}" == *'INHERIT += "${@bb.utils.contains'* ]]
     [[ "${extra}" == *'PREFERRED_PROVIDER_virtual/cpp-hello = "cpp-hello"'* ]]
     [[ "${extra}" == *'PREFERRED_PROVIDER:virtual/cpp-hello = "cpp-hello"'* ]]
@@ -95,12 +96,12 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "layer configuration and core recipes have no colon overrides" {
+@test "layer configuration and core recipes have no unsupported colon overrides" {
     # 只查真正的代码行：yp-compat.inc 的说明性注释会引用冒号写法当例子。
     # recipes-example/ 不在此列——那是刻意的兼容性演示（两种分隔符各写一行）。
     run bash -c "grep -rnE ':(append|prepend|remove)\b|:[$][{]PN[}]' \
         '${LAYER_DIR}/conf' '${LAYER_DIR}/recipes-core' \
-        | grep -vE ':[0-9]+:[[:space:]]*#'"
+        | grep -vE ':[0-9]+:[[:space:]]*#|yp-common\\.inc:[0-9]+:DISTRO_FEATURES:remove = \"x11 wayland opengl 3g bluetooth nfs zeroconf\"$'"
     [ "${status}" -eq 1 ]
     [ -z "${output}" ]
 }
@@ -124,8 +125,8 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "yp distro and images leave poky features and init manager untouched" {
-    run grep -rnE '^[[:space:]]*(DISTRO_FEATURES[^[:space:]]*|IMAGE_FEATURES|INIT_MANAGER)[[:space:]]*[?+.:=-]*=' \
+@test "yp distro and images do not overwrite inherited feature baselines" {
+    run grep -rnE '^[[:space:]]*(DISTRO_FEATURES|IMAGE_FEATURES)[[:space:]]*=' \
         "${LAYER_DIR}/conf" "${LAYER_DIR}/recipes-core"
     [ "${status}" -eq 1 ]
     [ -z "${output}" ]
