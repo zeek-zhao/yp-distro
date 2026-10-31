@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# =============================================================================
+# .githooks/commit-msg — 拒绝 AI 署名 + 强制提交身份
+#
+# 启用（每个克隆/工作区一次）：
+#     git config core.hooksPath .githooks
+#   wf4.sh guard 会自动设置。
+#
+# 拦截四类问题（历史上的实际事故都在这四类里）：
+#   1. author / committer 不是 zeek.zhao <zeek.zhao@foxmail.com>
+#      —— 本仓库曾同时存在 4 种身份，包括 Jenkins 全局身份与
+#         zeek.admin@devops.com 这类完全无关的邮箱
+#   2. AI 协作者 trailer：Co-authored-by: Copilot / Claude / GPT / Cursor ...
+#   3. AI 生成声明：Generated with ... / 🤖 / Assisted by ...
+#   4. 自己 co-author 自己（Co-authored-by 的邮箱与 author 相同）
+#      —— 单人仓库里无意义，且是 AI 工具批量添加时的典型冗余
+#   另外拦截标题里出现字面 "\n"：历史上有一条提交因为用内联 -m 传多行
+#   字符串，把 \n 原样写进了 subject。多行消息请用 `git commit -F <file>`。
+#
+# 设计取舍：这里拦的是**消息与身份**，不拦代码内容，也不试图判断代码是否
+# 由 AI 生成——后者无法可靠判定，且会误伤正常提交。
+# =============================================================================
+set -u
+
+MSG_FILE="${1:-}"
+if [[ -z "${MSG_FILE}" || ! -f "${MSG_FILE}" ]]; then
+    printf '[commit-msg] 缺少提交消息文件\n' >&2
+    exit 2
+fi
+
+WANT_NAME="${WB_GIT_NAME:-zeek.zhao}"
+WANT_MAIL="${WB_GIT_EMAIL:-zeek.zhao@foxmail.com}"
+AI_RE='copilot|claude|anthropic|openai|chatgpt|\bgpt-?[0-9]|\bgemini\b|cursor|codeium|tabnine|devin|aider|codex'
+
+fail() {
+    printf '\n[commit-msg] 提交被拒绝：%s\n' "$*" >&2
+    printf '[commit-msg] 如需修正身份：\n' >&2
+    printf "    git config user.name '%s'\n" "${WANT_NAME}" >&2
+    printf "    git config user.email '%s'\n\n" "${WANT_MAIL}" >&2
+    exit 1
+}
+
+# ---------------------------------------------------------------- 身份校验 --
+# 用 git var 而非环境变量：hook 里 GIT_AUTHOR_* 并不保证被 export，
+# 而 git var 会正确反映 -c user.name=... / --author 等临时覆盖
+ident() { git var "$1" 2>/dev/null | sed -E 's/^([^<]*) <([^>]*)>.*/\1|\2/'; }
+
+a="$(ident GIT_AUTHOR_IDENT)"
+c="$(ident GIT_COMMITTER_IDENT)"
+a_name="${a%%|*}"; a_mail="${a##*|}"
+c_name="${c%%|*}"; c_mail="${c##*|}"
+# git var 会保留名字末尾空格，去掉再比
+a_name="${a_name%"${a_name##*[![:space:]]}"}"
+c_name="${c_name%"${c_name##*[![:space:]]}"}"
+
+[[ "${a_name}" == "${WANT_NAME}" && "${a_mail}" == "${WANT_MAIL}" ]] \
+    || fail "作者身份必须是 ${WANT_NAME} <${WANT_MAIL}>，当前是 ${a_name} <${a_mail}>"
+[[ "${c_name}" == "${WANT_NAME}" && "${c_mail}" == "${WANT_MAIL}" ]] \
+    || fail "提交者身份必须是 ${WANT_NAME} <${WANT_MAIL}>，当前是 ${c_name} <${c_mail}>"
+
+# ---------------------------------------------------------------- 消息校验 --
+if grep -qiE "^[[:space:]]*co-authored-by:.*(${AI_RE})" "${MSG_FILE}"; then
+    fail "消息含 AI 协作者 trailer（Co-authored-by: Copilot/Claude/...），请删掉该行"
+fi
+
+if grep -qiE "generated[[:space:]]+(with|by)[[:space:]]+(${AI_RE})|assisted[-[:space:]]by[[:space:]]*(${AI_RE})|🤖" "${MSG_FILE}"; then
+    fail "消息含 AI 生成声明（Generated with / 🤖 / Assisted by ...），请删掉该行"
+fi
+
+if grep -qiE "^[[:space:]]*co-authored-by:[[:space:]]*[^<]*<${a_mail}>" "${MSG_FILE}"; then
+    fail "Co-authored-by 的邮箱与作者本人相同（${a_mail}），单人仓库里无意义，请删掉该行"
+fi
+
+first_line="$(head -n 1 "${MSG_FILE}")"
+case "${first_line}" in
+    *'\n'*)
+        fail '标题里含字面 "\n"。多行消息请写入文件后用 git commit -F <file>' ;;
+esac
+
+exit 0
