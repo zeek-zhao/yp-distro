@@ -18,7 +18,9 @@ setup() {
 @test "yp distro declares the agreed identity" {
     [ -f "${DISTRO_DIR}/yp.conf" ]
     grep -qx 'DISTRO = "yp"' "${DISTRO_DIR}/yp.conf"
-    grep -qx 'DISTRO_NAME = "YP (Yocto Platform)"' "${DISTRO_DIR}/yp.conf"
+    # 身份细节收敛到单一真本 include/yp-release.inc（#57），yp.conf 只负责 require。
+    grep -qx 'require conf/distro/include/yp-release.inc' "${DISTRO_DIR}/yp.conf"
+    grep -qx 'DISTRO_NAME = "YP (Yocto Platform)"' "${DISTRO_DIR}/include/yp-release.inc"
 }
 
 # bats test_tags=layer
@@ -28,31 +30,37 @@ setup() {
     [ "${lines[0]}" = 'INIT_MANAGER = "systemd"' ]
     [ "${lines[1]}" = 'require conf/distro/poky.conf' ]
     [ "${lines[2]}" = 'DISTRO = "yp"' ]
-    [ "${lines[3]}" = 'DISTRO_NAME = "YP (Yocto Platform)"' ]
-    [ "${lines[4]}" = 'require conf/distro/include/yp-common.inc' ]
-    [ "${lines[5]}" = 'require conf/distro/include/yp-compat.inc' ]
+    [ "${lines[3]}" = 'require conf/distro/include/yp-release.inc' ]
+    [ "${lines[4]}" = 'require conf/distro/include/yp-uboot.inc' ]
+    [ "${lines[5]}" = 'require conf/distro/include/yp-common.inc' ]
+    [ "${lines[6]}" = 'require conf/distro/include/yp-compat.inc' ]
     # 身份与 include 之后只允许两类叠加：
     #   1) CVE 类的条件 INHERIT（必须放 distro 级，image 级会 SkipRecipe）
     #   2) virtual 提供者钉死（两种分隔符各一行）
     local extra
-    extra="$(printf '%s\n' "${lines[@]:6}")"
+    extra="$(printf '%s\n' "${lines[@]:7}")"
     [[ "${extra}" == *'INHERIT += "${@bb.utils.contains'* ]]
     [[ "${extra}" == *'PREFERRED_PROVIDER_virtual/cpp-hello = "cpp-hello"'* ]]
     [[ "${extra}" == *'PREFERRED_PROVIDER:virtual/cpp-hello = "cpp-hello"'* ]]
 }
 
 # bats test_tags=layer
-@test "common include is the sole source of version codename and maintainer" {
+@test "release include is the sole source of version codename and maintainer" {
     local variable
-    [ -f "${DISTRO_DIR}/include/yp-common.inc" ]
-    grep -qx 'DISTRO_VERSION = "0.1.0"' "${DISTRO_DIR}/include/yp-common.inc"
-    grep -qx 'DISTRO_CODENAME = "yp-phase0"' "${DISTRO_DIR}/include/yp-common.inc"
+    [ -f "${DISTRO_DIR}/include/yp-release.inc" ]
+    # 版本号跟里程碑走：v0.3.0 = 6.0 发行版与镜像（P3 第一段）
+    grep -qx 'DISTRO_VERSION = "0.3.0"' "${DISTRO_DIR}/include/yp-release.inc"
+    grep -qx 'DISTRO_CODENAME = "yp-product"' "${DISTRO_DIR}/include/yp-release.inc"
     grep -Eq '^MAINTAINER = "[^"]+"' "${DISTRO_DIR}/include/yp-common.inc"
-    for variable in DISTRO_VERSION DISTRO_CODENAME MAINTAINER; do
+    for variable in DISTRO_VERSION DISTRO_CODENAME; do
         run grep -rlE "^${variable}[[:space:]]*=" "${LAYER_DIR}/conf"
         [ "${status}" -eq 0 ]
-        [ "${output}" = "${DISTRO_DIR}/include/yp-common.inc" ]
+        [ "${output}" = "${DISTRO_DIR}/include/yp-release.inc" ]
     done
+    # MAINTAINER 仍是 yp-common.inc 的唯一真本
+    run grep -rlE '^MAINTAINER[[:space:]]*=' "${LAYER_DIR}/conf"
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "${DISTRO_DIR}/include/yp-common.inc" ]
 }
 
 # bats test_tags=layer
@@ -77,8 +85,8 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "reference image installs the cpp example by real package name" {
-    grep -qx 'SUMMARY = "YP reference image"' "${IMAGE_DIR}/yp-image.bb"
+@test "full image installs the cpp example by real package name" {
+    grep -qx 'SUMMARY = "YP full image —— 演示与开发"' "${IMAGE_DIR}/yp-image.bb"
     grep -qx 'IMAGE_INSTALL += "cpp-hello"' "${IMAGE_DIR}/yp-image.bb"
     # IMAGE_INSTALL 里的虚拟名在 do_rootfs 阶段按 RPROVIDES 解析，而 RPROVIDES
     # 不能带 virtual/ 前缀（6.0 QA virtual-slash），3.1~5.0 也会报
@@ -88,20 +96,34 @@ setup() {
 }
 
 # bats test_tags=layer
-@test "minimal image adds no packages or features to the baseline" {
-    run grep -nvE '^(SUMMARY = "[^"]+"|require recipes-core/images/core-image-minimal\.bb|[[:space:]]*(#.*)?)$' \
-        "${IMAGE_DIR}/yp-image-minimal.bb"
+@test "minimal image adds only branding, no business or debug packages" {
+    # minimal 的定位是「裸底 + 品牌文件」，通过 include yp-image.inc 拿到品牌（#57）。
+    # 它不得直接装业务/调试工具，也不得 include runtime（那会拉 curl/tar/procps）。
+    grep -qx 'require recipes-core/images/core-image-minimal.bb' "${IMAGE_DIR}/yp-image-minimal.bb"
+    grep -qx 'include yp-image.inc' "${IMAGE_DIR}/yp-image-minimal.bb"
+    run grep -q 'include yp-image-runtime.inc' "${IMAGE_DIR}/yp-image-minimal.bb"
     [ "${status}" -eq 1 ]
-    [ -z "${output}" ]
+    run grep -qE '^IMAGE_INSTALL.*(cpp-hello|wget|python3|strace|gdbserver)' "${IMAGE_DIR}/yp-image-minimal.bb"
+    [ "${status}" -eq 1 ]
 }
 
 # bats test_tags=layer
 @test "layer configuration and core recipes have no unsupported colon overrides" {
-    # 只查真正的代码行：yp-compat.inc 的说明性注释会引用冒号写法当例子。
+    # 冒号 override 在 dunfell 3.1 上是静默失效（不是报错，是整行不起作用）。
+    # 因此只允许两类：
+    #   1) yp-common.inc 的 DISTRO_FEATURES:remove —— 有 3.1 运行时 d.setVar 兜底；
+    #   2) #57~#60 的 6.0 先行 recipe/bbappend（品牌化 / 三层镜像 / journald / 服务模板）
+    #      —— D12 决策「6.0 先行，3.1/4.0 冻结为实验田」，这些文件只在 wrynose 上要求
+    #      生效，3.1/4.0 的功能降级由 v0.7.0 统一补。白名单文件逐一列出，防止
+    #      未经审视的新 override 混进来。
     # recipes-example/ 不在此列——那是刻意的兼容性演示（两种分隔符各写一行）。
+    # yp-compat.inc 的说明性注释会引用冒号写法当例子，走注释过滤。
+    local allowed
+    allowed='yp-common\.inc|yp-image\.inc|yp-hello-svc\.bb|yp-branding\.bb|yp-journald-persist\.bb|base-files_%\.bbappend|os-release\.bbappend|systemd_%\.bbappend'
     run bash -c "grep -rnE ':(append|prepend|remove)\b|:[$][{]PN[}]' \
         '${LAYER_DIR}/conf' '${LAYER_DIR}/recipes-core' \
-        | grep -vE ':[0-9]+:[[:space:]]*#|yp-common\\.inc:[0-9]+:DISTRO_FEATURES:remove = \"x11 wayland opengl 3g bluetooth nfs zeroconf\"$'"
+        | grep -vE ':[0-9]+:[[:space:]]*#' \
+        | grep -vE '(${allowed}):[0-9]+:'"
     [ "${status}" -eq 1 ]
     [ -z "${output}" ]
 }
