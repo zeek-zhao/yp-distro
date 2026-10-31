@@ -32,18 +32,21 @@ release=""
 variant=""
 machine=qemux86-64
 image_mode=release
+image_layer=""
 dry_run=0
 with_cve=0
 with_spdx=0
+with_uboot=0
 while (($# > 0)); do
     case "$1" in
-        --release | --variant | --machine | --image-mode)
+        --release | --variant | --machine | --image-mode | --image)
             (($# >= 2)) || invalid_args "$1 缺少参数"
             case "$1" in
                 --release) release="$2" ;;
                 --variant) variant="$2" ;;
                 --machine) machine="$2" ;;
                 --image-mode) image_mode="$2" ;;
+                --image) image_layer="$2" ;;
             esac
             shift 2
             ;;
@@ -57,6 +60,10 @@ while (($# > 0)); do
             ;;
         --spdx)
             with_spdx=1
+            shift
+            ;;
+        --uboot)
+            with_uboot=1
             shift
             ;;
         -h | --help)
@@ -77,6 +84,12 @@ esac
 case "${variant}" in
     general | custom) ;;
     *) invalid_args "--variant 必须是 general|custom" ;;
+esac
+
+# 镜像层只认三层逻辑名；映射到具体配方交给 lib/common.sh 的 resolve_image。
+case "${image_layer}" in
+    "" | minimal | base | full) ;;
+    *) invalid_args "--image 必须是 minimal|base|full" ;;
 esac
 case "${image_mode}" in
     release | dev) ;;
@@ -132,8 +145,16 @@ kas_configs="/work/kas/targets/${release}-${variant}.yml"
 # 同一份 target 既能出「标准构建」也能出「合规构建」，两者只差这一个文件。
 ((with_spdx == 0)) || kas_configs+=":/work/kas/features/spdx.yml"
 ((with_cve == 0)) || kas_configs+=":/work/kas/features/cve.yml"
+# 启动链是独立一层：同一份 target 既出 -kernel 链也出 U-Boot 链，两者只差这个文件。
+((with_uboot == 0)) || kas_configs+=":/work/kas/features/uboot.yml"
 kas_work_dir="/work/work/kas-${release}-${variant}${machine_sfx}"
 build_command="mkdir -p ${kas_work_dir} /work/work/downloads /work/work/sstate && KAS_CLONE_DEPTH=1 KAS_WORK_DIR=${kas_work_dir} kas build ${kas_configs}"
+# 不给 --image 时不传 --target，kas 沿用 target 文件里的值 —— 既有的 8 组合与
+# 报告链路完全不受影响；给了才覆盖，指向另一层镜像。
+if [[ -n "${image_layer}" ]]; then
+    image_target="$(resolve_image "${image_layer}")"
+    build_command+=" --target ${image_target}"
+fi
 if [[ "${image_mode}" == release ]]; then
     command_args=(./project.sh shell --release "${release}" --variant "${variant}" --machine "${machine}" -- bash -lc)
 else
@@ -151,8 +172,8 @@ build_meta="${build_log%.log}.meta"
 # 报告要区分「标准构建」与「合规构建」：meta 只放秒数（report.sh 按纯数字解析），
 # 开关单独放 .flags，避免把 meta 的格式搞坏。
 build_flags="${build_log%.log}.flags"
-printf 'release=%s\nvariant=%s\nmachine=%s\nimage_mode=%s\ncve=%s\nspdx=%s\n' \
-    "${release}" "${variant}" "${machine}" "${image_mode}" "${with_cve}" "${with_spdx}" >"${build_flags}"
+printf 'release=%s\nvariant=%s\nmachine=%s\nimage_mode=%s\nimage=%s\ncve=%s\nspdx=%s\nuboot=%s\n' \
+    "${release}" "${variant}" "${machine}" "${image_mode}" "${image_layer:-default}" "${with_cve}" "${with_spdx}" "${with_uboot}" >"${build_flags}"
 start_seconds="$(date +%s)"
 printf 'Build start: %s\n' "$(date --iso-8601=seconds)" | tee "${build_log}"
 if "${command_args[@]}" "${build_command}" 2>&1 | tee -a "${build_log}"; then
