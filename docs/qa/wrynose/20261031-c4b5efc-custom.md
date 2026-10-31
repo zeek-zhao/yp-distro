@@ -4,24 +4,23 @@
 - Release: `wrynose`
 - Variant: `custom`
 - Machine: `qemux86-64`
-- Commit: `3feb33e`
+- Commit: `c4b5efc`
 - Tag: `yocto-6.0.4`
-- SOURCE_FINGERPRINT: `130b6f351728bf73b92ce57589c63612dd889372f7d761c96073b377556c5f7c`
-- Hostname: `74a584d85129`
-- Start time: `2026-10-31T09:38:06+08:00`
-- End time: `2026-10-31T09:38:19+08:00`
+- SOURCE_FINGERPRINT: `a5f05a2c630d1396e51f353b240f54b5f60cc49c8b80238436af7d3ef66a0e88`
+- Hostname: `683b2ce25f3f`
+- Start time: `2026-10-31T09:43:10+08:00`
+- End time: `2026-10-31T09:43:23+08:00`
 - Duration: `13s`
 
 ## Test statistics
 
 | Tests | Passed | Failed | Skipped |
 |---:|---:|---:|---:|
-| 163 | 161 | 2 | 0 |
+| 163 | 163 | 0 | 0 |
 
 ## Failures
 
-- `11_compliance.bats::sbom-stats.py 认索引型文档并按 documentNamespace 对位聚合`: 
-- `99_coverage.bats::latest report degraded list matches degraded.txt`: 
+None
 
 ## 构建产物
 
@@ -30,7 +29,7 @@
 - Artifact bytes: `60871153`
 - Artifact SHA-256: `972d6a705d2f5d02f2444dbafc78e26e2daefabca332702e67c711aebd7fa543`
 - Image digest: n/a（本地构建无 registry digest）
-- 全部产物 sha256: 见 `artifacts-20261031-3feb33e-custom.sha256`（同目录，路径相对仓库根）
+- 全部产物 sha256: 见 `artifacts-20261031-c4b5efc-custom.sha256`（同目录，路径相对仓库根）
 
 ### 构建统计
 
