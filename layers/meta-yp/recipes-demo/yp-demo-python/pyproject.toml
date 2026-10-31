@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yp-demo-python"
+version = "0.1.0"
+description = "Minimal YP Python demo service"
+
+[tool.setuptools]
+py-modules = ["yp_demo_py"]
