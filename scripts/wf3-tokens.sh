@@ -13,6 +13,12 @@
 #   scripts/wf3-tokens.sh --last 5             只看最近 N 次
 #   scripts/wf3-tokens.sh --json               机器可读（给报告/看板用）
 #
+#   scripts/wf3-tokens.sh publish               把台账发布进版本库并重渲看板：
+#                                                 logs/token-usage.tsv → metrics/token-usage.tsv
+#                                                 docs/tokens.html（自包含，见 tokens-dashboard.py）
+#       logs/ 在 .gitignore 里，台账要进仓库必须落到 metrics/。两处是**同一份内容**，
+#       publish 每次整体覆盖（台账是追加型，覆盖即同步，不需要增量合并）。
+#
 # 台账字段（TSV，14 列）：
 #   ts  task  issue  session_start  model  in  out  cache_r  cache_w  total  credits  premium  dur_ms  rc
 #
@@ -217,10 +223,31 @@ for r in rows[-15:]:
 PY
 }
 
+# ------------------------------------------------------------------ publish --
+# 台账落 metrics/（进版本库），再重渲 docs/tokens.html。
+# 台账是追加型，整体覆盖即同步；不删 metrics 里已有的行，只以 logs 为准。
+do_publish() {
+    local pub_dir="${ROOT_DIR}/metrics" pub="${ROOT_DIR}/metrics/token-usage.tsv"
+    if [[ ! -f "${LEDGER}" ]]; then
+        printf '[tokens] 还没有台账：%s（先跑一个 wf3 任务）\n' "${LEDGER}"
+        return 0
+    fi
+    mkdir -p "${pub_dir}"
+    cp "${LEDGER}" "${pub}"
+    local n
+    n=$(wc -l < "${pub}")
+    printf '[tokens] 台账已发布：metrics/token-usage.tsv（%s 行）\n' "${n}"
+    # 以 metrics/ 那份为输入，而不是 logs/：看板上写的数据源就是仓库里能找到的那份
+    ( cd "${ROOT_DIR}" && python3 scripts/tokens-dashboard.py metrics/token-usage.tsv docs/tokens.html ) \
+        || { printf '[tokens] 看板渲染失败\n' >&2; return 1; }
+    printf '[tokens] 提示：把 metrics/ 与 docs/tokens.html 一起提交，仓库里就有进度可查\n'
+}
+
 # -------------------------------------------------------------------- main --
 [[ $# -ge 1 ]] || { do_report; exit 0; }
 case "$1" in
     ingest)  shift; do_ingest "$@" ;;
+    publish) shift; do_publish "$@" ;;
     report|"") shift || true; do_report "$@" ;;
     -h|--help|help) usage 0 ;;
     --*)     do_report "$@" ;;
