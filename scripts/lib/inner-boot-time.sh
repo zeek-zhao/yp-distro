@@ -135,8 +135,8 @@ start_writer
 # 管道数据（无缓冲），日志文件仍然完整，两边都不牺牲。
 set +e
 timeout --signal=TERM --kill-after=20 "${BOOT_TIMEOUT}" \
-    runqemu "${RUNQEMU_ARGS[@]}" nographic slirp snapshot <"${FIFO}" 2>&1 \
-    | tee >(monitor_stream) >"${LOG}"
+    runqemu "${RUNQEMU_ARGS[@]}" nographic slirp snapshot <"${FIFO}" 2>&1 |
+    tee >(monitor_stream) >"${LOG}"
 rc=${PIPESTATUS[0]}
 set -e
 
