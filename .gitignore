@@ -14,3 +14,7 @@ docs/qa/**/*-render.md
 
 # 容器持久 HOME（copilot / gh 凭证）
 .devhome/
+
+# Python 字节码（sbom-stats.py / foss-summary.py 被 py_compile 或 import 时会生成）
+__pycache__/
+*.pyc
