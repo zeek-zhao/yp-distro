@@ -122,5 +122,12 @@ CRA 语境下它决定漏洞匹配是否有效，但本项目当前只做「有�
   也没有做许可证兼容性判定。
 - 3.1/4.0 的 `--spdx` 是真正新增的任务量（每 recipe 一个 `do_create_spdx`），
   首次开启会明显拉长构建时间，sstate 命中后回到正常水平。
+- **3.1 的 SPDX 需要一份许可证别名补丁**（`yp-spdx-legacy-license.bbclass`）：
+  dunfell 的 create-spdx 回移版本不把 `GPLv2+` 归一成 `GPL-2.0-or-later`，
+  直接拿 `GPL-2+` 去 `common-licenses` 找文件，找不到就
+  `Cannot find any text for license GPL-2+` 让 `do_create_spdx` 失败
+  （实测 strace 是第一个）。类里按 recipe 的 `LICENSE` 生成 `<base>+` 的别名
+  正文并挂到 `LICENSE_PATH`，4.0+ 上是空操作。SBOM 里那些包的许可证正文
+  因此是「基础许可证的正文 + 原始 `+` 声明」，语义正确。
 - 覆盖率的分子是「解包成功且 ScanCode 产出 json 的包数」，解包失败算失败，
   记在 `failed` 里，不进分子。
