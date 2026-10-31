@@ -1,0 +1,16 @@
+[Unit]
+# 等待网络目标就绪，避免服务早于系统网络初始化阶段启动。
+Description=YP 系统指标定时采集服务
+After=network.target
+
+[Service]
+# 前台运行并从默认环境文件取间隔；失败后延迟重启，正常停止不重拉起。
+Type=simple
+ExecStart=/usr/bin/yp-collectd
+EnvironmentFile=-/etc/default/yp-collectd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+# 设备正常进入多用户运行级别时启动该采集服务。
+WantedBy=multi-user.target
