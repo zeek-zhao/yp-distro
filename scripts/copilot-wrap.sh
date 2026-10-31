@@ -28,8 +28,8 @@ unset GH_TOKEN GITHUB_TOKEN COPILOT_GITHUB_TOKEN
 
 # 登录态缺失时给出明确的手动授权指引，不要让 copilot 自己弹交互提示
 # （wf3 跑在 tmux 里，交互提示会一直挂着不退出，看起来像卡死）
-if [[ ! -s "${HOME}/.copilot/config.json" ]] \
-   || ! grep -qs '"authTokens"' "${HOME}/.copilot/config.json"; then
+if [[ ! -s "${HOME}/.copilot/config.json" ]] ||
+    ! grep -qs '"authTokens"' "${HOME}/.copilot/config.json"; then
     cat >&2 <<'EOF'
 [copilot-wrap] 未检测到 OAuth 登录态（~/.copilot/config.json 无 authTokens）。
 
