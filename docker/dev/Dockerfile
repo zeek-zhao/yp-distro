@@ -66,8 +66,9 @@ RUN sed -i \
     # 本镜像**不跑构建**，但远程 AI CLI（wf3 的 copilot 会话）需要 `bitbake -e`
     # 做只读解析验证；而 sanity 的 HOSTTOOLS 检查在解析末尾就执行，缺一个整条
     # 命令直接失败。不给这些工具，AI 只能盲改文件、无法自验 —— 实测代价是它会
-    # 去研究 base.bbclass 试图用 hack 绕过检查，那比多装 10MB 危险得多。
-        chrpath cpio diffstat gawk zstd \
+    # 去研究 base.bbclass 试图用 hack 绕过检查，那比多装十几 MB 危险得多。
+    # 各版列表不同：kirkstone/scarthgap 还要 lz4c（lz4 包），wrynose 不要。
+        chrpath cpio diffstat gawk zstd lz4 \
         shellcheck \
         build-essential pkg-config \
     && apt-get clean \
@@ -79,7 +80,7 @@ RUN sed -i \
 RUN ln -sf /usr/bin/zstd /usr/local/bin/unzstd \
     && printf '#!/bin/sh\nexec zstd -T0 "$@"\n' > /usr/local/bin/pzstd \
     && chmod +x /usr/local/bin/pzstd \
-    && for t in chrpath cpio diffstat gawk zstd pzstd unzstd; do command -v "$t" >/dev/null || exit 1; done
+    && for t in chrpath cpio diffstat gawk zstd lz4c pzstd unzstd; do command -v "$t" >/dev/null || exit 1; done
 
 RUN locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8

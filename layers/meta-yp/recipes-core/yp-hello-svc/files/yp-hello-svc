@@ -1,0 +1,8 @@
+#!/bin/sh
+# 每 10 秒打一条到 stdout。systemd 把 stdout 接进 journal，
+# 所以 `journalctl -u yp-hello-svc` 应该看到 10 秒间隔的时间戳。
+# 不用 date -u 之外的时间格式：日志比对靠固定格式。
+while true; do
+    printf 'yp-hello-svc alive at %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    sleep 10
+done

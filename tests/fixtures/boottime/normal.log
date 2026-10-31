@@ -1,0 +1,12 @@
+U-Boot 2025.01 (Jan 01 2026 - 00:00:00 +0000)
+
+DRAM:  256 MiB
+Hit any key to stop autoboot:  0
+Starting kernel ...
+
+[    0.000000] Booting Linux on physical CPU 0x0
+[    0.000000] Linux version 6.12.0-yocto-standard (oe-user@oe-host)
+[    1.412398] systemd[1]: systemd 259.5 running in system mode
+[    3.200112] systemd[1]: Reached target Multi-User System.
+
+qemux86-64 login: 

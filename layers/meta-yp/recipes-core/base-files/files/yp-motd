@@ -1,0 +1,5 @@
+@DISTRO_NAME@ @DISTRO_VERSION@ (@DISTRO_CODENAME@)
+machine=@MACHINE@ variant=@VARIANT@ built=@DATE@
+
+这是 YP 发行版镜像，不是 poky 参考镜像。
+版本与构建信息：cat /etc/yp-release
