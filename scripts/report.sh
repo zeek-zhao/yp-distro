@@ -261,14 +261,23 @@ if os.path.isfile(degraded_file):
             if aspect in COMPLIANCE_ASPECTS and row_release == release:
                 degraded_rows.append((aspect, reason, requirement))
 
+sbom_index = sbom.get("kind") == "spdx2-index"
+sbom_aggregate = sbom.get("aggregate") or {}
+# 索引型文档（3.1/4.0/5.0）的「镜像里到底有什么」只能从外部文档聚合出来，
+# 聚合不齐就等于 SBOM 不可用，所以这条进验收门，而不像 PURL 那样只做观测。
+index_ok = (not sbom_index) or (
+    bool(sbom_aggregate) and (sbom_aggregate.get("missing_count") or 0) == 0
+)
+
 checks = [
     ("SBOM 已产出并可解析", bool(sbom.get("available"))),
+    ("SBOM 外部引用全部对位（索引型必检）", index_ok),
     ("CVE 清单已产出（采集工具可随版本分叉）", bool(cve.get("available"))),
     ("FOSS 批量扫描有结果", bool(foss.get("available"))),
     ("FOSS 覆盖率 > 0", (foss.get("coverage") or 0) > 0),
     ("PURL 非空率 >= 90%（CRA 漏洞匹配前提，观测项）", (sbom.get("purl_ratio") or 0) >= 0.9),
 ]
-gate = checks[:4]
+gate = checks[:5]
 passed = all(ok for _, ok in gate)
 
 lines = [
@@ -290,24 +299,49 @@ lines = [
 ]
 
 if sbom.get("available"):
-    lines += [
-        "| 项 | 值 |",
-        "|---|---|",
-        "| 格式 | `%s` |" % sbom.get("format", "n/a"),
-        "| 文件 | `%s` |" % sbom.get("path", "n/a"),
-        "| 体积 | %s（%s 字节） |"
-        % ("%.1f MB" % (int(sbom.get("bytes") or 0) / 1048576.0), sbom.get("bytes", "n/a")),
-        "| SHA-256 | `%s` |" % sbom.get("sha256", "n/a"),
-        "| 打包形态 | `%s` |" % sbom.get("packaging", "n/a"),
-        "| 包元素 | %s |" % sbom.get("packages", "n/a"),
-        "| 文件元素 | %s |" % sbom.get("files", "n/a"),
-        "| PURL 非空率 | %.1f%%（%s/%s） |"
-        % (
-            (sbom.get("purl_ratio") or 0) * 100,
-            sbom.get("purl_nonempty", "n/a"),
-            sbom.get("packages", "n/a"),
-        ),
+    kind = sbom.get("kind", "spdx2-full")
+    aggregate = sbom.get("aggregate") or {}
+    kind_text = {
+        "spdx2-index": "索引型：文档内只有 1 个 image 包，组件清单以 `externalDocumentRefs` 指向 `deploy/spdx/` 下的 per-recipe 文档",
+        "spdx2-full": "自包含：2.2 文档内直接列出组件",
+        "spdx3": "自包含：单个 `@graph` 内同时含包与文件",
+    }.get(kind, "`%s`" % kind)
+    rows = [
+        ("格式", "`%s`" % sbom.get("format", "n/a")),
+        ("文件", "`%s`" % sbom.get("path", "n/a")),
+        ("体积", "%s（%s 字节）"
+         % ("%.1f MB" % (int(sbom.get("bytes") or 0) / 1048576.0), sbom.get("bytes", "n/a"))),
+        ("SHA-256", "`%s`" % sbom.get("sha256", "n/a")),
+        ("打包形态", "`%s`" % sbom.get("packaging", "n/a")),
+        ("文档形态", kind_text),
     ]
+    if kind == "spdx2-index":
+        missing = aggregate.get("missing") or []
+        rows += [
+            ("外部文档引用", "%s" % sbom.get("external_documents", "n/a")),
+            ("镜像组件（CONTAINS 对位）", "%s" % sbom.get("components", "n/a")),
+            ("已解析外部文档", "%s%s"
+             % (aggregate.get("documents", "n/a"),
+                "" if not missing else "（缺 %s 份：%s）"
+                % (aggregate.get("missing_count", len(missing)),
+                   "、".join("`%s`" % name for name in missing[:5])))),
+            ("聚合包元素", "%s" % aggregate.get("packages", "n/a")),
+            ("聚合文件元素", "%s" % aggregate.get("files", "n/a")),
+        ]
+    else:
+        rows += [
+            ("包元素", "%s" % sbom.get("packages", "n/a")),
+            ("文件元素", "%s" % sbom.get("files", "n/a")),
+        ]
+    denominator = sbom.get("packages")
+    if kind == "spdx2-index" and aggregate.get("packages"):
+        denominator = aggregate["packages"]
+    rows.append(
+        ("PURL 非空率", "%.1f%%（%s/%s）"
+         % ((sbom.get("purl_ratio") or 0) * 100, sbom.get("purl_nonempty", "n/a"), denominator))
+    )
+    lines += ["| 项 | 值 |", "|---|---|"]
+    lines += ["| %s | %s |" % (name, value) for name, value in rows]
     vex = sbom.get("vex")
     if vex:
         lines.append(
@@ -316,10 +350,18 @@ if sbom.get("available"):
         )
     else:
         lines.append("| VEX | 本版本无（`vex.bbclass` 只有 5.0/6.0 有） |")
-    licenses = sbom.get("licenses") or {}
+    licenses = (aggregate.get("licenses") if kind == "spdx2-index" else None) or sbom.get("licenses") or {}
     if licenses:
         top = "，".join("`%s` %s" % (name, count) for name, count in list(licenses.items())[:8])
         lines += ["| 许可证 top | %s |" % top]
+    if kind == "spdx2-index":
+        lines += [
+            "",
+            "索引型的包数不能直接照抄文档里的 `packages`（那是 1 个 image 包）。",
+            "上表的「镜像组件」「聚合包元素」是沿 `CONTAINS` 关系把 %s 份外部文档按"
+            % aggregate.get("documents", sbom.get("components", "n/a")),
+            "`documentNamespace` 逐个对位后累加出来的，口径与 6.0 自包含文档一致。",
+        ]
 else:
     lines += ["未产出：%s" % sbom.get("reason", "n/a")]
 
@@ -411,19 +453,25 @@ lines += [
     "「包名 + 版本 + 许可证」，不比文档内部结构。本节把差异写死，避免把",
     "口径不同当成回归。",
     "",
-    "| release | SPDX | 镜像级 SBOM 形态 | VEX | 说明 |",
+    "| release | SPDX | 镜像级 SBOM 形态 | 文档自包含性 | VEX |",
     "|---|---|---|---|---|",
-    "| dunfell 3.1.33 | 2.2 | `<image>-<machine>.spdx.tar.gz` 归档 | 无 | 无 `vex.bbclass`；许可证需别名补丁 |",
-    "| kirkstone 4.0.35 | 2.2 | `<image>-<machine>.spdx.json` 单文件 | 无 | 无 `vex.bbclass` |",
-    "| scarthgap 5.0.20 | 2.2（默认） | `<image>.rootfs.spdx.tar.zst` 归档 | 有 | 可切 3.0.1，未切 |",
-    "| wrynose 6.0.4 | 3.0.1 | `<image>-<machine>.rootfs.spdx.json` 单文件 | 有 | 2.x 输出已被删除 |",
+    "| dunfell 3.1.33 | 2.2 | `<image>-<machine>.spdx.tar.gz`（包内 `<image>-<ts>.spdx.json`） | 索引型 | 无 |",
+    "| kirkstone 4.0.35 | 2.2 | `<image>-<machine>.spdx.json` 单文件 | 索引型 | 无 |",
+    "| scarthgap 5.0.20 | 2.2（默认） | `<image>-<machine>.rootfs.spdx.tar.zst` | 索引型 | 有 |",
+    "| wrynose 6.0.4 | 3.0.1 | `<image>-<machine>.rootfs.spdx.json` 单文件 | 自包含 | 有 |",
     "",
-    "本版本实际：格式 `%s`，形态 `%s`。" % (sbom.get("format", "n/a"), sbom.get("packaging", "n/a")),
+    "本版本实际：格式 `%s`，打包形态 `%s`，文档形态 `%s`。"
+    % (sbom.get("format", "n/a"), sbom.get("packaging", "n/a"), sbom.get("kind", "n/a")),
     "",
     "语义差异（不能直接比大小）：",
     "",
-    "- 2.2 的 `packages` 是文档内 package 元素；3.0.1 的 `software_Package` 把构建期",
-    "  元素也算了进去，数字天然更大，所以两版包数不能当回归指标；",
+    "- 3.1/4.0/5.0 的镜像文档是**索引**：`packages` 只有 1 个 image 包，组件靠",
+    "  `externalDocumentRefs` + `CONTAINS` 指向 `deploy/spdx/<ver>/` 下的 per-recipe 文档，",
+    "  照抄 `packages` 会得到「1 个包」的假象，必须聚合后再比；",
+    "- 6.0 的 `software_Package` 把构建期元素也算进去，数字天然比 2.2 的聚合值大，",
+    "  两版包数不能当回归指标；",
+    "- PURL 只有 6.0 默认产出（`SPDX_PACKAGE_URL`），2.2 的 per-recipe 文档没有 purl，",
+    "  所以前三版 PURL 非空率是 0%，这是能力差异不是采集失败；",
     "- 3.0.1 的 VEX 由 `security_Vex*` 关系元素承载（`SPDX_INCLUDE_VEX`），2.2 没有对应表达；",
     "- 5.0 的镜像级 SBOM 是归档，要解压后才能当输入用，6.0 是可直接喂工具的单文件。",
     "",
@@ -445,7 +493,22 @@ lines.append("")
 with open(target, "w", encoding="utf-8") as handle:
     handle.write("\n".join(lines))
 
-print("SBOM : %s %s 包" % (sbom.get("format", "n/a"), sbom.get("packages", "n/a")))
+if sbom.get("kind") == "spdx2-index":
+    aggregate = sbom.get("aggregate") or {}
+    print(
+        "SBOM : %s 索引型 %s 组件（聚合 %s 包，PURL %.0f%%）"
+        % (
+            sbom.get("format", "n/a"),
+            sbom.get("components", "n/a"),
+            aggregate.get("packages", "n/a"),
+            (sbom.get("purl_ratio") or 0) * 100,
+        )
+    )
+else:
+    print(
+        "SBOM : %s %s 包（PURL %.0f%%）"
+        % (sbom.get("format", "n/a"), sbom.get("packages", "n/a"), (sbom.get("purl_ratio") or 0) * 100)
+    )
 print(
     "CVE  : %s %s/%s/%s"
     % (
