@@ -13,7 +13,9 @@
 SRC_URI:remove = "git://source.denx.de/u-boot/u-boot.git;protocol=https;branch=master;tag=v2026.01"
 
 # 追加官方 release tarball（prepend 末尾带空格，与保留的 file:// 补丁分隔）。
-SRC_URI:prepend = "https://ftp.denx.de/pub/u-boot/u-boot-${PV}.tar.bz2 "
+SRC_URI:prepend = "https://ftp.denx.de/pub/u-boot/u-boot-${PV}.tar.bz2 \
+           file://qemu-x86-nographic.cfg \
+           "
 
 SRC_URI[sha256sum] = "b60d5865cefdbc75da8da4156c56c458e00de75a49b80c1a2e58a96e30ad0d54"
 
