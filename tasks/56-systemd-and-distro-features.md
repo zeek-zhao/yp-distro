@@ -88,10 +88,10 @@ bash scripts/qemu.sh --release wrynose --variant custom --detach
 grep -c 'Reached target' work/artifacts/wrynose/custom/qemu-serial.log
 ```
 
-- [ ] A-1 四版全为 `INIT_MANAGER="systemd"`
-- [ ] A-2 `VIRTUAL-RUNTIME_init_manager="systemd"`
-- [ ] A-3 wrynose 真起机，`grep -c 'Reached target'` ≥ 1
-- [ ] 3.1 也真起机一次，`ps | grep -c systemd-udevd` 的结论写进 `docs/distro-features.md`
+- [x] A-1 四版全为 `INIT_MANAGER="systemd"`
+- [x] A-2 `VIRTUAL-RUNTIME_init_manager="systemd"`
+- [x] A-3 wrynose 真起机，`grep -c 'Reached target'` ≥ 1
+- [x] 3.1 也真起机一次，`ps | grep -c systemd-udevd` 的结论写进 `docs/distro-features.md`
 
 ---
 
@@ -162,12 +162,15 @@ bash scripts/build.sh --release wrynose --variant custom
 bash scripts/dev.sh scripts/report.sh --release wrynose --variant custom
 ```
 
-- [ ] B-1 PASS
-- [ ] B-2 `systemd` 在、`sysvinit` 不在
-- [ ] `bats -r tests/bats/12_distro.bats` 全过
-- [ ] `docs/distro-features.md` 每条都有具体理由
-- [ ] 文档写「删」的项在 `yp-common.inc` 里确实删了（不一致算未完成）
-- [ ] `report.sh` 不因此出现新的失败项
+- [x] B-1 PASS
+- [x] B-2 `systemd` 在、`sysvinit` 不在
+- [x] `bats -r tests/bats/12_distro.bats` 全过
+- [x] `docs/distro-features.md` 每条都有具体理由
+- [x] 文档写「删」的项在 `yp-common.inc` 里确实删了（不一致算未完成）
+- [x] `report.sh` 不因此出现新的失败项
+
+> L3 证据（2026-10-31，四版真构建 + 真起机）：`docs/qa/l3-systemd-boot.md`；取证工具 `scripts/boot-exec.sh`。
+
 
 ---
 
