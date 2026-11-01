@@ -20,8 +20,8 @@ PARALLEL_MAKE = "-j ${@min(oe.utils.cpu_count(), 20)}"
 `local.conf` **之前**解析。在 `local.conf` 里再写 `?=` 属于「变量已有值」，
 不会覆盖，等于没写。这是 poky 的 `local.conf.sample` 注释里那两行最容易踩的坑。
 
-**为什么不是写死 20**：215 是 32 核，别的机器不是。`min()` 保证小机器按实际核数跑，
-大机器封顶 20 以免和同机的其他任务抢内存（215 上 124GB 内存常年有其他构建）。
+**为什么不是写死 20**：构建机是 32 核，别的机器不是。`min()` 保证小机器按实际核数跑，
+大机器封顶 20 以免和同机的其他任务抢内存（构建机上 124GB 内存常年有其他构建）。
 
 **改上限**：两个 20 必须一起改，校验器会断言它们相等。
 按经验 `BB_NUMBER_THREADS × PARALLEL_MAKE` 不超过核数时比较稳，超过就得看内存。
@@ -119,7 +119,7 @@ BB_GENERATE_MIRROR_TARBALLS = "1"
 在 `do_fetch` 完成后，把 git 源再打一份 `git2_<hash>.tar.gz` 放进 `DL_DIR`。
 value 在于：
 
-- 215 出网受限，`linux-yocto` 直连 git 会在传大 pack 时断（`fetch-pack: unexpected disconnect`），
+- 构建机出网受限，`linux-yocto` 直连 git 会在传大 pack 时断（`fetch-pack: unexpected disconnect`），
   当初只能改走 `downloads.yoctoproject.org` 的 3.83 GiB 全 history 包
 - 有了 mirror tarball，`DL_DIR` 可以整包搬到另一台机器，不用重新解一遍 git 协议
 - 代价是 `DL_DIR` 多占一份（顶层目录 17G → 会增加）

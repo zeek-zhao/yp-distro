@@ -20,7 +20,7 @@ PR #31 的 `ci` run 在 GitHub 托管 runner 上 `bats` job 红：
 ```
 
 10 个失败全部来自 `tests/bats/03_container.bats`：runner 上**没有** `ghcr.io/zeek-zhao/yp-distro/<release>:local|latest` 镜像
-（那是 215 本地构建的产物，CI 里只有 `images.yml` 在 main 上推镜像）。而 215 上 46/46 全绿。
+（那是构建机本地构建的产物，CI 里只有 `images.yml` 在 main 上推镜像）。而构建机上 46/46 全绿。
 
 也就是说：测试把「机器上已构建过 4 个镜像」当成了隐含前提，CI 环境没有 → 必红。
 `scripts/container.sh` 的实现是对的（镜像缺席时报错并提示 `scripts/image.sh build`），**不要改实现**。
@@ -37,14 +37,14 @@ release_image() {
     printf 'ghcr.io/zeek-zhao/yp-distro/%s' "$1"
 }
 
-# 该环境没有可用镜像时跳过（CI runner 常态）；本地/215 构建过镜像则会真跑
+# 该环境没有可用镜像时跳过（CI runner 常态）；本地/构建机构建过镜像则会真跑
 require_release_image() {
     local release="$1"
     if docker image inspect "$(release_image "${release}"):local" >/dev/null 2>&1 ||
         docker image inspect "$(release_image "${release}"):latest" >/dev/null 2>&1; then
         return 0
     fi
-    skip "release image not available in this environment: ${release}（CI runner 常态；215 上应真跑）"
+    skip "release image not available in this environment: ${release}（CI runner 常态；构建机上应真跑）"
 }
 ```
 
@@ -79,7 +79,7 @@ require_release_image() {
 ## 验收标准
 
 ```bash
-# 1) 215 上有 4 个镜像 → 期望 0 not ok、0 skip（新加的守卫不被触发）
+# 1) 构建机上有 4 个镜像 → 期望 0 not ok、0 skip（新加的守卫不被触发）
 bash scripts/dev.sh bats --print-output-on-failure tests/bats/03_container.bats
 bash scripts/dev.sh bats tests/bats/
 
@@ -97,13 +97,13 @@ bash scripts/dev.sh bats --print-output-on-failure tests/bats/03_container.bats 
 [ $had_latest -eq 1 ] && docker tag "${img}:tmp-latest" "${img}:latest"
 ```
 
-- [ ] 第 1 条：0 not ok、**0 skip**（215 有镜像，守卫不触发）
+- [ ] 第 1 条：0 not ok、**0 skip**（构建机有镜像，守卫不触发）
 - [ ] 第 3 条：镜像缺席时相关用例显示 `# skip`，且**没有** `not ok`
 - [ ] 镜像已还原（`docker image inspect ghcr.io/zeek-zhao/yp-distro/scarthgap:local` 成功）
 - [ ] `git diff --stat` 只含 `tests/bats/03_container.bats`
 
 ## 背景（为什么允许 skip）
 
-CI runner 上没有 215 的本地构建产物，镜像只在 `images.yml`（main 分支）用 GHCR 推。
+CI runner 上没有构建机的本地构建产物，镜像只在 `images.yml`（main 分支）用 GHCR 推。
 本地/build 机上 4 个镜像都在，验收要求 0 skip；CI 上容器运行时用例 skip 属预期，
 但**纯逻辑用例（参数校验、dry-run 组装、水位门禁）必须在 CI 上真跑**，不能被 skip 掩盖。

@@ -31,7 +31,7 @@ WorkBuddy 独立验收（在**宿主**上 `bash scripts/container.sh` 与在 **d
    在宿主上该路径可能不存在 → docker 会在宿主创建同名空目录，污染宿主。
    这与 P0-03 踩过的「嵌套挂载成空目录」是同一类坑。
 
-3. **`id -un` 无法解析**：215 宿主 uid 是 **2000**，镜像内 `builder` 是 **1000**，
+3. **`id -un` 无法解析**：构建机宿主 uid 是 **2000**，镜像内 `builder` 是 **1000**，
    `--user 2000:2000` 进容器后 `id -un` 输出 `id: cannot find name for user ID 2000`。
    Yocto/bitbake 依赖 `getpwuid` 的路径会因此出怪问题，必须让用户名可解析。
 
@@ -116,7 +116,7 @@ printf '\n'
 
 ### 6. `docs/container.md` 补两段
 
-- **uid 与用户名**：宿主 uid（215 上 2000）与镜像内 `builder`（1000）不同，靠 `/etc/passwd` 注入解决；`--check` 会打印宿主 uid/gid；
+- **uid 与用户名**：宿主 uid（构建机上 2000）与镜像内 `builder`（1000）不同，靠 `/etc/passwd` 注入解决；`--check` 会打印宿主 uid/gid；
 - **嵌套模式**：`WB_HOST_REPO_DIR` 的作用、容器内无 docker CLI 属预期、不要在容器内再起嵌套挂载。
 
 ## 不要做的事
@@ -149,7 +149,7 @@ bash scripts/dev.sh bash scripts/container.sh --release scarthgap --dry-run | gr
 
 # 5) 真起容器：用户名可解析 + 非 root + uid 对齐
 bash scripts/container.sh --release scarthgap --variant general -- bash -lc 'id -un; id -u'
-#   期望两行：builder / 宿主 uid（215 上为 2000）
+#   期望两行：builder / 宿主 uid（构建机上为 2000）
 
 # 6) 宿主上不许出现被 docker 误建的空目录
 [ ! -d /usr/local/bin/docker ] || { echo "宿主 /usr/local/bin/docker 被误建为目录"; exit 1; }

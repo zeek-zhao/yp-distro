@@ -63,7 +63,7 @@ feat/P0-08-meta-yp ──PR──> dev ──PR（阶段收口时）──> main
 
 ## 5. 与 WF3 的关系
 
-WF3（`scripts/wf3.sh`）在 215 的仓库工作树里直接跑 Copilot CLI，因此**切分支是派单前置动作**：
+WF3（`scripts/wf3.sh`）在构建机的仓库工作树里直接跑 Copilot CLI，因此**切分支是派单前置动作**：
 派单脚本先 `git switch -c feat/<TASK-ID>-<slug> dev`，再 `wf3.sh start <TASK-ID>`。
 验收通过后由验收方（WorkBuddy）执行 PR 与提交，AI 不直接推 `main`。
 

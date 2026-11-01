@@ -6,7 +6,7 @@
 
 ### 实测事实 A：环境变量对 DL_DIR/SSTATE_DIR 无效
 
-在 215 用 `ghcr.io/zeek-zhao/yp-distro/wrynose:local` 实测 `bitbake -e`：
+在构建机用 `ghcr.io/zeek-zhao/yp-distro/wrynose:local` 实测 `bitbake -e`：
 
 | local.conf 写法 | 容器内环境变量 | bitbake 解析结果 |
 |---|---|---|
@@ -31,7 +31,7 @@
 ### 实测事实 C：现状代价
 
 `work/kas-wrynose-general/downloads` 已 **11 GB / 319 个包**（含 `linux-yocto` 的 3.83 GiB 全 history 包）。
-不改的话，scarthgap / kirkstone / dunfell 每个都要各拉一份，按 215 出口 ~1 MB/s 算，每版本白等 1 小时以上。
+不改的话，scarthgap / kirkstone / dunfell 每个都要各拉一份，按构建机出口 ~1 MB/s 算，每版本白等 1 小时以上。
 
 ## 目标改动
 

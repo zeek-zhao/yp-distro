@@ -5,7 +5,7 @@
 | L1：GitHub 托管 runner，`ci.yml` | main push、所有 PR、手动 | lint、凭据扫描、BATS；约 2–10 分钟 |
 | L2：GitHub 托管 runner，`images.yml` | main 上 docker、image.sh、scripts/ci 或本 workflow 变更；手动 | 4 个 GHCR 镜像，GHA 分 release 缓存；约 10–60 分钟 |
 | 出口验收：GitHub 托管 runner，`pull-check.yml` | 手动指定 tag；每周一北京时间 06:00 | 匿名拉取并断言非 root、release、工具链、UTF-8；约 2–15 分钟 |
-| L3：215 构建节点 | 派单方按真实构建任务触发 | Yocto 构建及运行产物，不在 GitHub 托管 runner 构建 |
+| L3：构建机构建节点 | 派单方按真实构建任务触发 | Yocto 构建及运行产物，不在 GitHub 托管 runner 构建 |
 
 所有 job 使用 ubuntu-24.04 并设超时；L1 不依赖 Docker daemon。
 `ci.yml` 的 BATS job 无论成败上传 `bats-report`，含 `reports/` 和 `docs/qa/`，保留 14 天。
@@ -50,14 +50,14 @@ bash scripts/dev.sh bats tests/bats
 ```
 
 `--only actionlint` 可单独安装；`GH_DL` 可覆盖 GitHub 下载地址。
-lint 只检查跟踪的工程脚本、5 个 Dockerfile 和 workflow；遗留参考文件不参与。
-凭据扫描只检查跟踪文本，排除 `.devhome/`、`reference/legacy/` 和二进制；
+lint 只检查跟踪的工程脚本、5 个 Dockerfile 和 workflow。
+凭据扫描只检查跟踪文本，排除 `.devhome/` 和二进制；
 确有误报才在可选的 `scripts/ci/secret-scan.allow` 写 `path | pattern-id | reason`。
 
 ## 常见故障
 
 - 匿名 pull 返回 403：检查四个包是否仍为 private；由派单方公开后重跑验收。
-- 境外镜像构建卡在 apt：确认 `build-args` 覆盖 `APT_MIRROR=archive.ubuntu.com`，不要沿用 215 的国内源。
+- 境外镜像构建卡在 apt：确认 `build-args` 覆盖 `APT_MIRROR=archive.ubuntu.com`，不要沿用构建机的国内源。
 - 找不到 actionlint：运行安装器并将对应 `<prefix>/bin` 加到 PATH；静态 BATS 不会跳过此项。
 
   四个 release 构建镜像与 dev 镜像自 #46 起已在 `/usr/local/bin` 内置

@@ -36,7 +36,10 @@
 | `README.md` | 目录树 `layers/meta-yp/` |
 | `docs/branching.md`、`docs/roadmap.md` | 示例分支名与 Issue #11 标题 |
 
-不改动：`reference/legacy/`（原样保留的参考脚本）、`tasks/P0-0*.md`（历史任务卡，留档不追改）。
+不改动：`tasks/P0-0*.md`（历史任务卡，留档不追改）。
+
+`reference/legacy/` 已于 2026-11-01 开源时整体移除 —— 它装的是从本地参考工程
+拷贝来的旧脚本，含内网地址与内部流程，不适合公开仓库。
 
 ## 四、验证
 

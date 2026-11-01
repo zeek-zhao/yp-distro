@@ -113,7 +113,7 @@ ls work/kas-scarthgap-general/build/tmp/sysroots-components/x86_64/qemu-system-n
   -machine virt -cpu cortex-a57 -smp 4 -m 2048 -snapshot -nographic ...
 ```
 
-全程 TCG 全模拟，在 release 容器内跑，**215 宿主环境零改动**。
+全程 TCG 全模拟，在 release 容器内跑，**构建机宿主环境零改动**。
 
 | release | machine | 主产物 | 字节 | SHA-256（前 12） | 任务数 | 构建 | 串口 | 报告（commit） |
 |---|---|---|---:|---:|---:|---:|---:|---|

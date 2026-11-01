@@ -24,9 +24,12 @@ require_build_artifact() {
     fi
 }
 
-require_215() {
-    if [[ "$(hostname)" != "RSZ-ED-SVR148" ]]; then
-        skip "需要 215：当前主机不是构建节点"
+# 构建机判定：不硬编码主机名。设 YP_BUILD_HOST=<主机名> 时按主机名比对；
+# 未设就跳过——CI runner 上没有构建产物，本来也该跳过。
+require_build_host() {
+    local want="${YP_BUILD_HOST:-}"
+    if [[ -z "${want}" ]] || [[ "$(hostname)" != "${want}" ]]; then
+        skip "需要构建机：设置 YP_BUILD_HOST=<构建机主机名> 后可真跑"
     fi
 }
 

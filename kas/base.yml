@@ -38,7 +38,7 @@ local_conf_header:
     # 坑：bitbake.conf 里 BB_NUMBER_THREADS / PARALLEL_MAKE 本身就是 `?=`，而它
     # 比 local.conf 先解析，所以在 local.conf 里再写 `?=` 是空操作 —— 必须用 `=`。
     # 两者都在 BB_BASEHASH_IGNORE_VARS 里，改并行度不会触发重编译（实测 4551
-    # 个任务仍 4548 个不用重跑）。215 实测 32 核 / 124GB，跑满会和其他任务抢内存。
+    # 个任务仍 4548 个不用重跑）。构建机实测 32 核 / 124GB，跑满会和其他任务抢内存。
     BB_NUMBER_THREADS = "${@min(oe.utils.cpu_count(), 20)}"
     PARALLEL_MAKE = "-j ${@min(oe.utils.cpu_count(), 20)}"
 
