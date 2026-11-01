@@ -1,0 +1,13 @@
+[Unit]
+Description=YP Rust build system demo
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/yp-demo-rust --json
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
