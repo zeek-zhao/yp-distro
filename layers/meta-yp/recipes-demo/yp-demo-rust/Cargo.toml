@@ -1,0 +1,9 @@
+[package]
+name = "yp-demo-rust"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Minimal offline Rust demo for Yocto"
+publish = false
+
+[dependencies]
