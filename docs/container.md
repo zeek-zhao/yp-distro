@@ -8,8 +8,8 @@ The Docker container name is `yocto-<release>-<variant>`, for example
 `yocto.machine=<machine>` Docker label. Containers run as the invoking host
 UID:GID (`--user`); starting as root is rejected.
 
-The host UID can differ from the image's `builder` UID (2000 on node 215
-versus 1000 in the image). Before a real run, the script reads the image's
+The host UID can differ from the image's `builder` UID (2000 on a shared build
+node versus 1000 in the image). Before a real run, the script reads the image's
 baseline `/etc/passwd`, replaces `builder` with the host UID:GID, and removes
 any other entry using that UID. The resulting `work/home/.passwd` has mode
 644 and is mounted read-only at `/etc/passwd`, so `id -un` and `getpwuid`
@@ -35,7 +35,7 @@ If neither image is available, build it with
 
 For image cleanup (#16), only use
 `docker image prune --filter label=project=yocto`. **Do not use `-a`**:
-215 is a shared Jenkins node, and unrelated images must not be removed.
+The build node is a shared Jenkins agent, and unrelated images must not be removed.
 
 When called inside the dev container, Docker still runs on the host via the
 mounted socket. `WB_HOST_REPO_DIR` carries the host's absolute checkout path;

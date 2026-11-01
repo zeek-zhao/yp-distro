@@ -41,7 +41,7 @@
 | [#22](https://github.com/zeek-zhao/yp-distro/issues/22) | general / custom 独立 distro 双 variant | #11 #18 |
 | [#23](https://github.com/zeek-zhao/yp-distro/issues/23) | 缓存策略（DL_DIR / sstate + 文件锁） | #10 #22 |
 
-实跑顺序固定为 **wrynose → scarthgap → kirkstone → dunfell**（C34：先跑 215 上已验证的 wrynose 拿第一份报告，风险后置）。
+实跑顺序固定为 **wrynose → scarthgap → kirkstone → dunfell**（C34：先跑构建机上已验证的 wrynose 拿第一份报告，风险后置）。
 
 ## P2 交付能力（v1.0.0）
 
@@ -56,8 +56,8 @@
 
 | # | 问题 | 影响 |
 |---|---|---|
-| [#16](https://github.com/zeek-zhao/yp-distro/issues/16) | 215 磁盘余量与 docker 镜像回收边界 | 188GB 可回收镜像属其他 Jenkins 任务，不能 `prune -a`；`DL_DIR` 落点必须显式 |
-| [#24](https://github.com/zeek-zhao/yp-distro/issues/24) | wrynose 三仓库拆分在 kas 的 layers 表达未验证 | 214 上无多版本实践可参考，需 215 实测 `kas dump` |
+| [#16](https://github.com/zeek-zhao/yp-distro/issues/16) | 构建机磁盘余量与 docker 镜像回收边界 | 188GB 可回收镜像属其他 Jenkins 任务，不能 `prune -a`；`DL_DIR` 落点必须显式 |
+| [#24](https://github.com/zeek-zhao/yp-distro/issues/24) | wrynose 三仓库拆分在 kas 的 layers 表达未验证 | 214 上无多版本实践可参考，需构建机实测 `kas dump` |
 | [#28](https://github.com/zeek-zhao/yp-distro/issues/28) | do_scancode 是否值得进构建期 | 可能让每个 recipe 的构建时间翻倍 |
 
 ## 阶段收口动作

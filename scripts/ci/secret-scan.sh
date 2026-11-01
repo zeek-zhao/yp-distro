@@ -40,7 +40,7 @@ git ls-files -z >"${tmp}/files"
 count=0
 failed=0
 while IFS= read -r -d '' file; do
-    case "${file}" in .devhome/* | reference/legacy/*) continue ;; esac
+    case "${file}" in .devhome/*) continue ;; esac
     [[ -f "${file}" ]] || die "跟踪文件不可读：${file}"
     # grep -I emits nothing for binary input; an empty text file still counts.
     rc=0

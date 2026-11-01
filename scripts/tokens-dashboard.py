@@ -7,7 +7,7 @@
 默认：logs/token-usage.tsv → docs/tokens.html
 
 设计约束（都是踩过坑才写成这样）：
-  - **零外部依赖**：不引 CDN、不引 JS 框架。215 出网受限，离线双击也要能看。
+  - **零外部依赖**：不引 CDN、不引 JS 框架。构建机出网受限，离线双击也要能看。
   - 数据内嵌：台账整体塞进 <script type="application/json">，单文件可拷可发。
   - 双主题：用 prefers-color-scheme 跟随系统，浅底深字 / 深底浅字两套变量。
   - 口径不猜：in 已含 cacheWrite，total = in + out，与 copilot 自报一致；

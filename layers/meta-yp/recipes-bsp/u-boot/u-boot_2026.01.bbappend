@@ -1,5 +1,5 @@
 # 把 u-boot 源码从 git clone 换成 release tarball。
-# 动机：source.denx.de 的 git clone 在 215 出口只跑到 39~48 KiB/s（完整历史 114 万
+# 动机：source.denx.de 的 git clone 在构建机出口只跑到 39~48 KiB/s（完整历史 114 万
 # 对象，几小时起步），而 ftp.denx.de 官方 release tarball 能到 700~900 KB/s（32.5 MB，约 1 分钟）。
 # 内容一致：都是 v2026.01 tag 的源码快照，CVE patch 仍由上游 .bb 的 SRC_URI 追加。
 #

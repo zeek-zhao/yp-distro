@@ -23,7 +23,7 @@
 
 现有镜像 773~890 MB。若各镜像烤自己那一份，等于体积翻倍；若四个镜像都烤同一个 py 版本，又会和镜像内的系统 python 对不上（venv 里的 `typecode` / `intbitset` 是编译扩展，绑解释器版本）。
 
-三份合计约 **2.7 GB**，只在 215 磁盘上占一次。
+三份合计约 **2.7 GB**，只在构建机磁盘上占一次。
 
 ## 3. 版本映射
 
@@ -84,7 +84,8 @@ bitbake cpp-hello-scancode -c scancode
 
 ## 6. 实测口径
 
-环境：215，kirkstone release 镜像（Ubuntu 22.04 / python 3.10.12 / scancode 32.5.0），参数集与 `reference/legacy/foss/scancode.sh` 一致。
+环境：kirkstone release 镜像（Ubuntu 22.04 / python 3.10.12 / scancode 32.5.0），
+参数集以 `scripts/compliance.sh` 为准。
 
 | 样本 | 文件数 / 体积 | `--processes` | 耗时 | 产物 |
 |---|---|---|---:|---|

@@ -2,7 +2,7 @@
 
 `cve-check` 的结论依赖一份 NVD 的 sqlite 库。官方路径由
 `cve-update-nvd2-native` 走 NVD 2.0 REST API 现拉：无 API key 时限流 5 次/30 秒、
-2000 条一页，全量约 25 万条**实测 4 小时**（2026-10-29，215，出口约 1 MB/s）。
+2000 条一页，全量约 25 万条**实测 4 小时**（2026-10-29，构建机，出口约 1 MB/s）。
 本方案把这条路彻底摘掉：数据来自 [olbat/nvdcve](https://github.com/olbat/nvdcve)
 ——它每天把 NVD 官方 JSON feed 拆成 `CVE-YYYY-NNNN.json` 提交到 git——由本地脚本
 投影成 `cve-check` 认的 sqlite，构建期只读本地文件。
@@ -100,7 +100,7 @@ scripts/build.sh --release scarthgap --variant custom --cve
 - 开关落在 `work/logs/build-<rel>-<var>.flags`（`cve=1`），`report.sh` 据此决定
   报告里要不要出「## CVE 检查」一节 —— 没开 `--cve` 的构建不会假装有 CVE 结论。
 
-### 实测（2026-10-30，215，32 核）
+### 实测（2026-10-30，构建机，32 核）
 
 | release | 任务数 | 其中 `do_cve_check` | 构建耗时 | 镜像 `.json` | 未修复/已修复/忽略 |
 |---|---:|---:|---:|---|---|
@@ -142,7 +142,7 @@ scripts/cve-db.sh status                # wrynose 行显示分片数与修订
 | dunfell / kirkstone / scarthgap | `work/downloads/CVE_CHECK/nvdcve_*.db` | `nvd-to-sqlite.py` 投影 | 构建期 `do_cve_check` |
 | wrynose | `work/cve-cache/sbom/nvd-fkie` | 仅检出的 git 数据 | 构建后 `sbom-cve-check` CLI |
 
-### 实测（2026-10-31，215）
+### 实测（2026-10-31，构建机）
 
 ```bash
 scripts/cve-db.sh --release wrynose      # 4.1 GB / 28 个年份分片 / f26b0edd41

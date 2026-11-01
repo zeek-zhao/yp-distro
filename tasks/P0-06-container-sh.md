@@ -96,7 +96,7 @@ container-runtime | all | tests/bats/03_container.bats | container
 
 ### 6. 新增 `docs/container.md`（≤ 60 行）
 
-写清：容器命名规则、UID 映射、DL/SSTATE 落点与磁盘水位、`--check`/`--dry-run` 用法、`#16` 的清理边界（只 `docker image prune --filter label=project=yocto`，**禁止** `-a`，因为 215 是共享 Jenkins 节点）、嵌套场景为什么要 `WB_HOST_REPO_DIR`。
+写清：容器命名规则、UID 映射、DL/SSTATE 落点与磁盘水位、`--check`/`--dry-run` 用法、`#16` 的清理边界（只 `docker image prune --filter label=project=yocto`，**禁止** `-a`，因为构建机是共享 Jenkins 节点）、嵌套场景为什么要 `WB_HOST_REPO_DIR`。
 
 ### 7. `README.md` 目录树加一行
 
@@ -151,4 +151,4 @@ docker image inspect ghcr.io/zeek-zhao/yp-distro/scarthgap:local --format '{{ind
 
 - `scripts/dev.sh`（容器参数构造的现成写法，尤其 `build_run_args()` 与 `in_dev_container()`）
 - `scripts/lib/common.sh`（`resolve_all` / `work_dir` / `check_disk_watermark` 三个函数直接复用，不要重写）
-- 需求 §4.1 磁盘模型的结论：构建产物一律落 `/home`（215 上 `/home` 余 ~1.2T，`/` 只剩 ~349G）
+- 需求 §4.1 磁盘模型的结论：构建产物一律落 `/home`（构建机上 `/home` 余 ~1.2T，`/` 只剩 ~349G）

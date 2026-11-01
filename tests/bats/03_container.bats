@@ -17,7 +17,7 @@ require_release_image() {
         docker image inspect "$(release_image "${release}"):latest" >/dev/null 2>&1; then
         return 0
     fi
-    skip "release image not available in this environment: ${release} (expected on CI; must run on 215)"
+    skip "release image not available in this environment: ${release} (expected on CI; must run on a build node)"
 }
 
 # Pure logic tests need image resolution, but never execute Docker commands.

@@ -6,11 +6,11 @@ Issue #19（scarthgap 全链路实跑）的验收里有一条：
 
 > [ ] 与 wrynose 报告的差异段非空（**跨版本差异必须显式记录，不许复制粘贴**）
 
-现在 `scripts/report.sh` 没有这一节。scarthgap(5.0) 的真构建正在 215 上跑（预计 4551 任务），跑完就要出报告，所以这一节现在补。
+现在 `scripts/report.sh` 没有这一节。scarthgap(5.0) 的真构建正在构建机上跑（预计 4551 任务），跑完就要出报告，所以这一节现在补。
 
 ## 已实测的差异事实（不要重新怀疑，可直接用）
 
-在 215 上直接读两份已检出的源码（`work/kas-scarthgap-general/poky` 与 `work/kas-wrynose-general/openembedded-core`）得到：
+在构建机上直接读两份已检出的源码（`work/kas-scarthgap-general/poky` 与 `work/kas-wrynose-general/openembedded-core`）得到：
 
 | aspect | scarthgap 5.0 | wrynose 6.0 |
 |---|---|---|

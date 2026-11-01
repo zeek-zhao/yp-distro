@@ -187,7 +187,7 @@ overrides:
 如果把 `url` 写回去（哪怕指向本仓库自己），`kas checkout` 会去 clone 这个私有仓库，
 慢且需要凭证，而 layer 其实已经在磁盘上——这是 P1-03 之前的错误写法。
 
-4 个 `-custom` target 实测（215，`KAS_CLONE_DEPTH=1`）：
+4 个 `-custom` target 实测（构建机，`KAS_CLONE_DEPTH=1`）：
 
 | release | checkout | lock | workdir 有 `yp/` | `bblayers.conf` |
 |---|---|---|---|---|

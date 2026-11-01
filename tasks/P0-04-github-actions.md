@@ -2,7 +2,7 @@
 
 ## 目标
 
-把仓库的**校验流水线**从"人工在 215 上敲命令"搬到 GitHub Actions，并交付 P0 的出口条件：
+把仓库的**校验流水线**从"人工在构建机上敲命令"搬到 GitHub Actions，并交付 P0 的出口条件：
 `ghcr.io/zeek-zhao/yp-distro/<release>` 4 个镜像**免登录可拉**（需求 C24）。
 
 本卡只写"能被本地静态验证"的东西：工具链安装脚本、lint 脚本、3 个 workflow、BATS 静态门禁、文档。
@@ -23,7 +23,7 @@
   - `tests/bats/99_coverage.bats` 会强制校验：新增的**非 meta 的 BATS 文件必须被 features.txt 引用**，且 tag 必须在该文件里真实出现。所以 02 号文件**必须**登记 feature 并打对 tag，否则全量 BATS 会红。
 - GitHub 仓库：`zeek-zhao/yp-distro`，**私有**。默认分支 `main`。
 - **凭据铁律**：workflow 里只允许用 `secrets.GITHUB_TOKEN`（GitHub 自动注入）。**任何地方都不许出现 PAT / `ghp_` / `github_pat_`**，也不许往仓库写 `.env`、私钥、token 文件。GHCR 推送用 `GITHUB_TOKEN` + `permissions: packages: write` 就够，不需要个人令牌。
-- **CI 的网络位置是 GitHub 托管 runner（境外）**，所以构建镜像时必须把 `APT_MIRROR` 覆盖成 `archive.ubuntu.com`（Dockerfile 默认值是 `cn.archive.ubuntu.com`，那是给 215 用的）。
+- **CI 的网络位置是 GitHub 托管 runner（境外）**，所以构建镜像时必须把 `APT_MIRROR` 覆盖成 `archive.ubuntu.com`（Dockerfile 默认值是 `cn.archive.ubuntu.com`，那是给构建机用的）。
 
 ## 交付物 0：遗留脚本隔离（先做这一步）
 
@@ -58,7 +58,7 @@ scripts/ci/install-tools.sh [--prefix DIR] [--only tool1,tool2] [--print-env]
 | `--prefix` | 默认：`/usr/local` 可写就用它，否则 `$HOME/.local`。二进制装到 `<prefix>/bin` |
 | `--only` | 逗号分隔，只装指定工具（调试用） |
 | `--print-env` | 只打印 `export PATH="<prefix>/bin:$PATH"` 后退出，方便 `eval` |
-| `GH_DL` | 环境变量覆盖，默认 `https://github.com`（215 出网走 GitHub release 直连，实测可用） |
+| `GH_DL` | 环境变量覆盖，默认 `https://github.com`（构建机出网走 GitHub release 直连，实测可用） |
 
 固定版本（**不要改成 latest，不要自动升级**）：
 
@@ -301,7 +301,7 @@ ci-tools:
 ## 交付物 9：`docs/ci.md`
 
 一页纸，中文，覆盖：
-1. 三层流水线（L1 门禁 / L2 镜像 / L3 真实构建在 215）各自落在哪、谁触发
+1. 三层流水线（L1 门禁 / L2 镜像 / L3 真实构建在构建机）各自落在哪、谁触发
 2. 三个 workflow 的触发条件、产物、耗时预期
 3. GHCR 命名与 tag 约定（`sha-<7>` 不可变、`<series>` 浮动、`latest`）
 4. **首次推送后把包设为 public 的操作**：Web 路径（Package settings → Change visibility）与 API 路径
