@@ -45,7 +45,9 @@ fi
 repo="${GITHUB_REPOSITORY:-zeek-zhao/yp-distro}"
 
 tmp="$(mktemp)"
-trap 'rm -f -- "${tmp}"' EXIT
+# 清理失败不能污染退出码：Windows 上 mktemp 的路径与原生 rm 的路径语义不一致，
+# 清理报错会让 --check 在「已判定一致」之后仍然退出 1。
+trap 'rm -f -- "${tmp}" 2>/dev/null || true' EXIT
 
 python3 - "${repo}" "${token}" >"${tmp}" <<'PY'
 import json
