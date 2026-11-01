@@ -113,7 +113,7 @@ ENV YOCTO_RELEASE=dunfell \
     DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.title="yocto-dunfell" \
-      org.opencontainers.image.source="https://github.com/zeek-zhao/yocto" \
+      org.opencontainers.image.source="https://github.com/zeek-zhao/yp-distro" \
       org.opencontainers.image.description="Yocto 3.1 (dunfell) build image on Ubuntu 20.04" \
       org.opencontainers.image.licenses="MIT"
 
@@ -139,7 +139,7 @@ CMD ["bash"]
 ## 交付物 3：`scripts/image.sh`
 
 ```
-scripts/image.sh build <release>      # docker build，tag = ghcr.io/zeek-zhao/yocto/<release>:local
+scripts/image.sh build <release>      # docker build，tag = ghcr.io/zeek-zhao/yp-distro/<release>:local
 scripts/image.sh verify <release>     # 起容器做工具断言（见下）
 scripts/image.sh list                 # 列出 4 个 local 镜像
 scripts/image.sh push <release> <tag> # docker tag + push 到 ghcr.io（本卡不调用，留好）
@@ -155,7 +155,7 @@ scripts/image.sh push <release> <tag> # docker tag + push 到 ghcr.io（本卡�
   4. 无凭据文件：`ls /work /home/*/.ssh /root/.ssh /root/.netrc /root/.docker/config.json` 均不存在（`/work` 空目录除外）
   5. `ENV` 里的 `YOCTO_RELEASE` 与参数一致
 - **未知 release 必须 `die` 且退出码 ≠ 0**
-- 镜像名统一 `ghcr.io/zeek-zhao/yocto/<release>`（本地 tag 用 `:local`，避免误推）
+- 镜像名统一 `ghcr.io/zeek-zhao/yp-distro/<release>`（本地 tag 用 `:local`，避免误推）
 
 ## 交付物 4：`project.sh` 增 `image` 子命令
 

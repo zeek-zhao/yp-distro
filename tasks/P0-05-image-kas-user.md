@@ -81,12 +81,12 @@ bash scripts/dev.sh bash scripts/image.sh verify
 
 # 3) 逐镜像直测
 for r in dunfell kirkstone scarthgap wrynose; do
-  docker run --rm "ghcr.io/zeek-zhao/yocto/$r:local" bash -lc 'kas --version | head -1; id -un'
+  docker run --rm "ghcr.io/zeek-zhao/yp-distro/$r:local" bash -lc 'kas --version | head -1; id -un'
 done
 
 # 4) 用户必须唯一且为 builder
 for r in dunfell kirkstone scarthgap wrynose; do
-  docker run --rm "ghcr.io/zeek-zhao/yocto/$r:local" id -un
+  docker run --rm "ghcr.io/zeek-zhao/yp-distro/$r:local" id -un
 done | sort -u | grep -qx builder
 
 # 5) 静态门禁

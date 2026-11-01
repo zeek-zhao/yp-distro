@@ -2,11 +2,11 @@
 
 ## 背景（已实测，不要重新怀疑）
 
-仓库 `zeek-zhao/yocto`，当前分支 `dev`，HEAD `0d8d13d`。BATS 现状 **93 ok / 0 not ok / 0 skip**，必须只增不减。
+仓库 `zeek-zhao/yp-distro`，当前分支 `dev`，HEAD `0d8d13d`。BATS 现状 **93 ok / 0 not ok / 0 skip**，必须只增不减。
 
 ### 实测事实 A：环境变量对 DL_DIR/SSTATE_DIR 无效
 
-在 215 用 `ghcr.io/zeek-zhao/yocto/wrynose:local` 实测 `bitbake -e`：
+在 215 用 `ghcr.io/zeek-zhao/yp-distro/wrynose:local` 实测 `bitbake -e`：
 
 | local.conf 写法 | 容器内环境变量 | bitbake 解析结果 |
 |---|---|---|

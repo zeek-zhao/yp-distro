@@ -9,9 +9,9 @@
 
 | 阶段 | 里程碑 | 状态 |
 |---|---|---|
-| **P0 基线** | [v0.1.0](https://github.com/zeek-zhao/yocto/milestone/1) | 进行中：4 镜像已推 GHCR 且**公开可拉**、L1 CI 三 job 全绿、BATS 30 用例零 skip；剩余 4 张卡（见下） |
-| P1 打通 | [v0.2.0](https://github.com/zeek-zhao/yocto/milestone/2) | 未开始（依赖 kas 层） |
-| P2 交付能力 | [v1.0.0](https://github.com/zeek-zhao/yocto/milestone/3) | 未开始 |
+| **P0 基线** | [v0.1.0](https://github.com/zeek-zhao/yp-distro/milestone/1) | 进行中：4 镜像已推 GHCR 且**公开可拉**、L1 CI 三 job 全绿、BATS 30 用例零 skip；剩余 4 张卡（见下） |
+| P1 打通 | [v0.2.0](https://github.com/zeek-zhao/yp-distro/milestone/2) | 未开始（依赖 kas 层） |
+| P2 交付能力 | [v1.0.0](https://github.com/zeek-zhao/yp-distro/milestone/3) | 未开始 |
 
 **P0 出口条件**：GHCR 4 镜像免登录可拉 ✅、L1 全绿 ✅、`project.sh test` 轻量用例可跑 ✅。
 
@@ -35,8 +35,8 @@ make help                                    # 所有入口
 ## 镜像
 
 ```bash
-docker pull ghcr.io/zeek-zhao/yocto/wrynose:latest      # 免登录
-docker run --rm ghcr.io/zeek-zhao/yocto/dunfell:latest id -un
+docker pull ghcr.io/zeek-zhao/yp-distro/wrynose:latest      # 免登录
+docker run --rm ghcr.io/zeek-zhao/yp-distro/dunfell:latest id -un
 ```
 
 tag 语义：`sha-<7位>` = 某次提交、`3.1|4.0|5.0|6.0` = release 系列、`latest` = main 最新。

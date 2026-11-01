@@ -22,7 +22,7 @@ EOF
 }
 
 image_name() {
-    printf 'ghcr.io/zeek-zhao/yocto/%s' "$1"
+    printf 'ghcr.io/zeek-zhao/yp-distro/%s' "$1"
 }
 
 release=""

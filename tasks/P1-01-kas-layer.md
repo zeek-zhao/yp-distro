@@ -17,7 +17,7 @@ P0 已全部关闭（`dev` = `main` = `5d9ffad`，BATS 68 ok）。现在要把�
 
 ## 已实测的事实（**不要重新试错，直接按这个做**）
 
-以下全部在 215 的 `ghcr.io/zeek-zhao/yocto/scarthgap:5.0` 镜像里实测过（kas 4.6）：
+以下全部在 215 的 `ghcr.io/zeek-zhao/yp-distro/scarthgap:5.0` 镜像里实测过（kas 4.6）：
 
 1. **`kas` 没有 `validate` 子命令。** 子命令只有 `build / checkout / dump / for-all-repos / lock / shell / menu`。
 2. **`kas dump` 无法在 L1 用。** 9 个 step 全 `--skip` 也会崩：`KeyError: 'header'`（`kas/plugins/dump.py:240`）。带 repos 时则必然 clone。
@@ -40,7 +40,7 @@ P0 已全部关闭（`dev` = `main` = `5d9ffad`，BATS 68 ok）。现在要把�
    ```yaml
    repos:
      yp:
-       url: https://github.com/zeek-zhao/yocto
+       url: https://github.com/zeek-zhao/yp-distro
        tag: main
        layers:
          layers/meta-yp:
@@ -149,7 +149,7 @@ target: yp-image
 
 repos:
   yp:
-    url: https://github.com/zeek-zhao/yocto
+    url: https://github.com/zeek-zhao/yp-distro
     tag: main
     layers:
       layers/meta-yp:

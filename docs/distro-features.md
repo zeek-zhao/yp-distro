@@ -90,7 +90,7 @@ BATS：`12_distro.bats` 3 条 + `04_layer.bats` 12 条，15/15 通过。
    注意各版列表不同 —— kirkstone / scarthgap 还要 `lz4c`，wrynose 不要。
 2. **3.1 必须用它自己的构建镜像**：dev 镜像是 Ubuntu 24.04 + Python 3.12，
    dunfell 的 bitbake 1.46 会卡在 `import pyinotify`（依赖 Python 3.12 已移除的
-   `asyncore`）。3.1 的解析验证只能走 `ghcr.io/zeek-zhao/yocto/dunfell:local`（Python 3.8）。
+   `asyncore`）。3.1 的解析验证只能走 `ghcr.io/zeek-zhao/yp-distro/dunfell:local`（Python 3.8）。
 
 ### 一个语法陷阱（本卡最贵的一课）
 

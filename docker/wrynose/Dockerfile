@@ -33,7 +33,7 @@ ENV YOCTO_RELEASE=wrynose \
     DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.title="yocto-wrynose" \
-      org.opencontainers.image.source="https://github.com/zeek-zhao/yocto" \
+      org.opencontainers.image.source="https://github.com/zeek-zhao/yp-distro" \
       org.opencontainers.image.description="Yocto 6.0 (wrynose) build image on Ubuntu 24.04" \
       org.opencontainers.image.licenses="MIT"
 

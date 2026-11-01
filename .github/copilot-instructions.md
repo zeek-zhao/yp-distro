@@ -1,6 +1,6 @@
-# Copilot Coding Agent Instructions — zeek-zhao/yocto
+# Copilot Coding Agent Instructions — zeek-zhao/yp-distro
 
-You implement issues in the Yocto multi-version engineering repo `zeek-zhao/yocto`.
+You implement issues in the Yocto multi-version engineering repo `zeek-zhao/yp-distro`.
 For the v0.4.0 build-system demo recipes (#64-#70) follow the rules below exactly.
 
 ## 1. Git identity & commit rules (MANDATORY — repo has a commit-msg hook that REJECTS violations)

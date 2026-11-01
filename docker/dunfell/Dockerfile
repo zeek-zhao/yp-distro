@@ -33,7 +33,7 @@ ENV YOCTO_RELEASE=dunfell \
     DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.title="yocto-dunfell" \
-      org.opencontainers.image.source="https://github.com/zeek-zhao/yocto" \
+      org.opencontainers.image.source="https://github.com/zeek-zhao/yp-distro" \
       org.opencontainers.image.description="Yocto 3.1 (dunfell) build image on Ubuntu 20.04" \
       org.opencontainers.image.licenses="MIT"
 
