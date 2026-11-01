@@ -9,6 +9,10 @@
 #   1. 任何提交的 author/committer 邮箱里带 zeek 时，必须正好是标准邮箱
 #   2. 工作树与提交消息里不得出现内部域名、内网网段
 #
+# GitHub 的 noreply 合成身份放行：那是平台在网页合并时生成的，不含真实
+# 个人信息；如果也拦，每次网页合并都要 force push 重写，PR 与提交的关联
+# 反而会断。
+#
 # 外部贡献者的非 zeek 身份是合法的，不拦。
 # =============================================================================
 set -euo pipefail
@@ -24,6 +28,12 @@ rc=0
 # ------------------------------------------------------------ 1. 提交身份 --
 while IFS='|' read -r name mail; do
     [[ -n "${mail}" ]] || continue
+    # GitHub 侧的合成身份（网页合并 merge commit / Web 编辑产物）不含真实
+    # 个人信息，也不代表维护者选错了身份，放行——否则每次通过网页合并 PR
+    # 都会让门禁变红，只能靠 force push 重写，反而破坏 PR 与提交的关联。
+    case "${mail}" in
+        *@users.noreply.github.com | noreply@github.com) continue ;;
+    esac
     [[ "${mail}" == *zeek* ]] || continue
     if [[ "${mail}" != "${WANT_MAIL}" ]]; then
         printf '[identity] %s <%s> 使用了非标准维护者邮箱（应为 %s）\n' \
