@@ -11,7 +11,6 @@ SRC_URI = "file://go.mod;subdir=src/${GO_IMPORT} \
            file://main.go;subdir=src/${GO_IMPORT} \
            file://vendor;subdir=src/${GO_IMPORT} \
            file://yp-demo-go.service"
-FILESEXTRAPATHS:prepend := "${THISDIR}:"
 S = "${UNPACKDIR}"
 
 export GOSUMDB = "off"
