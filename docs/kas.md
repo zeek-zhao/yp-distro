@@ -259,20 +259,55 @@ custom 比 general 多 6 个 recipe，来自 multilib（lib32）。
 这 5 条都已变成 `kas-verify.py` 的 `check_version_knobs` 断言，
 并有 5 个反向用例（改坏配置必须报错）证明断言不是空壳。
 
-### 已解决：冒号 override 在 dunfell 上静默失效
+### 已解决：冒号 override 在 dunfell 上的行为（分变量级与任务级）
 
-dunfell 3.1 的 bitbake 把 `:` 当作变量名/函数名的一部分，`FILES:${PN}`、
-`SUMMARY:${PN}` 这类冒号写法**不报错也不生效**；4.0+ 反过来只认冒号。
-两种写法**没有交集**，所以做法是：
+**变量级：静默失效。** dunfell 3.1 的 bitbake 把 `:` 当作变量名的一部分，
+`FILES:${PN}`、`SUMMARY:${PN}` 这类冒号写法**不报错也不生效**；4.0+ 反过来只认冒号，
+而且下划线写法在 4.0+ 是**致命**解析错误（`data_smart.py`「old override syntax」），
+报错会连带挂到所有求值到同名变量的 recipe 上。两种写法**没有交集**，所以做法是：
 
 1. **变量级**：两种分隔符各写一行（`FILES:${PN}-cus` + `FILES_${PN}-cus`）。
    未命中的那一行在该版本里就是惰性变量，没人读，无副作用。
    已覆盖 `FILES`、`SUMMARY`、`PREFERRED_PROVIDER_virtual/*`、
    `DEFAULTTUNE_virtclass-multilib-lib32`。
-2. **任务级没有退路**：`do_install:append()` 在 3.1 上会被解析成一个没人调用的
-   函数名，**静默失效**，而 `do_install_append()` 在 4.0+ 上同样静默失效。
-   所以任务一律**整体重定义**（见 `cpp-hello-cus-pack` 的 `do_compile`/`do_install`）。
+   变量名里带 `${PN}` 展开的（`IMAGE_INSTALL` / `OS_RELEASE_FIELDS` 这类）没法并列
+   两行——下划线版会在 4.0+ 炸掉解析，只能按 `LAYERSERIES_CORENAMES` 用
+   `python __anonymous` 给 3.1 补下划线版，见 `images/yp-image.inc`。
+2. **任务级有退路，而且冒号就能用**：`do_install:append()` 在 3.1 上**是生效的**
+   （实测 yocto-3.1.33 / BitBake 1.46.0，见下面的探针），所以任务级一律只写冒号一份，
+   四版通用。
 
-代价是 recipe 里成对出现两行，收益是同一份 recipe 四版语义一致，
+> **曾被搞错一次**：早期笔记写「任务级没有退路，冒号在 3.1 上静默失效」，于是给每个
+> `do_install:append` 又补了一份 `do_install_append`。3.1 上两份都生效，同一个
+> `do_install` 里那段逻辑跑了两遍，症状是 `xxx: not found` 的 exit 127（`f66f35b` 修掉）。
+>
+> 复现探针（放进任意在 `BBLAYERS` 里的层，跑 `bitbake -c install -f colon-probe`）：
+>
+> ```bitbake
+> SUMMARY = "probe"
+> LICENSE = "MIT"
+> LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+>
+> do_install() {
+>     install -d ${D}/probe
+>     echo base > ${D}/probe/result.txt
+> }
+>
+> do_install:append() {
+>     echo append >> ${D}/probe/result.txt
+> }
+> ```
+>
+> `image/probe/result.txt` 里出现 `base` + `append` 两行即证明冒号任务 override 生效；
+> `run.do_install` 里也能看到 append 的函数体被并进了 `do_install`。
+>
+> **也不要改成「独立任务 + `addtask`」**：自定义任务不在 `PSEUDO_TASKS` 里，不经
+> pseudo，装出来的文件属主是真实宿主 uid，`do_package_qa` 立刻判 `host-user-contaminated`。
+
+代价是变量级 recipe 里成对出现两行，收益是同一份 recipe 四版语义一致，
 不需要按版本拆 recipe 或分版本 `.bbappend`。`tests/bats/04_layer.bats`
-只对 `conf/` 与 `recipes-core/` 禁冒号写法（`recipes-example/` 是兼容性演示，例外）。
+仍只对 `conf/` 与 `recipes-core/` 禁冒号写法（白名单文件除外，`recipes-example/` 是
+兼容性演示）——这条 lint 针对的是**变量级**在 3.1 上不起作用，不是任务级。
+
+`recipes-example/` 里 `cpp-hello-cus-pack` 的 `do_compile`/`do_install` 整体重定义**保留不动**：
+它在那里充当「不分版本拆 recipe 也能四版一致」的另一种示范，没有功能问题，改它只是重新烧一遍构建时间。

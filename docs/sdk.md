@@ -149,17 +149,17 @@ custom 一次就过，只有 dunfell 需要处理。
 真实构建用的 `BBLAYERS` 不动，其它任务不受影响。实测 dunfell:custom 从
 `do_populate_sdk_ext: Failed` 变成 `Succeeded`，eSDK 1.27 GB、`devtool=ok`。
 
-## 6. 结论（#87，2026-11-01）
+## 8. 结论（#87，2026-11-01）
 
 **处置：保持 SDK / eSDK 为正式交付面，不取消，也不"降级为可选"。**
 
-### 6.1 为什么它看起来像悬案
+### 8.1 为什么它看起来像悬案
 
 `#25` 在 P2 阶段被挂起，直接原因是 3.1 的 eSDK 在 `do_populate_sdk_ext` 上失败
-（第 5 节那个 `relpath()` 问题）。workaround 落地后失败消失，但 `#25` 没有被回头
+（第 7 节那个 `relpath()` 问题）。workaround 落地后失败消失，但 `#25` 没有被回头
 关闭，于是「SDK 到底做不做」在文档里一直悬着。**不是没做，是没人收口。**
 
-### 6.2 实测覆盖（不是计划，是产物）
+### 8.2 实测覆盖（不是计划，是产物）
 
 | 维度 | 覆盖 |
 |---|---|
@@ -168,7 +168,7 @@ custom 一次就过，只有 dunfell 需要处理。
 | 安装包 | 每个 `work/kas-<rel>-<var>/build/tmp/deploy/sdk/` 各有 3 个 `.sh`（SDK、eSDK、及其它架构产物） |
 | 判定口径 | `sdk.installed && esdk.installed && esdk.devtool == "ok"`，任一不满足即 `FAIL` |
 
-### 6.3 当前 `main` 上的复验
+### 8.3 当前 `main` 上的复验
 
 ```
 $ bash scripts/sdk.sh --release wrynose --variant custom --verify-only
@@ -181,7 +181,7 @@ eSDK : ...-toolchain-ext-0.1.0.sh (3003 MB)
 `--verify-only` 不抢 `work/build.lock`（只有真构建抢锁），所以可以在镜像构建
 并行时单独复验——**这是排查「产物好好的、装上去不能用」最省时间的一条路**。
 
-### 6.4 范围边界（写清楚，免得以后又变成悬案）
+### 8.4 范围边界（写清楚，免得以后又变成悬案）
 
 - **只做 `qemux86-64`**。arm64 的 SDK 是另一摊：`nativesdk-*` 与 `gcc-crosssdk`
   在 4.0+ 对 `aarch64` 的分支没在这里验证过，不凭"x86 过了 arm 也应该过"下结论。
@@ -191,8 +191,8 @@ eSDK : ...-toolchain-ext-0.1.0.sh (3003 MB)
 - **不承诺 SDK 与镜像产物同版本可互操作**。SDK 里的 sysroot 版本跟构建时的
   sstate 走，换 sstate 就要重出 SDK，这一点不改。
 
-### 6.5 相关文档
+### 8.5 相关文档
 
-- 用法与坑：本文件第 1~5 节
+- 用法与坑：本文件第 1~7 节
 - 降级清单口径：`config/degraded.txt`
 - 报告链路：`scripts/report.sh --release R --variant V --sdk`

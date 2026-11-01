@@ -3,7 +3,7 @@
 > 本文件由 `scripts/plan-sync.sh` 从 GitHub Issues 生成，**请勿手改**。
 > 想改内容就去改 issue；CI 会校验此文件是否与线上一致。
 >
-> 生成时共 14 个开放 issue、4 个开放里程碑。
+> 生成时共 16 个开放 issue、4 个开放里程碑。
 
 ## v1.0.0 · 四版收口
 
@@ -12,6 +12,7 @@
 | [#85](https://github.com/zeek-zhao/yp-distro/issues/85) | chore(release): 四版全兼容回归与报告归档 | `ci`, `P3`, `wave-1` |
 | [#86](https://github.com/zeek-zhao/yp-distro/issues/86) | docs(release): 文档收口与发布 | `docs`, `P3`, `wave-1` |
 | [#87](https://github.com/zeek-zhao/yp-distro/issues/87) | chore(sdk): SDK / eSDK 恢复评估（源自 #25） | `docs`, `P3`, `wave-1` |
+| [#109](https://github.com/zeek-zhao/yp-distro/issues/109) | fix(dunfell): full 镜像 do_rootfs 目录属性冲突（7/8 组合的唯一阻塞项） | `bug`, `P1` |
 
 ## v0.5.0 · 6.0 启动优化
 
@@ -21,6 +22,7 @@
 | [#73](https://github.com/zeek-zhao/yp-distro/issues/73) | perf(boot): systemd 启动精简 —— unit 裁剪 / critical-chain / udev 收敛 | `enhancement`, `P3`, `boot-time`, `wave-2` |
 | [#74](https://github.com/zeek-zhao/yp-distro/issues/74) | perf(rootfs): ext4 vs squashfs+overlay vs cpio 的加载时间对比 | `enhancement`, `P3`, `boot-time`, `wave-2` |
 | [#75](https://github.com/zeek-zhao/yp-distro/issues/75) | docs(boot): 启动优化对比报告 —— 每项措施的收益与代价 | `docs`, `P3`, `boot-time`, `wave-2` |
+| [#110](https://github.com/zeek-zhao/yp-distro/issues/110) | fix(boot-time): 真实起机模式拿不到 login 打点（基线测不出来） | `bug`, `P2` |
 
 ## v0.6.0 · 6.0 服务与 demo
 
@@ -47,4 +49,4 @@
 
 ---
 
-<!-- plan-sync fingerprint: 01a78de67e407554 -->
+<!-- plan-sync fingerprint: 5d42c12f83ddd16a -->

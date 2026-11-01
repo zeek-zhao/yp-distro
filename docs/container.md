@@ -16,6 +16,16 @@ any other entry using that UID. The resulting `work/home/.passwd` has mode
 resolve to `builder` without changing the runtime UID. `--check` prints the
 host UID:GID; neither `--check` nor `--dry-run` creates the passwd file.
 
+The same treatment is applied to `/etc/group`, written to `work/home/.group`
+and mounted read-only at `/etc/group`. Mapping only `/etc/passwd` is not
+enough: `sstatesig` resolves the group name through `grp.getgrgid()` while
+hashing a package's file list, so a missing host GID raises `KeyError` and
+surfaces as `owned by uid N, gid N, which doesn't match any user/group on
+target`. That failure only appears when `do_package` actually runs — builds
+that hit sstate never traverse the file list, which is why the gap stayed
+hidden. Never invoke `bitbake` through a hand-written `docker run`: both
+files, the `PATH` setup and the pseudo state have to come from this script.
+
 The repository is mounted at `/work`. Build sources, outputs, downloads,
 sstate, and the per-release home directory live under the repository's
 `work/` tree (`/work/work/` in the container). `HOME` is
