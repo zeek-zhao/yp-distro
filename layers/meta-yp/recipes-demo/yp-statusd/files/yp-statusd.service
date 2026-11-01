@@ -1,0 +1,15 @@
+[Unit]
+# 网络目标先就绪，避免启动顺序早于网络服务初始化。
+Description=YP HTTP 状态服务
+After=network.target
+
+[Service]
+# simple 让 systemd 跟踪前台进程，退出后按策略自动重启。
+Type=simple
+ExecStart=/usr/bin/yp-statusd
+Restart=always
+RestartSec=3
+
+[Install]
+# 加入常规多用户启动目标，确保 systemd enable 后随系统自启。
+WantedBy=multi-user.target
