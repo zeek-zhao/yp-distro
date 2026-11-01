@@ -1,0 +1,13 @@
+[Unit]
+Description=YP Python demo service
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/yp-demo-python --json
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
