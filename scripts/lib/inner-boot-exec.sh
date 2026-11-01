@@ -20,7 +20,10 @@ BOOT_TIMEOUT="${BOOT_TIMEOUT:-240}"
 GUEST_CMD_FILE="${GUEST_CMD_FILE:?缺少 GUEST_CMD_FILE}"
 
 # 命令走文件传递，避免经多层 shell 引号解析
-GUEST_CMD="$(head -1 "${GUEST_CMD_FILE}")"
+# 整份读入，不要用 head -1：多行命令（L3 取证常常一次跑七八条断言）
+# 用 head -1 只会执行第一行，其余静默丢弃且不报错 —— 调用方看到的是
+# 「命令跑了但只出了第一节输出」，很容易误判成服务没起来。
+GUEST_CMD="$(cat "${GUEST_CMD_FILE}")"
 [[ -n "${GUEST_CMD}" ]] || GUEST_CMD="ps -ef"
 
 MACHINE_SUFFIX=""
@@ -74,8 +77,17 @@ start_writer() {
         sleep 4
         printf 'echo __BEGIN__\r\n'
         sleep 3
-        printf '%s\r\n' "${GUEST_CMD}"
-        sleep 6
+        # 逐行发送，不要用 printf '%s\r\n' "${GUEST_CMD}" 一次灌入整段：
+        # 串口没有流控，多行一次性写进 tty 的规范模式行缓冲会丢掉中间行
+        # （实测 8 行命令只有第 1 行被执行，其余静默消失），
+        # 被丢的命令不报错，事后只能从串口日志里发现少了几节输出。
+        while IFS= read -r guest_line; do
+            printf '%s\r\n' "${guest_line}"
+            sleep 0.3
+        done <<<"${GUEST_CMD}"
+        # 等待时间要覆盖命令本身的耗时：curl 带 -m、journalctl 翻 journal、
+        # 多个 --version 串行执行时 6 秒不够，默认给 15 秒，可用 GUEST_WAIT 覆盖。
+        sleep "${GUEST_WAIT:-15}"
         printf 'echo __END__\r\n'
         sleep 4
         printf 'poweroff -f\r\n'
