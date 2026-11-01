@@ -39,3 +39,14 @@ IMAGE_INSTALL += "yp-journald-persist"
 
 # 服务模板示例：v0.6.0 的 HTTP 服务与 v0.4.0 的六构建系统都复用同一个 bbclass。
 IMAGE_INSTALL += "yp-hello-svc"
+
+# ---- v0.4.0 六构建系统 + v0.6.0 两个服务（#64~#70 / #76 / #77）----
+# 装真包名而不是虚拟名，理由同上：IMAGE_INSTALL 的虚拟名在 rootfs 阶段按
+# RPROVIDES 解析，而 RPROVIDES 不能带 virtual/ 前缀。
+# 只在 full 层出现：base 是「装上工具之后慢多少」的对照面，业务包不进 base，
+# 否则 minimal ⊂ base ⊂ full 的体积单调断言就失去意义（12_distro.bats）。
+# yp-statusd / yp-collectd 是要真起机验证的两个：前者提供 /status JSON，
+# 后者每 60s 写 journald。两者的自启由 yp-service.bbclass 的
+# SYSTEMD_AUTO_ENABLE 负责，rootfs 阶段用 systemctl --root 完成。
+IMAGE_INSTALL += "yp-demo-make yp-demo-cmake yp-demo-autotools yp-demo-meson yp-demo-python yp-demo-rust yp-demo-go yp-statusd yp-collectd"
+
