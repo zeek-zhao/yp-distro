@@ -28,8 +28,16 @@ max="${2:-${MAX_SKIPS:-4}}"
 }
 
 # JUnit 里 skip 的两种写法：<skipped/> 与 <skipped message="..."/>。
-skipped="$(grep -o '<skipped' "${xml}" | wc -l | tr -d ' ')"
-total="$(grep -o '<testcase' "${xml}" | wc -l | tr -d ' ')"
+#
+# 注意 grep 的退出码：没有匹配时 grep 返回 1，在 `set -o pipefail` 下会让整条
+# 管道失败、脚本静默退出——「跳过了 0 个」这个最理想的情况反而把门禁自己打死。
+# 所有计数都必须显式吞掉 grep 的退出码。
+count_matches() {
+    { grep -o "$1" "$2" || true; } | wc -l | tr -d ' '
+}
+
+skipped="$(count_matches '<skipped' "${xml}")"
+total="$(count_matches '<testcase' "${xml}")"
 
 log_info "BATS 用例总数 ${total}，跳过 ${skipped}，上限 ${max}"
 
