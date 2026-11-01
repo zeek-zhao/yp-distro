@@ -3,8 +3,12 @@
 TARGET = yp-demo-make
 SRC = demo.c
 
+# 字符串宏在本层加引号，配方只传裸值（原因见 yp-statusd/files/Makefile）。
+YP_DEMO_VARIANT ?= make
+CPPFLAGS += -DYP_DEMO_VARIANT='"$(YP_DEMO_VARIANT)"'
+
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET)
