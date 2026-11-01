@@ -9,16 +9,21 @@ SRC_URI = "file://configure.ac \
            file://demo.c \
            file://yp-demo-autotools.service \
 "
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 
 inherit autotools pkgconfig yp-service
 
 EXTRA_OECONF = "--disable-static --enable-json"
 
-do_configure:prepend() {
+yp_demo_autotools_prepare_m4() {
     mkdir -p ${S}/m4
 }
 
+do_configure:prepend() {
+    yp_demo_autotools_prepare_m4
+}
+
+# 任务级冒号语法 3.1 也认，不需要再补下划线版（见 yp-service.bbclass 同段注释）。
 do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${B}/yp-demo-autotools ${D}${bindir}/yp-demo-autotools

@@ -20,7 +20,15 @@
   格式差异 / 降级清单。文件名以 `compliance-` 开头，同样不会被
   `99_coverage.bats` 当成「最新构建报告」。采集与渲染细节见 `docs/compliance.md`。
 - 2026-10-30 已产出 8 组合（4 release × 2 variant）全 PASS 的 SDK 归档；
-  实测数据与 dunfell 的 eSDK workaround 见 `docs/sdk.md` 第 6、7 节。
+  实测数据与 dunfell 的 eSDK workaround 见 `docs/sdk.md` 第 6、7 节，
+  「做不做 SDK」的结论见第 8 节。
+- 2026-11-01 的 `f66f35b` 回归产出 **7 份**构建报告（wrynose / scarthgap / kirkstone
+  各 2 个 variant，加 dunfell general），每份 `194 | 194 | 0 | 0`。缺的那份是
+  dunfell custom —— 它卡在 full 镜像 `do_rootfs` 的目录属性冲突（#109），
+  **不是「没跑」，是「跑不过」**，补测前不要把它算成已覆盖。
+- `docs/qa/boot-baseline.md` 是启动时间基线的唯一归档（三层镜像、三段分解）。
+  当前结果表空着，因为测量链拿不到 `login` 打点（#110）——**空表是有意的**，
+  别拿历史零散数据凑一个看起来完整的表。
 - 报告的「CVE 检查」一节只在构建带了 `--cve` 时出现（开关记在
   `work/logs/build-<rel>-<var>.flags`），内容是离线库版本、库内 CVE 数、
   镜像清单名与「未修复/已修复/忽略」计数。

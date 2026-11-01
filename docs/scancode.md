@@ -107,4 +107,8 @@ bitbake cpp-hello-scancode -c scancode
 ## 8. 待办
 
 - bundle 目前只记 SHA-256（下载后写 `<资产名>.sha256`），**没有和上游公布值做比对**。若要把「供应链校验」做实，需要把三份哈希钉进 `scripts/scancode.sh`。
-- 构建后批量扫描（`scripts/foss.sh`）在 #26 里落地。
+- 构建后批量扫描已由 `scripts/compliance.sh --only foss` 承担（`--foss-limit N`
+  控制源码包上限，默认 20，`0` 为不限）。`scripts/scancode.sh` 只负责扫描器本体
+  的 `sync` / `status` / `path`，不扫源码——两者别搞混。
+- **尚未接入构建流程**：目前是显式调 `compliance.sh` 触发，不是 `bitbake` 收尾自动跑。
+  自动接入是 #26 的范围。

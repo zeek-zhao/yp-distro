@@ -3,7 +3,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -52,8 +51,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if !*daemon {
 		return emit()
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	// 刻意不用 signal.NotifyContext：那是 Go 1.16 才有的 API，
+	// dunfell(3.1) 的 Go 1.14 会报 undefined。信号通道写法 1.14 起都成立。
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(stop)
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -61,7 +63,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		select {
-		case <-ctx.Done():
+		case <-stop:
 			return nil
 		case <-ticker.C:
 		}

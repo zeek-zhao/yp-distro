@@ -48,5 +48,16 @@ IMAGE_INSTALL += "yp-hello-svc"
 # yp-statusd / yp-collectd 是要真起机验证的两个：前者提供 /status JSON，
 # 后者每 60s 写 journald。两者的自启由 yp-service.bbclass 的
 # SYSTEMD_AUTO_ENABLE 负责，rootfs 阶段用 systemctl --root 完成。
-IMAGE_INSTALL += "yp-demo-make yp-demo-cmake yp-demo-autotools yp-demo-meson yp-demo-python yp-demo-rust yp-demo-go yp-statusd yp-collectd"
+IMAGE_INSTALL += "yp-demo-make yp-demo-cmake yp-demo-autotools yp-demo-meson yp-demo-python ${YP_DEMO_RUST} yp-demo-go yp-statusd yp-collectd"
 
+# ---- dunfell(3.1) 的 Rust 缺口 ----
+# 3.1 的 poky 里没有 cargo.bbclass：4.0 才进 meta/classes，5.0 挪到
+# meta/classes-recipe。dunfell 上解析这条配方直接 ParseError
+# （Could not inherit file classes/cargo.bbclass），custom variant 连解析阶段
+# 都过不去。摘包必须在镜像层做而不是 BBMASK 配方 —— 镜像里还写死包名的话，
+# 屏蔽配方会变成 "Nothing RPROVIDES 'yp-demo-rust'"。
+YP_DEMO_RUST ??= "yp-demo-rust"
+python __anonymous() {
+    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("YP_DEMO_RUST", "")
+}

@@ -109,7 +109,9 @@ setup() {
 
 # bats test_tags=layer
 @test "layer configuration and core recipes have no unsupported colon overrides" {
-    # 冒号 override 在 dunfell 3.1 上是静默失效（不是报错，是整行不起作用）。
+    # 这里禁的是**变量级**冒号 override：它在 dunfell 3.1 上静默失效（不报错，整行
+    # 不起作用）。任务级的 `do_install:append()` 在 3.1 上是生效的（f66f35b 用探针
+    # 配方实测过 3.1.33 / BitBake 1.46），不在此列——别把两者混为一谈。
     # 因此只允许两类：
     #   1) yp-common.inc 的 DISTRO_FEATURES:remove —— 有 3.1 运行时 d.setVar 兜底；
     #   2) #57~#60 的 6.0 先行 recipe/bbappend（品牌化 / 三层镜像 / journald / 服务模板）

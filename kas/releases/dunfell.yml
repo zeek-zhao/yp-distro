@@ -14,6 +14,19 @@ local_conf_header:
     # 打开后产物是 ${IMAGE_NAME}.json —— 注意 3.1 的 IMAGE_NAME 自带时间戳。
     CVE_CHECK_FORMAT_JSON = "1"
 
+  uboot-bbappend: |
+    # u-boot_2026.01.bbappend 只服务 6.0：3.1 的 u-boot 是 2020.01，这个 bbappend
+    # 匹配不到任何 recipe 时 bitbake 报 "No recipes in default available" 并
+    # **终止构建**（不是 warning），custom variant 连解析都过不去。
+    # 显式屏蔽，而不是让它当孤儿。
+    BBMASK += "u-boot_2026[.]01[.]bbappend"
+
+  rust-demo: |
+    # 同上的道理：3.1 没有 cargo.bbclass，yp-demo-rust 在这条发行版线上无法解析。
+    # 镜像层已用 YP_DEMO_RUST 把它摘出 IMAGE_INSTALL，这里再屏蔽配方本体，
+    # 免得 bitbake-layers / 单配方构建时撞 ParseError。
+    BBMASK += "yp-demo-rust"
+
 repos:
   poky:
     url: https://git.yoctoproject.org/poky

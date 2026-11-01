@@ -528,7 +528,8 @@ PY
 fi
 
 if ((render_only == 0)); then
-    command -v bats >/dev/null 2>&1 || die "找不到 bats"
+    command -v docker >/dev/null 2>&1 ||
+        die "找不到 docker（BATS 在开发容器里跑，见 docs/build-env.md）"
     command -v python3 >/dev/null 2>&1 || die "找不到 python3（解析 JUnit 报告需要）"
 fi
 
@@ -546,14 +547,23 @@ failure_list=""
 
 if ((render_only == 0)); then
     mkdir -p "${ROOT_DIR}/reports"
-    output_dir="$(mktemp -d "${ROOT_DIR}/reports/.bats-report.XXXXXX")"
     target_xml="${ROOT_DIR}/reports/bats-${release}-${variant}${machine_sfx}-${date_stamp}.xml"
 
     SECONDS=0
+    # BATS 必须跑在容器里，用宿主 bats 是错的：
+    #   1) 版本不可控——构建机上实测 /usr/bin/bats 是 1.2.1，镜像里是 1.14；
+    #      老版本对**嵌套 bats**（03_container.bats 会再调一层验 skip 语义）的
+    #      处理不同，会把外层 BATS_TEST_NAME 漏进内层，报
+    #      `bats: unknown test name 'test_xxx'`。同一个用例在两种 bats 上结论
+    #      不同，比用例失败更糟：会让人开始怀疑用例本身。
+    #   2) 1.14 的 junit formatter 直接把 XML 写 **stdout**（--output 目录被
+    #      忽略），所以不再需要中间目录，也不该再 mv。
+    # dev.sh 自带「已在容器内就直接本地执行」的分支，所以这条命令在 CI 容器里
+    # 与工作机上行为一致。
     # stdin 必须重定向：部分用例的 teardown 会 rm -r 含只读 git 对象的临时仓库，
     # rm 在 tty 上会停在 “remove write-protected regular file?” 提示上永久阻塞。
-    if bats --formatter junit --output "${output_dir}" -r "${ROOT_DIR}/tests/bats" \
-        >"${output_dir}/bats.xml" </dev/null; then
+    if bash "${ROOT_DIR}/scripts/dev.sh" bats --formatter junit \
+        -r /work/tests/bats >"${target_xml}" </dev/null; then
         bats_status=0
     else
         bats_status=$?
@@ -561,14 +571,20 @@ if ((render_only == 0)); then
     duration="${SECONDS}"
     end_time="$(date --iso-8601=seconds)"
 
-    junit_source="${output_dir}/bats.xml"
-    if [[ ! -f "${junit_source}" ]]; then
-        rmdir "${output_dir}" 2>/dev/null || true
+    junit_source="${target_xml}"
+    if [[ ! -s "${junit_source}" ]]; then
         log_error "Bats 未生成预期的 JUnit 文件：${junit_source}"
         exit 1
     fi
-    mv -- "${junit_source}" "${target_xml}"
-    rmdir "${output_dir}"
+    # stdout 必须只有 XML。dev.sh 首次运行会自动构建镜像，构建日志如果落在
+    # stdout 上就会顶到 `<?xml` 前面，后面 ET.parse 报「syntax error: line 1,
+    # column 0」——报错完全没提真正的原因，所以这里先把第一行验一道。
+    first_line="$(head -n 1 "${junit_source}")"
+    if [[ "${first_line}" != '<?xml'* && "${first_line}" != '<testsuites'* ]]; then
+        log_error "JUnit 文件首行不是 XML，说明有其它输出混进了 stdout："
+        head -n 5 "${junit_source}" >&2
+        exit 1
+    fi
 
     summary="$(
         python3 - "${target_xml}" <<'PY'

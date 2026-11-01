@@ -55,11 +55,15 @@ PY
 }
 
 # bats test_tags=syntax
-@test "demo recipes use UNPACKDIR when the recipes directory exists" {
+@test "demo recipes go through YP_SRC_DIR for their source root" {
     local recipes_dir="${ROOT_DIR}/layers/meta-yp/recipes-demo"
     # #64~#70 尚未合并时目录不存在；合并后此检查会自动生效。
     [ -d "${recipes_dir}" ] || return 0
 
+    # 断言的是 ${YP_SRC_DIR} 而不是 ${UNPACKDIR}：后者 6.0 才引入，
+    # 3.1~5.0 上写它 S 就停在字面量（解析不报错，do_unpack 才炸）。
+    # YP_SRC_DIR 在 yp-service.bbclass 里定义为 `${UNPACKDIR} or ${WORKDIR}`，
+    # 是四版唯一正确的入口。
     local recipe
     for recipe in "${recipes_dir}"/*/*.bb; do
         [ -f "${recipe}" ] || continue
@@ -69,9 +73,9 @@ import sys
 
 lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
 assignments = [line for line in lines if re.match(r"^\s*S\s*=", line)]
-expected = re.compile(r'^\s*S\s*=\s*"\$\{UNPACKDIR\}"\s*$')
+expected = re.compile(r'^\s*S\s*=\s*"\$\{YP_SRC_DIR\}"\s*$')
 assert assignments and all(expected.match(line) for line in assignments), (
-    f"{sys.argv[1]} must set every S assignment to ${{UNPACKDIR}}; "
+    f"{sys.argv[1]} must set every S assignment to ${{YP_SRC_DIR}}; "
     f"found: {assignments}"
 )
 PY

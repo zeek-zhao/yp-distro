@@ -105,7 +105,7 @@ with a newer bitbake.
 ERROR: Unable to parse .../bitbake/lib/bb/__init__.py
 ```
 
-「两种分隔符各写一行」这个直觉在 3.1 上下文里成立（`:` 在 3.1 静默失效），
+「两种分隔符各写一行」这个直觉在 3.1 上下文里成立（变量级 `:` 在 3.1 静默失效），
 反方向不成立（`_` 在 4.0+ 硬失败）。所以只能：**4.0+ 用字面 `:remove`，
 3.1 用运行时 `d.setVar("DISTRO_FEATURES_remove", ...)` 且用
 `LAYERSERIES_CORENAMES` 守卫**。运行时赋值绕过了「字面语法检查」，

@@ -45,12 +45,32 @@ feat/72-kernel-trim ──PR──> main ──tag──> v0.5.0
 
 ### 4.1 平台级（不可绕过）
 
-转公开后 `POST /repos/.../rulesets` 已可用。`main` 上的 ruleset 强制：
+转公开后 `POST /repos/.../rulesets` 已可用。`main` 上的 ruleset `protect-main`
+（条件 `~DEFAULT_BRANCH`）实测生效的规则只有四条：
 
-- 禁止删除分支、禁止 force push（`non_fast_forward`）
-- 变更必须经 PR（`pull_request`）
-- 必须通过状态检查：`lint` / `bats` / `secret-scan` / `identity-guard`
-- 提交作者邮箱不得命中内部域名（`commit_author_email_pattern`，`must_not_match`）
+| 规则 | 效果 |
+|---|---|
+| `deletion` | 禁止删除 `main` |
+| `non_fast_forward` | 禁止 force push |
+| `pull_request` | 变更必须经 PR；`required_approving_review_count: 0`，但 `required_review_thread_resolution: true`（未解决的 review 讨论会挡合并） |
+| `required_status_checks` | 必须通过的检查见下 |
+
+必需状态检查共 9 项（名字就是 job 名，矩阵 job 带展开后缀）：
+
+```
+lint  bats  secret-scan  identity-guard  plan-sync
+bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
+```
+
+`strict_required_status_checks_policy: false`——不要求分支先 rebase 到最新
+`main` 才能合并，所以并行 PR 之间不会互相排队。
+
+> ⚠️ **`commit_author_email_pattern` 在仓库级 ruleset 上用不了**：创建该规则
+> 返回 `422`（该参数只在组织级 ruleset 上生效，个人仓库没有组织）。
+> 所以「提交作者邮箱」这一层**不在平台强制**，实际由前两层兜住：
+> `commit-msg` 钩子（本地）+ `identity-guard`（CI 扫**全部历史**）。
+> 这也正是 `identity-guard` 必须扫全历史、不能只扫本次 diff 的原因——
+> 平台护栏缺了一角，最后一层就必须是全景的。
 
 ### 4.2 本地与 CI（可绕过，用于快速反馈与存量校验）
 

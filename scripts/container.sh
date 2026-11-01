@@ -103,6 +103,7 @@ dl_dir=/work/work/downloads
 sstate_dir=/work/work/sstate
 home_dir="/work/work/home/${release}"
 passwd_file="${ROOT_DIR}/work/home/.passwd"
+group_file="${ROOT_DIR}/work/home/.group"
 
 # KVM 加速探测：宿主 jenkins 不在 kvm 组，所以宿主直跑 QEMU 拿不到 /dev/kvm，
 # 容器内必须用 --device + --group-add 才拿得到。拿不到不阻断构建（降级 TCG），
@@ -143,6 +144,9 @@ run_args=(
     --workdir /work
     -v "${HOST_REPO_DIR}:/work"
     -v "${HOST_REPO_DIR}/work/home/.passwd:/etc/passwd:ro"
+    # 组也必须映射：只在 passwd 里出现 builder 不够，sstatesig 还会用
+    # grp.getgrgid() 解析 gid，缺了它就报「doesn't match any user/group」。
+    -v "${HOST_REPO_DIR}/work/home/.group:/etc/group:ro"
     -e "HOME=${home_dir}"
     # 这两个变量是给人工排查看的契约声明；真值由 kas/base.yml 决定，
     # bitbake 不从环境导入它们。
@@ -229,6 +233,17 @@ chmod 644 "${passwd_base}.mapped"
 mv -- "${passwd_base}.mapped" "${passwd_file}"
 rm -f -- "${passwd_base}"
 trap - EXIT
+
+group_base="$(mktemp "${group_file}.XXXXXX")"
+docker run --rm "${resolved_image}" cat /etc/group >"${group_base}"
+# 与 passwd 同样的做法：去掉同名/同 gid 的别名，再补一行 builder。
+awk -F: -v gid="${host_gid}" '
+    $1 != "builder" && $3 != gid { print }
+    END { printf "builder:x:%s:\n", gid }
+' "${group_base}" >"${group_base}.mapped"
+chmod 644 "${group_base}.mapped"
+mv -- "${group_base}.mapped" "${group_file}"
+rm -f -- "${group_base}"
 
 tty_args=()
 if [[ -t 0 && -t 1 ]]; then

@@ -11,6 +11,11 @@ local_conf_header:
     # 5.0 没有 UNPACKDIR（该变量 6.0 才引入），file:// 仍解包到 ${WORKDIR}，
     # S = ${WORKDIR} 也仍然合法（base.bbclass 的 do_unpack[cleandirs] 对此有专门分支）。
     # 所以这里不要覆盖 YP_SRC_DIR —— 覆盖成 ${UNPACKDIR} 会让 S 变成字面量并炸在 mkdirhier。
+  uboot-bbappend: |
+    # u-boot_2026.01.bbappend 只服务 6.0：5.0 的 u-boot 是 2024.01，这个 bbappend
+    # 匹配不到任何 recipe 时 bitbake 报 "No recipes in default available" 并
+    # **终止构建**（不是 warning）。
+    BBMASK += "u-boot_2026[.]01[.]bbappend"
 
 repos:
   poky:

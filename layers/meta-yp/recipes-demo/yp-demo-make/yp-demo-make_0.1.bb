@@ -4,7 +4,7 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 # 6.0 的 file:// 源解包到 UNPACKDIR（${WORKDIR}/sources）；沿用 ${WORKDIR} 会找不到 demo.c。
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 
 SRC_URI = "file://demo.c file://Makefile file://yp-demo-make.service"
 
