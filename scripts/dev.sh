@@ -24,7 +24,7 @@ IMAGE="${YOCTO_DEV_IMAGE:-yocto-dev:local}"
 DOCKERFILE="${ROOT_DIR}/docker/dev/Dockerfile"
 BUILD_CTX="$(dirname "${DOCKERFILE}")"
 
-log() { printf '[dev] %s\n' "$*"; }
+log() { printf '[dev] %s\n' "$*" >&2; }
 die() {
     printf '[dev] ERROR: %s\n' "$*" >&2
     exit 1

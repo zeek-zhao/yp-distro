@@ -576,6 +576,15 @@ if ((render_only == 0)); then
         log_error "Bats 未生成预期的 JUnit 文件：${junit_source}"
         exit 1
     fi
+    # stdout 必须只有 XML。dev.sh 首次运行会自动构建镜像，构建日志如果落在
+    # stdout 上就会顶到 `<?xml` 前面，后面 ET.parse 报「syntax error: line 1,
+    # column 0」——报错完全没提真正的原因，所以这里先把第一行验一道。
+    first_line="$(head -n 1 "${junit_source}")"
+    if [[ "${first_line}" != '<?xml'* && "${first_line}" != '<testsuites'* ]]; then
+        log_error "JUnit 文件首行不是 XML，说明有其它输出混进了 stdout："
+        head -n 5 "${junit_source}" >&2
+        exit 1
+    fi
 
     summary="$(
         python3 - "${target_xml}" <<'PY'
