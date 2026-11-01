@@ -24,9 +24,15 @@
 | `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | 🚧 进行中 |
 | `v1.0.0` | 四版收口 | 🚧 进行中 |
 
-路线与依赖关系见 [`docs/roadmap.md`](docs/roadmap.md)。
-开放问题见 [issues](https://github.com/zeek-zhao/yp-distro/issues)，
-阶段看板见 [Projects #4](https://github.com/users/zeek-zhao/projects/4)。
+计划与进度分三层看，别重复维护：
+
+| 想知道 | 看哪里 |
+|---|---|
+| **现在到哪了 / 下一件该做什么** | [`docs/handover.md`](docs/handover.md) |
+| **什么才算做完**（每个版本的出口条件） | [`docs/plan/milestones.md`](docs/plan/milestones.md) |
+| **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
+| 阶段划分与约束 | [`docs/roadmap.md`](docs/roadmap.md) |
+| 在线看板 | [issues](https://github.com/zeek-zhao/yp-distro/issues) · [Projects #4](https://github.com/users/zeek-zhao/projects/4) |
 
 ## 快速开始
 
