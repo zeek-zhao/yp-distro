@@ -217,18 +217,18 @@ bash scripts/dev.sh scripts/report.sh --release wrynose --variant custom
 
 **但 3.1 不行**：dev 镜像是 Ubuntu 24.04 + Python 3.12，dunfell 的 bitbake 1.46 会卡在
 `import pyinotify`（依赖 Python 3.12 已移除的 `asyncore`）。3.1 的解析验证只能用
-`ghcr.io/zeek-zhao/yocto/dunfell:local`（Python 3.8）：
+`ghcr.io/zeek-zhao/yp-distro/dunfell:local`（Python 3.8）：
 
 ```bash
 docker run --rm -u "$(id -u):$(id -g)" -v /work:/work -w /work -e HOME=/tmp/h \
-  --entrypoint bash ghcr.io/zeek-zhao/yocto/dunfell:local -lc '
+  --entrypoint bash ghcr.io/zeek-zhao/yp-distro/dunfell:local -lc '
 mkdir -p /tmp/h
 cd /work && source work/kas-dunfell-custom/poky/oe-init-build-env work/kas-dunfell-custom/build >/dev/null 2>&1
 bitbake -e yp-image | grep -E "^(INIT_MANAGER|VIRTUAL-RUNTIME_init_manager|LAYERSERIES_CORENAMES)="'
 ```
 
 同类地，kirkstone / scarthgap 若在 dev 镜像里报缺 `lz4c`，用
-`ghcr.io/zeek-zhao/yocto/<rel>:local` 验证。
+`ghcr.io/zeek-zhao/yp-distro/<rel>:local` 验证。
 
 **如果容器内起不了 docker**（socket 没透传，或 `container.sh` 的嵌套 guard 拦了）：
 不要折腾，把 3.1 / 4.0 / 5.0 的解析验证标成「待人工验证（L3）」，只把 6.0 的做完。

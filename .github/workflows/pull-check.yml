@@ -25,7 +25,7 @@ jobs:
           TAG: ${{ inputs.tag || 'latest' }}
         run: |
           set -euo pipefail
-          img="ghcr.io/zeek-zhao/yocto/${RELEASE}:${TAG}"
+          img="ghcr.io/zeek-zhao/yp-distro/${RELEASE}:${TAG}"
           docker pull "$img"
           docker run --rm "$img" bash -c '
             set -euo pipefail

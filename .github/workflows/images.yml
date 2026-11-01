@@ -50,11 +50,11 @@ jobs:
           push: true
           build-args: APT_MIRROR=archive.ubuntu.com
           tags: |
-            ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:sha-${{ steps.meta.outputs.short_sha }}
-            ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:${{ matrix.series }}
-            ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:latest
+            ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:sha-${{ steps.meta.outputs.short_sha }}
+            ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:${{ matrix.series }}
+            ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:latest
           labels: |
-            org.opencontainers.image.source=https://github.com/zeek-zhao/yocto
+            org.opencontainers.image.source=https://github.com/zeek-zhao/yp-distro
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ matrix.series }}
           cache-from: type=gha,scope=${{ matrix.release }}
