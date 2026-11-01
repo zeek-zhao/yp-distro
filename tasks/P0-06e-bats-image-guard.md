@@ -19,7 +19,7 @@ PR #31 的 `ci` run 在 GitHub 托管 runner 上 `bats` job 红：
 ##[error]Process completed with exit code 1.
 ```
 
-10 个失败全部来自 `tests/bats/03_container.bats`：runner 上**没有** `ghcr.io/zeek-zhao/yocto/<release>:local|latest` 镜像
+10 个失败全部来自 `tests/bats/03_container.bats`：runner 上**没有** `ghcr.io/zeek-zhao/yp-distro/<release>:local|latest` 镜像
 （那是 215 本地构建的产物，CI 里只有 `images.yml` 在 main 上推镜像）。而 215 上 46/46 全绿。
 
 也就是说：测试把「机器上已构建过 4 个镜像」当成了隐含前提，CI 环境没有 → 必红。
@@ -34,7 +34,7 @@ CONTAINER_SCRIPT="${BATS_TEST_DIRNAME}/../../scripts/container.sh"
 
 # 镜像名与 scripts/container.sh 的 image_name() 保持一致
 release_image() {
-    printf 'ghcr.io/zeek-zhao/yocto/%s' "$1"
+    printf 'ghcr.io/zeek-zhao/yp-distro/%s' "$1"
 }
 
 # 该环境没有可用镜像时跳过（CI runner 常态）；本地/215 构建过镜像则会真跑
@@ -88,7 +88,7 @@ bash scripts/dev.sh bash scripts/ci/lint.sh
 bash scripts/dev.sh bash scripts/ci/secret-scan.sh
 
 # 3) 模拟"无镜像环境"：把镜像临时藏起来验证 skip 生效（不要删镜像，用 tag 重命名后还原）
-img=ghcr.io/zeek-zhao/yocto/scarthgap
+img=ghcr.io/zeek-zhao/yp-distro/scarthgap
 had_local=0; had_latest=0
 docker image inspect "${img}:local"  >/dev/null 2>&1 && { had_local=1;  docker tag "${img}:local"  "${img}:tmp-local";  docker rmi "${img}:local"  >/dev/null; }
 docker image inspect "${img}:latest" >/dev/null 2>&1 && { had_latest=1; docker tag "${img}:latest" "${img}:tmp-latest"; docker rmi "${img}:latest" >/dev/null; }
@@ -99,7 +99,7 @@ bash scripts/dev.sh bats --print-output-on-failure tests/bats/03_container.bats 
 
 - [ ] 第 1 条：0 not ok、**0 skip**（215 有镜像，守卫不触发）
 - [ ] 第 3 条：镜像缺席时相关用例显示 `# skip`，且**没有** `not ok`
-- [ ] 镜像已还原（`docker image inspect ghcr.io/zeek-zhao/yocto/scarthgap:local` 成功）
+- [ ] 镜像已还原（`docker image inspect ghcr.io/zeek-zhao/yp-distro/scarthgap:local` 成功）
 - [ ] `git diff --stat` 只含 `tests/bats/03_container.bats`
 
 ## 背景（为什么允许 skip）

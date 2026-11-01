@@ -33,7 +33,7 @@ ENV YOCTO_RELEASE=kirkstone \
     DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.title="yocto-kirkstone" \
-      org.opencontainers.image.source="https://github.com/zeek-zhao/yocto" \
+      org.opencontainers.image.source="https://github.com/zeek-zhao/yp-distro" \
       org.opencontainers.image.description="Yocto 4.0 (kirkstone) build image on Ubuntu 22.04" \
       org.opencontainers.image.licenses="MIT"
 

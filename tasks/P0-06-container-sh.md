@@ -21,7 +21,7 @@
 
 - `scripts/lib/common.sh` 提供：`load_release <r>`、`load_variant <v>`、`load_machine <m>`、`resolve_all <release> <variant> <machine>`（导出 `RELEASE REPO_MODE TAG VARIANT DISTRO IMAGE MACHINE`）、`work_dir <kind> [release]`（kind ∈ `src|build|artifacts|lock|downloads|sstate`）、`check_disk_watermark [pct]`（打印 `Disk usage: N%`，超阈值返回 1）。
 - `scripts/lib/log.sh` 提供 `log_info/log_warn/log_error/die`。
-- `scripts/image.sh` 的 `image_name <release>` 输出 `ghcr.io/zeek-zhao/yocto/<release>`，本地已构建的 tag 是 **`:local`**（4 个 release 都有），远端公开 tag 是 `:latest`。
+- `scripts/image.sh` 的 `image_name <release>` 输出 `ghcr.io/zeek-zhao/yp-distro/<release>`，本地已构建的 tag 是 **`:local`**（4 个 release 都有），远端公开 tag 是 `:latest`。
 - `scripts/dev.sh` 有 `in_dev_container()`（判 `/.dockerenv` + `/work` + PWD 前缀）与 `build_run_args()`（生成 `RUN_ARGS`）。
 - `config/variants/general.env`：`DISTRO=poky`、`IMAGE=core-image-minimal`；`config/variants/custom.env`：`DISTRO=yp`、`IMAGE=yp-image`（C42 命名，见 `docs/naming.md`）。
 - `config/machines/` 下有 machine env（如 `qemux86-64`）。
@@ -138,7 +138,7 @@ bash scripts/dev.sh bash scripts/container.sh --release wrynose --variant genera
 
 # 镜像标签
 bash scripts/dev.sh bash scripts/image.sh build scarthgap 2>&1 | tail -3
-docker image inspect ghcr.io/zeek-zhao/yocto/scarthgap:local --format '{{index .Config.Labels "project"}}'
+docker image inspect ghcr.io/zeek-zhao/yp-distro/scarthgap:local --format '{{index .Config.Labels "project"}}'
 #   期望输出 project=yocto 对应的值：yocto
 ```
 

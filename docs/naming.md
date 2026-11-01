@@ -15,7 +15,7 @@
 | custom 精简镜像 | `yp-image-minimal` | `layers/meta-yp/recipes-core/images/yp-image-minimal.bb`，纯基线镜像 / 最小可解析探针 |
 | build 目录 | `build/<release>/<variant>` | 见需求 §4.1 磁盘模型 |
 | 容器名 | `yocto-<release>-<variant>` | #10 `container.sh` 生成，便于 `docker ps` 识别 |
-| GHCR 镜像 | `ghcr.io/zeek-zhao/yocto/<release>` | 账号路径固定为 GitHub 账号，**不随本约定改名** |
+| GHCR 镜像 | `ghcr.io/zeek-zhao/yp-distro/<release>` | 账号路径固定为 GitHub 账号，**不随本约定改名** |
 
 ## 二、命名规则
 

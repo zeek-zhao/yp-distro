@@ -8,7 +8,7 @@ setup() {
 
 # Keep image names aligned with scripts/container.sh image_name().
 release_image() {
-    printf 'ghcr.io/zeek-zhao/yocto/%s' "$1"
+    printf 'ghcr.io/zeek-zhao/yp-distro/%s' "$1"
 }
 
 require_release_image() {
@@ -26,7 +26,7 @@ mock_release_image() {
     cat >"${BATS_TEST_TMPDIR}/bin/docker" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$#" -eq 3 && "$1" == image && "$2" == inspect &&
-    "$3" == ghcr.io/zeek-zhao/yocto/scarthgap:local ]]; then
+    "$3" == ghcr.io/zeek-zhao/yp-distro/scarthgap:local ]]; then
     exit 0
 fi
 printf 'Unexpected Docker command in logic test: %s\n' "$*" >&2

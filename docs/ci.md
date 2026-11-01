@@ -13,7 +13,7 @@
 
 ## 镜像约定与首次公开
 
-命名为 `ghcr.io/zeek-zhao/yocto/<release>`，release 为 dunfell、kirkstone、scarthgap、wrynose。
+命名为 `ghcr.io/zeek-zhao/yp-distro/<release>`，release 为 dunfell、kirkstone、scarthgap、wrynose。
 `sha-<7 位提交 SHA>` 作为不可变引用使用（不覆盖已有提交的镜像）；`<series>`（3.1 / 4.0 / 5.0 / 6.0）和 `latest` 随构建浮动。
 GHCR 本身不强制 tag 不可变；需要严格可复现时记录镜像 digest。
 推送只使用自动注入的 `GITHUB_TOKEN` 和 `packages: write`。

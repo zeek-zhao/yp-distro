@@ -3,7 +3,7 @@
 ## 目标
 
 把仓库的**校验流水线**从"人工在 215 上敲命令"搬到 GitHub Actions，并交付 P0 的出口条件：
-`ghcr.io/zeek-zhao/yocto/<release>` 4 个镜像**免登录可拉**（需求 C24）。
+`ghcr.io/zeek-zhao/yp-distro/<release>` 4 个镜像**免登录可拉**（需求 C24）。
 
 本卡只写"能被本地静态验证"的东西：工具链安装脚本、lint 脚本、3 个 workflow、BATS 静态门禁、文档。
 **真正的镜像推送与 public 设置由派单方在 GitHub 侧执行**，你不需要、也不允许碰 GitHub 仓库设置。
@@ -21,7 +21,7 @@
   - BATS 风格见 `tests/bats/00_project.bats`：`source "${BATS_TEST_DIRNAME}/setup.bash"`，每个用例打 `# bats test_tags=<tag>`
   - `config/features.txt` 四列：`feature_id | 适用 release | bats 文件 | bats tag`
   - `tests/bats/99_coverage.bats` 会强制校验：新增的**非 meta 的 BATS 文件必须被 features.txt 引用**，且 tag 必须在该文件里真实出现。所以 02 号文件**必须**登记 feature 并打对 tag，否则全量 BATS 会红。
-- GitHub 仓库：`zeek-zhao/yocto`，**私有**。默认分支 `main`。
+- GitHub 仓库：`zeek-zhao/yp-distro`，**私有**。默认分支 `main`。
 - **凭据铁律**：workflow 里只允许用 `secrets.GITHUB_TOKEN`（GitHub 自动注入）。**任何地方都不许出现 PAT / `ghp_` / `github_pat_`**，也不许往仓库写 `.env`、私钥、token 文件。GHCR 推送用 `GITHUB_TOKEN` + `permissions: packages: write` 就够，不需要个人令牌。
 - **CI 的网络位置是 GitHub 托管 runner（境外）**，所以构建镜像时必须把 `APT_MIRROR` 覆盖成 `archive.ubuntu.com`（Dockerfile 默认值是 `cn.archive.ubuntu.com`，那是给 215 用的）。
 
@@ -206,11 +206,11 @@ job `build`（`timeout-minutes: 60`）步骤顺序固定：
    - `build-args: APT_MIRROR=archive.ubuntu.com`（境外 runner，见背景约束）
    - `tags`：
      ```
-     ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:sha-${{ steps.meta.outputs.short_sha }}
-     ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:${{ matrix.series }}
-     ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:latest
+     ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:sha-${{ steps.meta.outputs.short_sha }}
+     ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:${{ matrix.series }}
+     ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:latest
      ```
-   - `labels`：`org.opencontainers.image.source=https://github.com/zeek-zhao/yocto`、`org.opencontainers.image.revision=${{ github.sha }}`、`org.opencontainers.image.version=${{ matrix.series }}`
+   - `labels`：`org.opencontainers.image.source=https://github.com/zeek-zhao/yp-distro`、`org.opencontainers.image.revision=${{ github.sha }}`、`org.opencontainers.image.version=${{ matrix.series }}`
    - `cache-from: type=gha,scope=${{ matrix.release }}` / `cache-to: type=gha,mode=max,scope=${{ matrix.release }}`
 
 **不许**出现 `pull_request` 触发（PR 上不推镜像，也不给 PR 写 packages 权限）。
@@ -238,7 +238,7 @@ job `pull`（`timeout-minutes: 30`，matrix 4 个 release，`fail-fast: false`�
 - 执行内容：
   ```bash
   set -euo pipefail
-  img="ghcr.io/zeek-zhao/yocto/${{ matrix.release }}:${{ inputs.tag || 'latest' }}"
+  img="ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:${{ inputs.tag || 'latest' }}"
   docker pull "$img"
   docker run --rm "$img" bash -c '
     set -euo pipefail
