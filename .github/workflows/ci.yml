@@ -50,6 +50,18 @@ jobs:
           set -euo pipefail
           bash scripts/ci/secret-scan.sh
 
+  # 2026-11-01 历史重写后加的门禁：身份必须统一，内部域名/内网地址不得回潮。
+  # 需要全历史，故 fetch-depth: 0。
+  identity-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 校验提交身份与内部信息
+        run: bash scripts/ci/identity-guard.sh
+
   # 私有仓库 + GitHub Free 计划下 rulesets 不可用（403），用它兜住「不许直推 main」：
   # 若 main 上的提交没有关联 PR，直接失败。见 docs/branching.md §4。
   branch-guard:

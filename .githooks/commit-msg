@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # =============================================================================
-# .githooks/commit-msg — 拒绝 AI 署名 + 强制提交身份
+# .githooks/commit-msg — 拒绝 AI 署名 + 约束提交身份
 #
 # 启用（每个克隆/工作区一次）：
 #     git config core.hooksPath .githooks
-#   wf4.sh guard 会自动设置。
 #
-# 拦截四类问题（历史上的实际事故都在这四类里）：
-#   1. author / committer 不是 zeek.zhao <zeek.zhao@foxmail.com>
-#      —— 本仓库曾同时存在 4 种身份，包括 Jenkins 全局身份与
-#         zeek.zhao@foxmail.com 这类完全无关的邮箱
-#   2. AI 协作者 trailer：Co-authored-by: Copilot / Claude / GPT / Cursor ...
-#   3. AI 生成声明：Generated with ... / 🤖 / Assisted by ...
-#   4. 自己 co-author 自己（Co-authored-by 的邮箱与 author 相同）
+# 拦截这几类问题：
+#   1. 维护者身份不统一 —— 本仓库历史上曾同时存在 4 种身份（工作邮箱、
+#      GitHub noreply、Jenkins 全局身份、另一个个人邮箱），2026-11-01 已
+#      统一为 zeek.zhao <zeek.zhao@foxmail.com>。凡邮箱里带 zeek 的提交，
+#      必须正好是这个地址。
+#   2. 外部贡献者缺 DCO 签名 —— 非维护者身份可以提交，但消息里必须有
+#      Signed-off-by（见 CONTRIBUTING.md）。
+#   3. AI 协作者 trailer：Co-authored-by: Copilot / Claude / GPT / Cursor ...
+#   4. AI 生成声明：Generated with ... / 🤖 / Assisted by ...
+#   5. 自己 co-author 自己（Co-authored-by 的邮箱与 author 相同）
 #      —— 单人仓库里无意义，且是 AI 工具批量添加时的典型冗余
 #   另外拦截标题里出现字面 "\n"：历史上有一条提交因为用内联 -m 传多行
 #   字符串，把 \n 原样写进了 subject。多行消息请用 `git commit -F <file>`。
@@ -34,9 +36,8 @@ AI_RE='copilot|claude|anthropic|openai|chatgpt|\bgpt-?[0-9]|\bgemini\b|cursor|co
 
 fail() {
     printf '\n[commit-msg] 提交被拒绝：%s\n' "$*" >&2
-    printf '[commit-msg] 如需修正身份：\n' >&2
-    printf "    git config user.name '%s'\n" "${WANT_NAME}" >&2
-    printf "    git config user.email '%s'\n\n" "${WANT_MAIL}" >&2
+    printf '[commit-msg] 维护者身份应为：%s <%s>\n' "${WANT_NAME}" "${WANT_MAIL}" >&2
+    printf '[commit-msg] 修正：git config user.name/user.email，或 git commit --amend --reset-author\n\n' >&2
     exit 1
 }
 
@@ -53,10 +54,23 @@ c_name="${c%%|*}"; c_mail="${c##*|}"
 a_name="${a_name%"${a_name##*[![:space:]]}"}"
 c_name="${c_name%"${c_name##*[![:space:]]}"}"
 
-[[ "${a_name}" == "${WANT_NAME}" && "${a_mail}" == "${WANT_MAIL}" ]] \
-    || fail "作者身份必须是 ${WANT_NAME} <${WANT_MAIL}>，当前是 ${a_name} <${a_mail}>"
-[[ "${c_name}" == "${WANT_NAME}" && "${c_mail}" == "${WANT_MAIL}" ]] \
-    || fail "提交者身份必须是 ${WANT_NAME} <${WANT_MAIL}>，当前是 ${c_name} <${c_mail}>"
+check_identity() {
+    local role="$1" name="$2" mail="$3"
+    if [[ "${mail}" == "${WANT_MAIL}" ]]; then
+        [[ "${name}" == "${WANT_NAME}" ]] \
+            || fail "${role}名字必须是 ${WANT_NAME}，当前是 ${name}"
+        return 0
+    fi
+    if [[ "${mail}" == *zeek* ]]; then
+        fail "${role}邮箱必须统一为 ${WANT_MAIL}，当前是 ${name} <${mail}>"
+    fi
+    # 外部贡献者：允许，但必须带与自己邮箱一致的 DCO 签名
+    grep -qiE "^[[:space:]]*signed-off-by:.*<${mail}>" "${MSG_FILE}" \
+        || fail "${role} ${name} <${mail}> 不是维护者身份，请加 Signed-off-by: ${name} <${mail}>（DCO）"
+}
+
+check_identity "作者" "${a_name}" "${a_mail}"
+check_identity "提交者" "${c_name}" "${c_mail}"
 
 # ---------------------------------------------------------------- 消息校验 --
 if grep -qiE "^[[:space:]]*co-authored-by:.*(${AI_RE})" "${MSG_FILE}"; then

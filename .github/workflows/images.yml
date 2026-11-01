@@ -24,12 +24,16 @@ jobs:
         include:
           - release: dunfell
             series: "3.1"
+            base: "20.04"
           - release: kirkstone
             series: "4.0"
+            base: "22.04"
           - release: scarthgap
             series: "5.0"
+            base: "24.04"
           - release: wrynose
             series: "6.0"
+            base: "24.04"
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -38,11 +42,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Compute short SHA
+      - name: Compute build metadata
         id: meta
         run: |
           set -euo pipefail
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -54,8 +59,15 @@ jobs:
             ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:${{ matrix.series }}
             ghcr.io/zeek-zhao/yp-distro/${{ matrix.release }}:latest
           labels: |
+            org.opencontainers.image.title=yp-distro ${{ matrix.release }} build environment
+            org.opencontainers.image.description=Yocto ${{ matrix.series }} (${{ matrix.release }}) build environment for yp-distro. Contains GPL/LGPL components from the Ubuntu base layer; see THIRD_PARTY_NOTICES.md.
+            org.opencontainers.image.url=https://github.com/zeek-zhao/yp-distro
             org.opencontainers.image.source=https://github.com/zeek-zhao/yp-distro
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.documentation=https://github.com/zeek-zhao/yp-distro/blob/main/THIRD_PARTY_NOTICES.md
+            org.opencontainers.image.licenses=MIT
             org.opencontainers.image.version=${{ matrix.series }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.base.name=docker.io/library/ubuntu:${{ matrix.base }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
           cache-from: type=gha,scope=${{ matrix.release }}
           cache-to: type=gha,mode=max,scope=${{ matrix.release }}

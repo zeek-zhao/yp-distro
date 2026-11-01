@@ -177,3 +177,28 @@ CVE 有清单、FOSS 有结果、FOSS 覆盖率 > 0。PURL 非空率 >= 90% 作�
   因此是「基础许可证的正文 + 原始 `+` 声明」，语义正确。
 - 覆盖率的分子是「解包成功且 ScanCode 产出 json 的包数」，解包失败算失败，
   记在 `failed` 里，不进分子。
+
+## 8. 对外分发时的义务（2026-11-01 起）
+
+本仓库以 MIT 发布，但**发布产物不是 MIT**，两者不要混：
+
+| 分发对象 | 许可 | 义务 |
+|---|---|---|
+| 仓库源码（脚本 / layer / 文档） | MIT | 保留 `LICENSE` 与版权声明 |
+| GHCR 构建环境镜像 | MIT（脚本层）+ Ubuntu base 的 GPL/LGPL | 提供 base 层对应源码的获取方式 |
+| Yocto rootfs / SDK 产物 | 内含 GPL/LGPL/BSD/Apache 等多许可 | 随附 SBOM + 列出源码获取方式 |
+
+三点落地要求：
+
+1. **镜像标签要带合规元数据**。`images.yml` 已写入
+   `org.opencontainers.image.{licenses,source,base.name,documentation}`。
+   `licenses=MIT` 指的是本仓库脚本部分，base 层的许可在
+   `THIRD_PARTY_NOTICES.md` 里单独说明并给出 `archive.ubuntu.com`。
+2. **分发 rootfs 时必须带上 SBOM**。GPL 的「对应源码」义务靠 SBOM 里每个包的
+   `externalRefs` 定位到上游，而不是靠口头承诺。归档路径见 §5，
+   报告里「SBOM」一节记录了 SHA-256 与组件数，可作为随附证据。
+3. **不可变 tag 才是合规基准**。`sha-<7位>` 与提交一一对应；
+   `latest` / `<series>` 会漂移，不能用来主张「我分发的是这一版」。
+
+完整的第三方声明见 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md)。
+
