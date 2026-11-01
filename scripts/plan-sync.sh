@@ -50,6 +50,7 @@ tmp="$(mktemp)"
 trap 'rm -f -- "${tmp}" 2>/dev/null || true' EXIT
 
 python3 - "${repo}" "${token}" >"${tmp}" <<'PY'
+import hashlib
 import json
 import sys
 import urllib.error
@@ -118,6 +119,18 @@ for (num, title), items in sorted(by_milestone.items(), key=lambda kv: (kv[0][0]
         out.append(f"| [#{issue['number']}]({issue['html_url']}) | {title_text} | {labels} |")
     out.append("")
 
+out.append("")
+out.append("---")
+out.append("")
+# 指纹只覆盖「有哪些问题、各自属于哪个里程碑」。标签、正文、评论的改动不参与，
+# 否则每改一次 issue 都会让 CI 变红，直到有人重新生成并提交——那会把清单同步
+# 变成「任何 issue 编辑都要跟一次提交」，没人受得了。
+fp_src = "\n".join(
+    sorted(f"{i['number']}|{i['title']}|{(i.get('milestone') or {}).get('number', 0)}" for i in issues)
+)
+fingerprint = hashlib.sha256(fp_src.encode()).hexdigest()[:16]
+out.append(f"<!-- plan-sync fingerprint: {fingerprint} -->")
+
 print("\n".join(out).rstrip() + "\n", end="")
 PY
 
@@ -132,11 +145,18 @@ case "${mode}" in
             log_error "缺少 ${OUT#"${ROOT_DIR}/"}，先跑 scripts/plan-sync.sh"
             exit 1
         fi
-        if ! diff -q -- "${tmp}" "${OUT}" >/dev/null; then
-            log_error "docs/issues.md 与线上 issue 不一致，跑 scripts/plan-sync.sh 重新生成"
+        fp_new="$(grep -o 'plan-sync fingerprint: [0-9a-f]*' "${tmp}" | head -n 1)"
+        fp_old="$(grep -o 'plan-sync fingerprint: [0-9a-f]*' "${OUT}" | head -n 1)"
+        if [[ -z "${fp_old}" ]]; then
+            log_error "docs/issues.md 缺少指纹行，跑 scripts/plan-sync.sh 重新生成"
+            exit 1
+        fi
+        if [[ "${fp_new}" != "${fp_old}" ]]; then
+            log_error "开放 issue 集合已变化（新增/关闭/换里程碑），跑 scripts/plan-sync.sh 重新生成"
+            log_error "  线上 ${fp_new:-<空>} vs 仓库 ${fp_old}"
             diff -u -- "${OUT}" "${tmp}" | head -n 40 >&2 || true
             exit 1
         fi
-        log_info "docs/issues.md 与线上一致"
+        log_info "docs/issues.md 与线上一致（${fp_old}）"
         ;;
 esac
