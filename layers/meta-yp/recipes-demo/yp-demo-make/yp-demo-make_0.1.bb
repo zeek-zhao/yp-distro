@@ -13,7 +13,8 @@ SRC_URI = "file://demo.c file://Makefile file://yp-demo-make.service"
 inherit yp-service
 
 do_compile() {
-    oe_runmake CC="${CC}" CFLAGS="${CFLAGS} -DYP_DEMO_VARIANT=make" LDFLAGS="${LDFLAGS}"
+    # 引号由 files/Makefile 加，这里传裸值（否则 gcc 看到 'make' 未声明）。
+    oe_runmake CC="${CC}" CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" YP_DEMO_VARIANT="make"
 }
 
 do_install() {

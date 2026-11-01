@@ -9,8 +9,12 @@ S = "${UNPACKDIR}"
 inherit yp-service
 
 do_compile() {
-    # 版本信息来自发行版变量，CFLAGS 则沿用 BitBake 的交叉编译参数。
-    oe_runmake CC="${CC}" CFLAGS="${CFLAGS} -DYP_VERSION=\"${DISTRO_VERSION}\" -DYP_BUILD=\"${DISTRO}-${MACHINE}\" -DYP_MACHINE=\"${MACHINE}\"" LDFLAGS="${LDFLAGS}"
+    # 字符串宏的引号由 files/Makefile 负责，这里只传裸值：
+    # 在 CFLAGS 里拼 \" 会被 make/sh 吃掉一层，gcc 收到裸数字（见 Makefile 注释）。
+    oe_runmake CC="${CC}" CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" \
+        YP_VERSION="${DISTRO_VERSION}" \
+        YP_BUILD="${DISTRO}-${MACHINE}" \
+        YP_MACHINE="${MACHINE}"
 }
 
 do_install() {
