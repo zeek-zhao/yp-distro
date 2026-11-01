@@ -19,3 +19,6 @@ distro-features | all | tests/bats/12_distro.bats | distro | ok
 kvm-accel | all | tests/bats/03_container.bats | container | ok
 yp-service | wrynose | tests/bats/13_service.bats | service | ok
 boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok
+syntax-matrix | all | tests/bats/15_syntax.bats | syntax | ok
+demo-statusd | wrynose | tests/bats/16_statusd.bats | demo | ok
+demo-collectd | wrynose | tests/bats/17_collectd.bats | demo | ok

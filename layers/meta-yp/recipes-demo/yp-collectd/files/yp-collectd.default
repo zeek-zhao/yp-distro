@@ -1,0 +1,2 @@
+# 修改采集间隔后需执行 systemctl restart yp-collectd 使新值生效。
+YP_COLLECTD_INTERVAL=60

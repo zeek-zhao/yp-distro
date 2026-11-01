@@ -1,0 +1,13 @@
+[Unit]
+Description=YP CMake demo
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/yp-demo-cmake
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
