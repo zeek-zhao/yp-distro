@@ -7,7 +7,7 @@
 #   docker/dev/（本文件）   跑 lint / BATS / review / 远程 AI CLI，统一 ubuntu 24.04
 #
 # dev 容器**不跑 bitbake**；需要 bitbake 时由 project.sh 调度构建镜像。
-# 这样 215 宿主机不需要装 bats/shellcheck/shfmt/gh/node，全部隔离在容器内。
+# 这样构建机不需要装 bats/shellcheck/shfmt/gh/node，全部隔离在容器内。
 #
 # 构建请走入口脚本（会按宿主 UID/GID 建用户，避免挂载产生 root 属主文件）：
 #   scripts/dev.sh --build
@@ -30,7 +30,7 @@ ARG NODE_VERSION=22.23.4
 ARG COPILOT_CLI_VERSION=1.0.105
 ARG KAS_VERSION=4.6
 
-# ── 用户映射（215 上 jenkins uid/gid = 2000；构建时由 dev.sh 传入实际值）──
+# ── 用户映射（构建机上 jenkins uid/gid = 2000；构建时由 dev.sh 传入实际值）──
 ARG DEV_UID=2000
 ARG DEV_GID=2000
 ARG DEV_USER=dev
@@ -161,7 +161,7 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -i "${PIP_INDE
     && kas --version
 
 ###############################################################################
-# 5. Node + 远程 AI CLI（WF3 的编码端；215 宿主不装 node）
+# 5. Node + 远程 AI CLI（WF3 的编码端；构建机不装 node）
 #    copilot 是 npm 包装器 + 平台专属二进制，optionalDependencies 在部分镜像上
 #    不会自动解析，故显式安装平台包。
 ###############################################################################
@@ -184,7 +184,7 @@ RUN npm config set registry "${NPM_REGISTRY}" --location=global \
 # 6. Docker CLI —— 不在镜像内安装，由 scripts/dev.sh 运行时挂载宿主二进制
 #
 # 理由（实测）：
-#   - 215 宿主 /usr/bin/docker 只依赖 libc + ld-linux（无 libdevmapper/libsystemd），
+#   - 构建机 /usr/bin/docker 只依赖 libc + ld-linux（无 libdevmapper/libsystemd），
 #     可直接挂进 ubuntu 24.04 容器运行；
 #   - docker static 包（82MB）从 TUNA 只有 40KB/s、阿里云 637KB/s，每次重建都要等；
 #   - 挂载宿主 CLI 能保证容器内 docker 版本与宿主/daemon 严格一致，

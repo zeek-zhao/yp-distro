@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # SDK / eSDK 产出与归档（issue #25）。
-# 只验证脚本契约与渲染逻辑；真构建靠 scripts/sdk.sh 在 215 上跑（需要几十 GB 磁盘）。
+# 只验证脚本契约与渲染逻辑；真构建靠 scripts/sdk.sh 在构建机上跑（需要几十 GB 磁盘）。
 
 setup() {
     source "${BATS_TEST_DIRNAME}/setup.bash"

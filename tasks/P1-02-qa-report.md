@@ -20,7 +20,7 @@ P1 要求每个版本每个 variant 有一次真实构建 + QEMU 通过，并把
 1. `scripts/report.sh` 生成的归档里，`Image digest` 和 `Artifact SHA-256` 是硬编码的 `n/a（P0 未实现）`，报告因此**不能证明真构建发生过**；
 2. 需求 §7.3 定义了一张「降级白名单」（SPDX 产物格式、CVE 清单工具、multilib、do_scancode），并要求：**降级项必须写进报告「降级清单」+ 在 `config/features.txt` 标注 `degraded`，由 `99_coverage.bats` 校验其与报告一致，不允许静默通过**。这三处目前一处都没有。
 
-本卡只做「把报告变成真构建报告 + 把降级清单做成三处一致」，**不跑真实构建**（真构建由 WorkBuddy 在 215 上用 `kas build` 跑），也不实现 `project.sh build` / `project.sh qemu`（另有任务卡）。
+本卡只做「把报告变成真构建报告 + 把降级清单做成三处一致」，**不跑真实构建**（真构建由 WorkBuddy 在构建机上用 `kas build` 跑），也不实现 `project.sh build` / `project.sh qemu`（另有任务卡）。
 
 ## 已定的设计口径（照此实现，不要自行发挥）
 

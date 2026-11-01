@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # 合规证据采集与归档（issue #26）。
-# 只验证脚本契约、路径规则与渲染逻辑；真采集靠 scripts/compliance.sh 在 215 上跑
+# 只验证脚本契约、路径规则与渲染逻辑；真采集靠 scripts/compliance.sh 在构建机上跑
 # （6.0 的 CVE 需要 4 GB 的 nvd-fkie 库，FOSS 需要 ScanCode 与容器）。
 
 setup() {
@@ -91,7 +91,7 @@ JSON
 
 # bats test_tags=compliance
 @test "compliance.sh --print-sbom 缺产物时指向 --spdx 构建" {
-    # 必须用隔离目录：215 上 work/ 里真有 wrynose 的 SBOM，直接用默认路径会命中
+    # 必须用隔离目录：构建机上 work/ 里真有 wrynose 的 SBOM，直接用默认路径会命中
     run env YP_DEPLOY_DIR="${test_root}/no-deploy" YP_ARTIFACT_DIR="${test_root}/no-art" \
         bash "${ROOT_DIR}/scripts/compliance.sh" --print-sbom --release wrynose --variant custom
     [ "${status}" -ne 0 ]

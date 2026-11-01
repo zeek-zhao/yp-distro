@@ -2,7 +2,7 @@
 
 > 关联 issue #61（U-Boot x86 zboot 启动链）、#63（三段启动计时基线）。
 > 本文件是 v0.3.0 收口时建立的 boot-time 基线，数据来自 `scripts/boot-time.sh`
-> 在 215 release 容器（KVM）上的 3 次真起机测量。
+> 在构建机的 release 容器（KVM）上的 3 次真起机测量。
 
 ## 测量对象
 - release：wrynose（yocto 6.0.4）

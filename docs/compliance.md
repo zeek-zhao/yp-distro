@@ -23,7 +23,7 @@ ScanCode 扫源码包），渲染很便宜。改版式时只需要 `report.sh --
 | CVE | 构建期 `cve-check` | 同左 | 同左 | 构建后 `sbom-cve-check` CLI |
 | FOSS | ScanCode 批量（构建后） | 同左 | 同左 | 同左 |
 
-三条与直觉相反的实测事实（都在 215 上真跑过）：
+三条与直觉相反的实测事实（都在构建机上真跑过）：
 
 1. **5.0 的 `create-spdx` 是默认打开的**。`deploy/spdx/2.2/` 下有 3.6 万个
    per-recipe SBOM，镜像级 SBOM 只有一个 `<image>-<machine>.rootfs.spdx.tar.zst`
@@ -96,7 +96,7 @@ sbom-cve-check --databases-dir work/cve-cache/sbom \
   CVSS、CPE 匹配它都含，cvelist 是 CNA 侧补充。省 4.3 GB 与一次全量 clone。
 - 工具版本固定在 `YP_SBOM_CVE_CHECK_VERSION`（默认 1.3.5），
   `pip3 install --target work/tools/sbom-cve-check-<ver>`。不用 venv：
-  215 的 python 缺 `ensurepip`，`python3 -m venv` 建不出来。
+  构建机的 python 缺 `ensurepip`，`python3 -m venv` 建不出来。
 
 3.1/4.0/5.0 读构建期清单，两级来源：
 

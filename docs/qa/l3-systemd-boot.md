@@ -2,7 +2,7 @@
 
 日期：2026-10-31
 分支：`feat/56-systemd`（HEAD `6f396e8`）
-执行：宿主 215 手动触发，容器内 TCG 起机（`qemux86-64` / `custom` variant）
+执行：宿主构建机手动触发，容器内 TCG 起机（`qemux86-64` / `custom` variant）
 
 ## 为什么需要这一份
 

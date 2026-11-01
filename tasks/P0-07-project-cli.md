@@ -150,7 +150,7 @@ bash scripts/dev.sh make secret-scan     # 真实转发一条，证明 wiring �
 > 注：`make -n` 要能被容器内的 `make` 执行；若 `make` 在镜像里缺失，用等价的静态断言（`git grep` 比对 target 与转发行）替代并在 PR 里说明 —— **但不许跳过 F 段**。
 > 不要把 `--release` 之类的参数跟在 make 目标后面（`make config --release x` 会被 make 当成自己的选项而报错）；带参数的场景一律直接调 `./project.sh`。
 
-### G. 真实入容器（可选，215 有镜像时才跑）
+### G. 真实入容器（可选，构建机有镜像时才跑）
 
 ```bash
 bash scripts/dev.sh ./project.sh shell --release scarthgap --variant general -- bash -lc 'id -un; command -v kas'

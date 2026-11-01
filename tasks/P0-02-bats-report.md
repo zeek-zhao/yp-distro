@@ -45,7 +45,7 @@ git rev-parse HEAD:config HEAD:docker HEAD:scripts HEAD:layers
 `docker/` 与 `layers/` 在 P0 阶段可能存在但为空，脚本必须容忍 `git rev-parse` 对不存在路径报错（用 `|| true` 并跳过该段）。
 
 **skip 白名单（需求 §6.3）**
-只允许三类，且必须写明原因：需要 Docker、需要构建产物、需要 215。
+只允许三类，且必须写明原因：需要 Docker、需要构建产物、需要构建机。
 白名单外的 skip 一律视为失败。`setup.bash` 提供三个 helper（见下），不允许在用例里手写裸 `skip`。
 
 ## 要做的事
@@ -58,7 +58,7 @@ git rev-parse HEAD:config HEAD:docker HEAD:scripts HEAD:layers
 - 三个 skip helper，**只在条件不满足时 skip，并输出固定格式的原因**：
   - `require_docker` → `skip "需要 Docker：docker daemon 不可达"`
   - `require_build_artifact <path>` → 文件不存在时 `skip "需要构建产物：<path> 缺失"`
-  - `require_215` → 非 `RSZ-ED-SVR148` 时 `skip "需要 215：当前主机不是构建节点"`
+  - `require_build_host` → 主机名与 `YP_BUILD_HOST` 不符时 `skip "需要构建机：…"`
 - `bats_version_info()`：打印 bats 版本与 ROOT_DIR（调试用）
 
 ### 2. `tests/bats/00_project.bats`
