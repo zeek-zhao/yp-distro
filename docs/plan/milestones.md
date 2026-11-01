@@ -73,7 +73,7 @@
 | issue | 内容 | 状态 |
 |---|---|---|
 | #85 | 四版全兼容回归与报告归档 | **7/8**，见下 |
-| #86 | 文档收口与发布 | 进行中 |
+| #86 | 文档收口与发布 | ✅ 见 [#86 结案评论](https://github.com/zeek-zhao/yp-distro/issues/86#issuecomment-6559294429) |
 | #87 | SDK / eSDK 恢复评估 | ✅ 结论见 [`docs/sdk.md`](../sdk.md) §8 |
 | #109 | dunfell full 镜像 `do_rootfs` 目录属性冲突 | 开放，**#85 的唯一阻塞项** |
 

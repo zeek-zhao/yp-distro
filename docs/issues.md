@@ -3,15 +3,13 @@
 > 本文件由 `scripts/plan-sync.sh` 从 GitHub Issues 生成，**请勿手改**。
 > 想改内容就去改 issue；CI 会校验此文件是否与线上一致。
 >
-> 生成时共 16 个开放 issue、4 个开放里程碑。
+> 生成时共 14 个开放 issue、4 个开放里程碑。
 
 ## v1.0.0 · 四版收口
 
 | Issue | 标题 | 标签 |
 |---|---|---|
 | [#85](https://github.com/zeek-zhao/yp-distro/issues/85) | chore(release): 四版全兼容回归与报告归档 | `ci`, `P3`, `wave-1` |
-| [#86](https://github.com/zeek-zhao/yp-distro/issues/86) | docs(release): 文档收口与发布 | `docs`, `P3`, `wave-1` |
-| [#87](https://github.com/zeek-zhao/yp-distro/issues/87) | chore(sdk): SDK / eSDK 恢复评估（源自 #25） | `docs`, `P3`, `wave-1` |
 | [#109](https://github.com/zeek-zhao/yp-distro/issues/109) | fix(dunfell): full 镜像 do_rootfs 目录属性冲突（7/8 组合的唯一阻塞项） | `bug`, `P1` |
 
 ## v0.5.0 · 6.0 启动优化
@@ -49,4 +47,4 @@
 
 ---
 
-<!-- plan-sync fingerprint: 5d42c12f83ddd16a -->
+<!-- plan-sync fingerprint: 7a99f97aba95d8e7 -->
