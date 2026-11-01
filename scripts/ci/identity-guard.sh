@@ -53,7 +53,24 @@ if hits="$(git log --all --format='%H %s%n%b' | grep -nE "${SENSITIVE_RE}" 2>/de
     rc=1
 fi
 
+# ------------------------------------------------------ 3. AI 署名残留 --
+# 2026-11-01 第二次历史重写删掉了全部 16 条 co-author trailer。这里保证它
+# 不再回来。
+#
+# 只匹配**署名句式**，不做裸关键词匹配：仓库里 scripts/copilot-wrap.sh、
+# .github/copilot-instructions.md 等实体仍在正常工作，提交消息里提到它们是
+# 正常工程记录。若按裸关键词扫，门禁会把自己的工具链判成违规。
+readonly AI_TOOL_RE='copilot|claude|anthropic|openai|chatgpt|gemini|cursor|codeium|tabnine|devin|aider|codex'
+readonly AI_TRAILER_RE="^[[:space:]]*co-authored-by:.*(${AI_TOOL_RE})"
+readonly AI_DECL_RE="(generated|written)[[:space:]]+(with|by)[[:space:]]+(${AI_TOOL_RE})|assisted[-[:space:]]by[[:space:]]*(${AI_TOOL_RE})|🤖"
+
+if hits="$(git log --all --format='%H %s%n%b' | grep -inE "${AI_TRAILER_RE}|${AI_DECL_RE}" 2>/dev/null)" &&
+    [[ -n "${hits}" ]]; then
+    printf '[identity] 提交消息含 AI 署名或生成声明：\n%s\n' "${hits}" >&2
+    rc=1
+fi
+
 if [[ "${rc}" -eq 0 ]]; then
-    printf '[identity] 通过：身份统一、无内部信息残留\n'
+    printf '[identity] 通过：身份统一、无内部信息残留、无 AI 署名\n'
 fi
 exit "${rc}"

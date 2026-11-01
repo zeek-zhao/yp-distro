@@ -210,7 +210,11 @@ mkdir -p \
     "${ROOT_DIR}/work/home/${release}"
 
 if ((pull_image)); then
-    docker pull "${resolved_image}"
+    # 拉取进度必须走 stderr：本脚本是 `-- <cmd>` 透传包装器，stdout 只应包含
+    # 被包装命令的输出。此前进度写 stdout，调用方按行读取输出时首行会变成
+    # "Pulling from ..."，03_container 的身份用例因此在没有 :local 镜像的
+    # 环境（CI、刚拉过 :latest 的机器）里必然失败。
+    docker pull "${resolved_image}" >&2
 fi
 
 passwd_base="$(mktemp "${passwd_file}.XXXXXX")"

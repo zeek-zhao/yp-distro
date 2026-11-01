@@ -1,5 +1,9 @@
 name: pull-check
 on:
+  # 公开仓库的 runner 免费且不限量，镜像回归不再需要等一周：main 一有推送
+  # 就把四个发行版镜像匿名拉下来验一遍，坏了当场发现。
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:

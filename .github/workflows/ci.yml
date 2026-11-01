@@ -23,15 +23,35 @@ jobs:
           bash scripts/ci/lint.sh
   bats:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Install tools and report
+      - name: Install tools
         run: |
           set -euo pipefail
           bash scripts/ci/install-tools.sh --prefix "$RUNNER_TEMP/tools"
-          export PATH="$RUNNER_TEMP/tools/bin:$PATH"
-          bash scripts/report.sh all
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      # 仓库转公开后 runner 资源不再受限，而 4 个发行版镜像本来就公开可取。
+      # 先拉下来，让 03_container 的容器用例真跑——此前它们在 CI 上恒 skip。
+      - name: Pull release images
+        run: |
+          set -euo pipefail
+          for release in dunfell kirkstone scarthgap wrynose; do
+            docker pull "ghcr.io/zeek-zhao/yp-distro/${release}:latest"
+          done
+      - name: Run BATS and render report
+        run: bash scripts/report.sh all
+      - name: Skip gate
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(reports/bats-*.xml)
+          if ((${#files[@]} == 0)); then
+            echo "::error::没有找到 BATS 的 JUnit 报告"
+            exit 1
+          fi
+          xml="$(printf '%s\n' "${files[@]}" | sort | tail -n 1)"
+          bash scripts/ci/skip-gate.sh "${xml}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -40,6 +60,30 @@ jobs:
             docs/qa/
           name: bats-report
           retention-days: 14
+
+  # 上面那个 job 只跑一遍 BATS（report.sh all 的语义），真正吃 release 配置的
+  # 用例（features.txt 的 release 维度、99_coverage 的降级清单比对）此前从未
+  # 按四个发行版分别验证过。这里补矩阵，成本只是在同一批用例上多跑三次。
+  bats-release-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [dunfell, kirkstone, scarthgap, wrynose]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          set -euo pipefail
+          bash scripts/ci/install-tools.sh --prefix "$RUNNER_TEMP/tools"
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      - name: Run BATS with release context
+        env:
+          BATS_TEST_RELEASE: ${{ matrix.release }}
+          RELEASE: ${{ matrix.release }}
+        run: bats -r tests/bats
+
   secret-scan:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -62,8 +106,21 @@ jobs:
       - name: 校验提交身份与内部信息
         run: bash scripts/ci/identity-guard.sh
 
-  # 私有仓库 + GitHub Free 计划下 rulesets 不可用（403），用它兜住「不许直推 main」：
-  # 若 main 上的提交没有关联 PR，直接失败。见 docs/branching.md §4。
+  # 问题清单的真源是 GitHub Issues；docs/issues.md 是生成物。这里校验它没漂移，
+  # 避免「文档说要做什么」和「issue 里实际是什么」各说各话。
+  plan-sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验 docs/issues.md 与线上一致
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/plan-sync.sh --check
+
+  # 仓库转公开后 rulesets 已解锁，main 的保护改由平台级 ruleset 强制
+  # （禁止直推 / 强制 PR / 强制状态检查 / 禁止 force push），见 docs/branching.md §4。
+  # 这个 job 保留作备份：ruleset 被误删或临时放开时，它仍会判红。
   branch-guard:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
