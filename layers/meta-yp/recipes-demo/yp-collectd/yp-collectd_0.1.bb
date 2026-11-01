@@ -4,7 +4,7 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 # 6.0 将 file:// 源解到 UNPACKDIR，因此源码目录不能沿用 WORKDIR。
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 SRC_URI = "file://collectd.c file://Makefile file://yp-collectd.service file://yp-collectd.default"
 
 inherit yp-service

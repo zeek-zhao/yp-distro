@@ -11,6 +11,13 @@
 # 那三个路径原本属于 base-files，另起包安装会在 do_rootfs 撞 file conflict。
 IMAGE_INSTALL:append = " yp-branding"
 
+# 3.1 不认冒号 override；`_append` 下划线版在 4.0+ 是致命解析错误，不能双写。
+# 漏了这一句的后果是 yp-branding 静默不进镜像 —— 构建成功、/etc/yp-release 不存在。
+python __anonymous() {
+    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("IMAGE_INSTALL_append", " yp-branding")
+}
+
 # 预留 rootfs 余量：默认值在 full 层会触发 ext4 自动扩容，扩容后的体积随构建
 # 环境漂移，体积对比就失去意义。
 IMAGE_ROOTFS_EXTRA_SPACE ?= "16384"

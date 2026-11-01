@@ -7,11 +7,11 @@ setup() {
 }
 
 # bats test_tags=demo
-@test "yp-statusd 配方使用服务模板和 6.0 解包目录" {
+@test "yp-statusd 配方使用服务模板并从 YP_SRC_DIR 取源码" {
     [ -f "${RECIPE}" ]
     run grep -Fq 'inherit yp-service' "${RECIPE}"
     [ "${status}" -eq 0 ]
-    run grep -Fq 'S = "${UNPACKDIR}"' "${RECIPE}"
+    run grep -Fq 'S = "${YP_SRC_DIR}"' "${RECIPE}"
     [ "${status}" -eq 0 ]
 }
 

@@ -14,3 +14,8 @@ repos:
 local_conf_header:
   release-name: |
     YP_RELEASE_NAME = "kirkstone"
+  uboot-bbappend: |
+    # u-boot_2026.01.bbappend 只服务 6.0：4.0 的 u-boot 是 2022.01，这个 bbappend
+    # 匹配不到任何 recipe 时 bitbake 报 "No recipes in default available" 并
+    # **终止构建**（不是 warning），custom variant 连解析都过不去。
+    BBMASK += "u-boot_2026[.]01[.]bbappend"

@@ -9,11 +9,11 @@ setup() {
 }
 
 # bats test_tags=demo
-@test "collectd 配方使用 yp-service 并从 UNPACKDIR 构建" {
+@test "collectd 配方使用 yp-service 并从 YP_SRC_DIR 构建" {
     [ -f "${RECIPE}" ]
     run grep -q '^inherit yp-service$' "${RECIPE}"
     [ "${status}" -eq 0 ]
-    run grep -Fq 'S = "${UNPACKDIR}"' "${RECIPE}"
+    run grep -Fq 'S = "${YP_SRC_DIR}"' "${RECIPE}"
     [ "${status}" -eq 0 ]
 }
 

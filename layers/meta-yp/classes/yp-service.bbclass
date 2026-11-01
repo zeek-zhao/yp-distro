@@ -24,8 +24,25 @@ SYSTEMD_AUTO_ENABLE_${PN} = "enable"
 # 3.1~5.0 直接解到 WORKDIR。??= 让 recipe 侧可以覆盖。
 YP_SRC_DIR ?= "${@d.getVar('UNPACKDIR') or d.getVar('WORKDIR')}"
 
-do_install:append() {
+yp_service_install_unit() {
 	install -d ${D}${systemd_system_unitdir}
 	install -m 0644 ${YP_SRC_DIR}/${YP_SERVICE_UNIT} \
 	    ${D}${systemd_system_unitdir}/${YP_SERVICE_UNIT}
 }
+
+do_install:append() {
+	yp_service_install_unit
+}
+
+# 任务级的冒号语法 3.1 也认（实测 3.1.33：只留这一份 `do_install:append()`，
+# dunfell 上生成的 do_install 里确实带上了 yp_service_install_unit）。不认冒号
+# 的是**变量**赋值（`IMAGE_INSTALL:append` 那一类，见 images/yp-image.inc 里的
+# python 补丁）——两者别混为一谈。
+#
+# 所以这里只留冒号一份，绝不并列写 `do_install_append() {}`：4.0+ 会把那个变量名
+# 判成 "old override syntax" 直接 fatal，而报错会挂到所有求值到同名变量的 recipe
+# 上（实测连上游 base-files / systemd 一起红）。
+#
+# 也别改成「独立任务 + addtask」：自定义任务不在 PSEUDO_TASKS 里，不经 pseudo，
+# 装出来的 unit 属主是真实宿主 uid，do_package_qa 立刻判 host-user-contaminated。
+# 必须挂在 do_install 上，才能借到 pseudo 的 fake root。

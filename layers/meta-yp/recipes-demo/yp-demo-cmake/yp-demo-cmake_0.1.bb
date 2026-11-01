@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 # For the CMake class, configure with EXTRA_OECMAKE and OECMAKE_C_FLAGS, not CFLAGS.
 inherit cmake yp-service
 
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 SRC_URI = "file://demo.c file://CMakeLists.txt file://yp-demo-cmake.service"
 
 EXTRA_OECMAKE = "-DYP_DEMO_VARIANT=cmake"

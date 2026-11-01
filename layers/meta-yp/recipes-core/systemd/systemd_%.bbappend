@@ -5,7 +5,7 @@
 # 主配置取 volatile：镜像容量小，日志落盘会在「跑几天之后」把分区写满，
 # 这种症状排查成本高、收益为零。full 层另有 90-persist.conf 的 drop-in
 # 覆盖成 persistent + 封顶（见 yp-journald-persist）。
-do_install:append() {
+yp_systemd_journald_conf() {
 	conf="${D}${sysconfdir}/systemd/journald.conf"
 	if [ -f "${conf}" ]; then
 		sed -i \
@@ -15,3 +15,9 @@ do_install:append() {
 		    "${conf}"
 	fi
 }
+
+do_install:append() {
+	yp_systemd_journald_conf
+}
+
+# 任务级冒号语法 3.1 也认，不需要再补下划线版（见 yp-service.bbclass 同段注释）。

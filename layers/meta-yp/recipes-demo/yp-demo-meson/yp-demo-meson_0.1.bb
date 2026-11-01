@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 # Meson's key Yocto variables are EXTRA_OEMESON and MESON_BUILDTYPE.
 SRC_URI = "file://meson.build file://meson_options.txt file://demo.c file://yp-demo-meson.service"
 
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 
 inherit meson pkgconfig yp-service
 

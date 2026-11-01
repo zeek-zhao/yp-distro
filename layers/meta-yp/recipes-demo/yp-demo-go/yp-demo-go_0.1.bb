@@ -11,11 +11,18 @@ SRC_URI = "file://go.mod;subdir=src/${GO_IMPORT} \
            file://main.go;subdir=src/${GO_IMPORT} \
            file://vendor;subdir=src/${GO_IMPORT} \
            file://yp-demo-go.service"
-S = "${UNPACKDIR}"
+S = "${YP_SRC_DIR}"
 
 export GOSUMDB = "off"
 export GOPROXY = "off"
 GOBUILDFLAGS:append = " -mod=vendor -trimpath"
+
+# 3.1 不认冒号 override；`_append` 下划线版在 4.0+ 是致命解析错误，不能双写。
+# 漏了这句在 3.1 上就是 go 缺 -mod=vendor：GOPROXY=off 已断网，构建直接失败。
+python __anonymous() {
+    if "dunfell" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("GOBUILDFLAGS_append", " -mod=vendor -trimpath")
+}
 GO_INSTALL = "${GO_IMPORT}"
 
 do_install() {

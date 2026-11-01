@@ -78,8 +78,8 @@ docs/              分支模型、CI、路线图、合规口径、qa 报告
 
 ## 开发方式
 
-- **分支**：`main`（稳定，发布线）← PR ← `dev`（集成）← PR ← `feat/<slug>`；
-  见 [`docs/branching.md`](docs/branching.md)
+- **分支**：`main` 是唯一长期分支（可发布、可复现），改动一律走
+  `feat/<ID>-<slug>` 短分支 + PR，合并即删；见 [`docs/branching.md`](docs/branching.md)
 - **一次改动**：一个 issue → 一张任务卡 `tasks/<ID>.md` → 一个任务分支 → 一个 PR
 - **提交**：Conventional Commits，见 [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
