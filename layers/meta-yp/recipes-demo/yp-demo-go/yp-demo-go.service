@@ -1,0 +1,13 @@
+[Unit]
+Description=YP Go demo service
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/yp-demo-go --json --daemon
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
