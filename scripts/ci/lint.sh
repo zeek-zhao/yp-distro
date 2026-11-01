@@ -35,7 +35,9 @@ for tool in "${tools[@]}"; do
 done
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "${tmp}"' EXIT
-git ls-files -z -- 'scripts/*.sh' 'project.sh' 'tests/bats/*.bash' >"${tmp}/files"
+# 用 '*.sh' 而不是逐目录列举：git 的 pathspec 通配是递归的，漏了哪个目录
+# 都不会再出现「docker/common/ 下两个脚本从来没被 lint 过」这类缺口。
+git ls-files -z -- '*.sh' 'tests/bats/*.bash' >"${tmp}/files"
 count=0
 while IFS= read -r -d '' _file; do
     ((count += 1))
