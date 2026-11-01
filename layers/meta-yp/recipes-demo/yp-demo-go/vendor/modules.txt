@@ -1,0 +1,3 @@
+# example.com/yp/greeting v0.1.0
+## explicit; go 1.22
+example.com/yp/greeting
