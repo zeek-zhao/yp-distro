@@ -1,0 +1,13 @@
+[Unit]
+Description=YP autotools demo
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/yp-demo-autotools
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
