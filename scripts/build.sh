@@ -183,6 +183,11 @@ else
 fi
 end_seconds="$(date +%s)"
 printf '%s\n' "$((end_seconds - start_seconds))" >"${build_meta}"
+# 指纹戳（#114）：构建成功才盖，deploy-guard.sh 用它识别「产物是旧代码构建的」。
+# 盖在 kas_work_dir 根（与 buildhistory 同级），失败/中断不盖——宁可报 stale 不可放行。
+if ((build_status == 0)); then
+    printf '%s\n' "$(source_fingerprint)" >"${kas_work_dir}/.yp-fingerprint"
+fi
 printf 'Build end: %s (exit %s)\n' "$(date --iso-8601=seconds)" "${build_status}" |
     tee -a "${build_log}"
 if ((build_status != 0)); then

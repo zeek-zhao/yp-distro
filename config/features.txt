@@ -22,3 +22,4 @@ boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok
 syntax-matrix | all | tests/bats/15_syntax.bats | syntax | ok
 demo-statusd | wrynose | tests/bats/16_statusd.bats | demo | ok
 demo-collectd | wrynose | tests/bats/17_collectd.bats | demo | ok
+deploy-guard | all | tests/bats/18_deployguard.bats | deploy-guard | ok
