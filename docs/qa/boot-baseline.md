@@ -114,3 +114,47 @@ wrynose-custom **minimal** 层，每配置起机 3 次取中位数，KVM，`--ti
 
 各配置的原始 boot-time.json 在测量机上 `/tmp/bt-measure-{g0,g1,g2,g3,lz4,zstd}.json`
 （测量过程产物，不入库；本表数字均可由表内命令复现）。
+
+## 7. systemd 启动剖析与精简（#73，2026-11-03）
+
+wrynose-custom **full** 层真起机（`boot-exec.sh`），systemd 257。注意口径：
+`systemd-analyze` 的数字是 guest 内部时钟（不含 runqemu 起容器/内核加载的 ~4s 墙钟开销），
+与第 6 节的墙钟不可直接相加。
+
+**改造前**（内核为 #72 定稿态）：
+
+```
+Startup finished in 1.621s (kernel) + 9.059s (userspace) = 10.700s
+multi-user.target reached after 8.869s in userspace.
+```
+
+blame 头部（时长并行会重叠，只用于排序，不可相加）：
+`dev-vda.device 6.578s`、`systemd-udev-trigger 2.826s`、`dbus 1.518s`、
+`systemd-logind 1.030s`、`systemd-udevd 796ms`、三个 yp-demo 服务各 ~750ms。
+
+**关键链**（决定 login 时刻的链）：
+
+```
+multi-user.target @8.770s ← getty.target @8.768s
+  ← serial-getty@ttyS1.service ← dev-ttyS1.device @8.406s
+```
+
+**处置**（只有出现在关键链上的才值得动）：
+
+| unit | 处置 | 理由 |
+|---|---|---|
+| `serial-getty@ttyS1` | **mask**（bbappend 见 `yp-common.inc` 的 YP_MASKED_UNITS） | runqemu 串口布局是 `-serial mon:stdio -serial null`，ttyS1 永远不会有输入，等它的 device unit 纯浪费 |
+| `systemd-udev-settle` | 不动 | 实测 **static**（未启用），issue 里点的头号候选在本镜像根本不在跑 |
+| `systemd-random-seed` / `machine-id-commit` | 不动 | 同上，static，不在关键链 |
+| `systemd-network-generator` | 不动 | enabled 且 515ms，但**不在关键链**——砍了墙钟不变，只让 blame 好看 |
+| `systemd-udev-trigger` | 不动 | coldplug 本体，mask 会导致 `/dev` 不全 |
+
+**改造后**：userspace 9.059s → **8.939s**；关键链改走
+`serial-getty@ttyS0 ← dev-ttyS0.device @8.442s`，少等一个设备单元。
+minimal 层墙钟变化（15941 → 16281ms）在噪声内。
+
+**结构性结论**：userspace 的大头不是服务，是 **udev 冷插队列的排空时刻**——
+`dev-ttyS0.device`/`dev-vda.device` 都要等到 ~6-8s 才 active（settle 语义下，
+login 要等最慢的那个设备事件处理完）。继续压它的路径是减少设备事件本身（#72 的
+内核裁剪已经做了）和加快 vda 的 blkid 探测，都不属于 unit 裁剪的范畴，
+在本 issue 到此为止。

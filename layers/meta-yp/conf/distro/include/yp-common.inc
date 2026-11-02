@@ -36,3 +36,24 @@ DEFAULT_TIMEZONE = "UTC"
 # 想换：YP_SSH=openssh-sshd，并在镜像里去掉 ssh-server-dropbear。
 YP_SSH ??= "dropbear"
 VIRTUAL-RUNTIME_ssh = "${YP_SSH}"
+
+# ---- systemd 启动精简（#73）----
+# runqemu 的串口布局是 `-serial mon:stdio -serial null`：ttyS0 接打点/登录链路，
+# ttyS1 是 null 设备，永远不会有输入。但 serial-getty@ttyS1.service 默认 enabled，
+# 且它等的是 dev-ttyS1.device —— 实测 dev-ttyS1.device @8.406s 是 multi-user
+# 关键链上最后一个激活项（systemd-analyze critical-chain，见
+# docs/qa/boot-baseline.md 第 7 节）。等一个没人用的串口，纯浪费。
+# mask（/dev/null 链接）而不是删除文件：unit 文件属于 systemd 包，删了会在
+# do_rootfs 后的 systemd 校验里丢属主；mask 是 systemd 官方语义。
+# 6.0 已实测；其余版本的关键链未测，不盲推（#83 起 5.0 对齐时单独验证）。
+python __anonymous () {
+    if "wrynose" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+        d.setVar("YP_MASKED_UNITS", "serial-getty@ttyS1.service")
+}
+
+YP_MASK_UNITS() {
+    for u in ${YP_MASKED_UNITS}; do
+        ln -sf /dev/null ${IMAGE_ROOTFS}${systemd_system_unitdir}/$u
+    done
+}
+ROOTFS_POSTPROCESS_COMMAND:append = " YP_MASK_UNITS;"

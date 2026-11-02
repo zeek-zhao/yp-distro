@@ -6,7 +6,7 @@ include yp-image.inc
 include yp-image-runtime.inc
 
 # 与 base 的差集：业务 + 调试。任何新包想进 full 而不进 base，加在这一行下面。
-IMAGE_INSTALL += "wget python3 strace gdbserver"
+IMAGE_INSTALL += "wget python3 strace gdbserver systemd-analyze"
 
 # 业务参考实现。装真实包名而不是 "virtual/cpp-hello"：
 # IMAGE_INSTALL 的虚拟名在 rootfs 阶段按 RPROVIDES 解析，而 RPROVIDES 不能带
