@@ -6,7 +6,7 @@
 | 任务/函数 override（`do_x:append()`） | `:append()` 可用（与 `_append` 等价） | `:append()` | `:append()` | `:append()` | `f66f35b`：删掉全部 python 补丁后 `bitbake -c install -f yp-demo-python`，dunfell 生成的 `do_install` 里仍带 `yp_service_install_unit` 与 `yp_demo_python_install_script` |
 | 源码解包目录（`file://`） | `${WORKDIR}` | `${WORKDIR}` | `${WORKDIR}` | `${UNPACKDIR}`（`${WORKDIR}/sources`） | `docs/kas.md`「6.0+ 禁止 `S = "${WORKDIR}"`」；`layers/meta-yp/classes/yp-service.bbclass` 注释 |
 | `CONF_VERSION` | `1` | `2` | `2` | `2` | `docs/kas.md`「CONF_VERSION 各版本不同」；上游 `local.conf.sample` 版本差异 |
-| 默认 init（poky 默认） | sysvinit | sysvinit | sysvinit | sysvinit | 待验证：需逐版核对上游 `meta-poky/conf/distro/poky.conf` |
+| 默认 init（poky 默认） | sysvinit | sysvinit | sysvinit | sysvinit | 逐版核对：dunfell/kirkstone 的 poky.conf 不设 INIT_MANAGER（oe-core defaultsetup.conf `??= "none"`，上游包默认 busybox+sysvinit）；scarthgap/wrynose 的 poky.conf 显式 `POKY_INIT_MANAGER = "sysvinit"`。YP 的 `yp.conf` 四版统一覆盖为 systemd（#84，2026-11-03） |
 | 默认 init（YP 实际） | systemd | systemd | systemd | systemd | `layers/meta-yp/conf/distro/yp.conf` 显式设置 `INIT_MANAGER = "systemd"` |
 | Python 构建类 | `setuptools3` | `setuptools3` | `setuptools3` | `python_setuptools_build_meta` | `yp-demo-python` 在 5.0 用 `setuptools3` 真构建通过（#82 配方级验证，2026-11-03）；6.0 列见 `docs/plan/milestones.md` v0.4.0 |
 | CVE 检查类 / 工具 | `cve-check` | `cve-check` | `cve-check` | `sbom-cve-check` | `docs/cve.md` §3；`docs/compliance.md` §2 |
@@ -42,3 +42,14 @@ device-manager and `ROOT_HOME` differences, are recorded in
 **3.1 的 Rust 缺口只有两条出路**：`BBMASK` 屏蔽配方 + 镜像层摘包（**两件都要做**——
 只屏蔽配方会因为镜像仍写死包名变成 `Nothing RPROVIDES`，只摘包则单配方构建仍撞
 ParseError），或者不写 Rust 配方。没有第三条：`cargo.bbclass` 在 3.1 里根本不存在。
+
+## 验证记录
+
+- **2026-11-03（#84，配方级「能编」快检，D12 冻结口径）**：dunfell 6/6
+  （`yp-demo-rust` 按 `kas/releases/dunfell.yml` 的 BBMASK 摘包，cargo 类 3.1
+  不存在，见下）、kirkstone 7/7、scarthgap 7/7（#82）、wrynose 7/7（v0.4.0）。
+  全部 `kas shell -c "bitbake yp-demo-*"` rc=0；kirkstone 的 Rust 与 3.1/4.0 的
+  「能编」由此闭合，降级项只有 dunfell 的 rust 一条（`degraded.txt` 不另立——
+  BBMASK 已是本仓库的显式配置，见 `docs/plan/milestones.md` v0.4.0）。
+- 「能跑」的证据归属：6.0 全部（v0.3.0~v0.6.0 各验收）、5.0（#80/#83）、
+  3.1/4.0 不要求。
