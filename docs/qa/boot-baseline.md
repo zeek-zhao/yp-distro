@@ -82,3 +82,35 @@
 - dunfell（3.1）的 `runqemu` 要 machine 位置参数、wrynose 的 `.zst` 只支持 `snapshot`，
   这些差异在 `inner-qemu.sh` 里处理；**基线只取 wrynose**，跨版本比启动耗时不成立
   （内核版本、systemd 版本、initramfs 策略都不同）。
+
+## 6. 内核裁剪实验（#72，2026-11-03）
+
+wrynose-custom **minimal** 层，每配置起机 3 次取中位数，KVM，`--timeout 60`。
+实现：`layers/meta-yp/recipes-kernel/linux/linux-yocto/yp-minimal.cfg` +
+`linux-yocto_%.bbappend`（按 LAYERSERIES 门控，只在 6.0 生效）。G1~G3 按组串行启用，
+压缩组在 G3 全开状态上三选一各测一遍。
+
+| 配置 | kernel_ms | wall_ms | bzImage 字节 | 相对上一行 |
+|---|---:|---:|---:|---|
+| G0 基线（defconfig，gzip） | 12861 | 17390 | 13784064 | — |
+| G1 调试设施（DEBUG_INFO/FTRACE/KPROBES 关） | 11714 | 15969 | 11936768 | **-8.9%**，体积 -13.4% |
+| G2 +文件系统（btrfs/nfs/cifs 关） | 11987 | 16191 | 10331136 | 启动时间与 G1 差异在噪声内，体积再 -13.5% |
+| G3 +设备（sound/wlan/bt/非virtio网卡关） | 11640 | 15941 | 9679872 | 启动时间与 G1 差异在噪声内，体积再 -6.3% |
+| G3 + LZ4 | 11764 | 15827 | 12088320 | 比 gzip 大 25%，启动无收益 |
+| G3 + ZSTD（**定稿**） | 11669 | 15924 | 8614912 | 启动无差异，体积比 gzip 小 11% |
+
+**结论**：
+
+1. **只有 G1（调试设施）有真实启动收益**（约 -1.1s）。DEBUG_INFO 的 DWARF 段直接影响
+   bzImage 解压量，是「体积 → 启动」传导最直接的一项。
+2. G2/G3 是**体积优化不是启动优化**：btrfs/nfs/声卡这些驱动惰性初始化，不进启动路径。
+   保留它们的代价只是镜像/内存占用，对 QEMU 场景收益有限，裁掉属于顺手。
+3. 压缩算法在 KVM 下**三选一启动时间等价**（解压 10MB 级内核的耗时低于测量噪声）。
+   定稿 ZSTD：体积最小（8614912，比基线小 37.5%），`zstd-native` 已进 DEPENDS。
+4. **坑（写下来防止重踩）**：KERNEL_FEATURES 里的 scc 在 SRC_URI fragment **之后**
+   合并，`debug-kernel.scc` 会把 fragment 关掉的 DEBUG_INFO 重新打开（首版 G1 的
+   .config 里 DEBUG_INFO 回到 =y，靠 bzImage 体积对不上才发现）。每启用一组裁剪必须
+   在 bbappend 里同步摘掉对应 scc。
+
+各配置的原始 boot-time.json 在测量机上 `/tmp/bt-measure-{g0,g1,g2,g3,lz4,zstd}.json`
+（测量过程产物，不入库；本表数字均可由表内命令复现）。
