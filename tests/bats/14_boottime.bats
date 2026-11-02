@@ -51,3 +51,36 @@ setup() {
     [ "${status}" -eq 0 ]
     echo "${output}" | grep -q '"wall_ms": null'
 }
+
+# ---- 管道回放（#110）：不起机，直接对 monitor_stream 喂字节流 ----
+
+setup_marks() {
+    MARKS="$(mktemp)"
+    rm -f "${MARKS}" "${MARKS}".*
+    # shellcheck source=scripts/lib/boot-marks.sh
+    source "${ROOT_DIR}/scripts/lib/boot-marks.sh"
+}
+
+# bats test_tags=boottime
+@test "monitor_stream marks login through a real tee pipe (prompt has no trailing newline)" {
+    setup_marks
+    printf '[    0.000000] kernel line\r\nU-Boot 2026.01\r\nyp-qemux86-64 login: ' \
+        | tee >(monitor_stream) >/dev/null
+    # bash 不等进程替换收尾就往下走；逐字符消费几十字节是毫秒级，给足调度时间
+    for _ in $(seq 1 50); do [[ -f "${MARKS}.login" ]] && break; sleep 0.1; done
+    [[ -n "$(mark login)" ]]
+    [[ -n "$(mark kernel)" ]]
+    [[ -n "$(mark uboot)" ]]
+    rm -f "${MARKS}" "${MARKS}".*
+}
+
+# bats test_tags=boottime
+@test "mark() returns empty instead of aborting under set -e when marks file is missing" {
+    run bash -c 'set -euo pipefail
+        MARKS=/nonexistent/boot-marks
+        source "'"${ROOT_DIR}"'/scripts/lib/boot-marks.sh"
+        v="$(mark login)"
+        echo "v=${v}"'
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == "v=" ]]
+}
