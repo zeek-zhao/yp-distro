@@ -11,9 +11,10 @@ setup() {
     local yml_count target_count release variant
     yml_count="$(find "${KAS_DIR}" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
     target_count="$(find "${KAS_DIR}/targets" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
-    # 20 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
-    #      + 3 feature（kas/features/cve.yml、spdx.yml、uboot.yml —— --cve/--spdx/--uboot 时追加）
-    [ "${yml_count}" -eq 20 ]
+    # 22 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
+    #      + 5 feature（cve.yml、spdx.yml、uboot.yml 为 --cve/--spdx/--uboot 追加；
+    #        rootfs-squashfs.yml、rootfs-cpio.yml 为 #74 的 rootfs 格式实验开关）
+    [ "${yml_count}" -eq 22 ]
     [ "${target_count}" -eq 8 ]
     for release in dunfell kirkstone scarthgap wrynose; do
         for variant in general custom; do
@@ -52,7 +53,7 @@ import yaml
 root = Path(sys.argv[1])
 files = [p for p in sorted((root / "kas").rglob("*.yml"))
          if not p.name.endswith(".lock.yml")]
-assert len(files) == 20, len(files)
+assert len(files) == 22, len(files)
 for path in files:
     assert yaml.safe_load(path.read_text())["header"]["version"] == 14, path
 ' "${ROOT_DIR}"
