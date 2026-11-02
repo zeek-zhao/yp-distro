@@ -182,3 +182,29 @@ wrynose-custom **minimal** 层，同一份内核（#72 定稿 + SQUASHFS/OVERLAY
    一切 append，这个顺序依赖要在注释里写明。
 4. 多种格式并存时 runqemu 按 `qb_default_fstype` 解析，**实验时 deploy 里只留
    一种格式**，否则测的和想测的不是同一个文件（首版 squashfs 数据就是 ext4 冒充的）。
+
+## 9. 5.0（scarthgap）启动基线与 U-Boot 链结论（#81，2026-11-03）
+
+scarthgap-custom **minimal** 层，3 次中位数，KVM。与 6.0 同为 `-kernel` 直启口径。
+
+| 版本 | 内核 | wall_ms | kernel_ms | bootloader | QEMU CPU 口径 |
+|---|---|---:|---:|---|---|
+| scarthgap 5.0 | 6.6.147（无裁剪，上游 defconfig） | **10964** | **7588** | n/a（见下） | IvyBridge（5.0 runqemu 默认） |
+| wrynose 6.0 | 6.18.52（#72 定稿：G1+G2+G3+ZSTD） | 15553 | 11326 | n/a | Skylake-Client（6.0 runqemu 默认） |
+
+- **5.0 比 6.0 快 ~4.6s（wall）**。两版内核口径不同——5.0 用未裁剪的 6.6
+  defconfig，6.0 用裁剪过的 6.18，**6.0 仍然更慢**：差异来自内核版本本身的
+  体积/初始化差异与 runqemu 默认 CPU 口径（IvyBridge vs Skylake-Client，都
+  是 KVM 加速的 QEMU 模型名，不是性能调优项）。**跨版本比较启动时间只作
+  记录用，不作为优化依据**（第 5 节「基线只取 wrynose」由此而来；本节的
+  存在是为了回答 #81，不构成跨版承诺）。
+- **5.0 的 U-Boot 链：n/a**（降级路径，#81 预设允许）。U-Boot 2024.01 能起
+  （SPL → proper，串口有输出、autoboot 正常），但 **`BOOTMETH_QFW` 在
+  2024.01 不存在**（2024.07+ 才引入；6.0 的 u-boot 2026.01 有，defconfig
+  自带 CONFIG_CMD_QFW + BOOTSTD_FULL）——QFW bootmeth 链在 5.0 结构上
+  不可用，U-Boot 扫完 bootdev 后掉进 `=>` shell。已登记
+  `config/degraded.txt`（`uboot-qfw-chain | scarthgap`），5.0 基线按
+  -kernel 直启口径测，bootloader 段不测。不 hand-roll `qfw load + zboot`
+  的 bootcmd：那会让 5.0/6.0 的 bootloader 链语义分叉，测出来的
+  「bootloader 段」没有可比性。
+- 测量产物：`work/artifacts/scarthgap/custom/boot-time-minimal.json`。
