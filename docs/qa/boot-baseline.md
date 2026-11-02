@@ -7,29 +7,15 @@
 > 原始产物：`work/artifacts/wrynose/custom/boot-time-<层>.json`（脚本默认写
 > `boot-time.json`，按层测量的结果要另存，否则后一层覆盖前一层）
 
-## 0. 当前状态：数字还空着（阻塞于 #110）
+## 0. 实测环境（2026-11-03）
 
-**本文件的方法论与口径是定稿的，结果表是空的。** 不是没测，是测量链本身有问题：
-
-- `scripts/boot-time.sh` 的真实起机模式每次等满 `--timeout`，然后报「run N 未拿到
-  login，跳过」，最终没有可用样本；
-- 但对应的串口日志末尾明确有 `yp-qemux86-64 login:`（证据：
-  `work/logs/serial-boottime-wrynose-custom-r1.log`）；
-- 说明**起机是好的，打点没抓到**。落点已定位到 `scripts/lib/inner-boot-time.sh`：
-
-  ```bash
-  timeout ... runqemu "${RUNQEMU_ARGS[@]}" nographic slirp snapshot <"${FIFO}" 2>&1 |
-      tee >(monitor_stream) >"${LOG}"
-  ```
-
-  `monitor_stream` 用 `while IFS= read -r -n 1 ch` 匹配 `login:` 并写 `${MARKS}.login`，
-  但那个文件从未生成——进程替换那一路没收到数据。
-
-**为什么不先填 0 或「约 N 秒」**：基线一旦失真，后面 v0.5.0 的四项实验全部失去对照面，
-而且没人会回头怀疑基线。宁可空着并写明阻塞项，也不要一个看起来完整的假表。
-
-修好后按第 1 节口径重跑，把第 2 节填满，并把本段换成实测环境说明。
-#110 的修复建议与回归方式（用 `--from-log` 回放一份含 `login:` 的串口日志）写在 issue 里。
+- 测量链阻塞（#110）已修（PR #113）：根因不是打点管道，而是收尾段 `set -e` 下
+  `kill writer_pid` 打在已退走的 writer 上把整条链静默打断；marks 一直都有。
+- 主机：构建机共享节点，KVM 加速（容器 `/dev/kvm`），QEMU `-smp 4 -m 1024`。
+- 本表为 **v0.5.0 优化定稿后**（内核裁剪 #72 + ttyS1 mask #73 + ext4 rootfs）的
+  基线，5 次取中位数；各优化项的实验过程见第 6/7/8 节与 `docs/boot-optimization.md`。
+- `userspace` 段只有 full 层有数（`systemd-analyze` 需要登进 guest；minimal/base
+  的串口 root 无空密码，见 `config/degraded.txt`）。
 
 ## 1. 口径（先看这段，否则数字会被误读）
 
@@ -44,15 +30,21 @@
 还是用户态在等某个 unit。v0.5.0 的内核裁剪 / systemd 精简 / rootfs 格式三个实验
 都靠这三段做对照。
 
-## 2. 结果
+## 2. 结果（2026-11-03，5 次中位数，KVM）
 
-（测量完成后填；当前阻塞见第 0 节）
-
-| 层 | 镜像 | bootloader | kernel | userspace | 墙钟中位数 | 3 次原始值 |
+| 层 | 镜像 | bootloader | kernel¹ | userspace² | 墙钟中位数 | 5 次原始值 |
 |---|---|---|---|---|---|---|
-| minimal | `yp-image-minimal` | | | | | |
-| base | `yp-image-base` | | | | | |
-| full | `yp-image` | | | | | |
+| minimal | `yp-image-minimal` | n/a³ | 11326 | n/a² | 15553 | 见 `work/artifacts/wrynose/custom/boot-time-minimal.json` |
+| base | `yp-image-base` | n/a³ | 11357 | n/a² | 15592 | 见 `work/artifacts/wrynose/custom/boot-time-base.json` |
+| full | `yp-image` | n/a³ | 12665 | ~9.0s² | 16995 | 见 `work/artifacts/wrynose/custom/boot-time-full.json` |
+
+¹ 这里的 kernel 段是「内核起点 → login 提示」的墙钟差，**包含 userspace 里到
+  getty 为止的部分**——测量链的 marks 没有 init 起点这个时刻。三段精确拆分
+  （firmware/loader/kernel/userspace）以 full 层的 `systemd-analyze` 为准。
+² minimal/base 串口 root 无空密码（`empty-root-password` 只开在 full 层），
+  `systemd-analyze` 采不到；full 的 5 次输出在 json 的 `systemd_analyze` 数组。
+³ runqemu `-kernel` 直启链路没有 bootloader 段；U-Boot 链的测量见 wrynose 的
+  U-Boot 归档（`docs/qa/wrynose/`）。
 
 ## 3. 怎么读这三行
 
