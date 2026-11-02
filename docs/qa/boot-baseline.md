@@ -158,3 +158,35 @@ minimal 层墙钟变化（15941 → 16281ms）在噪声内。
 login 要等最慢的那个设备事件处理完）。继续压它的路径是减少设备事件本身（#72 的
 内核裁剪已经做了）和加快 vda 的 blkid 探测，都不属于 unit 裁剪的范畴，
 在本 issue 到此为止。
+
+## 8. rootfs 格式对比（#74，2026-11-03）
+
+wrynose-custom **minimal** 层，同一份内核（#72 定稿 + SQUASHFS/OVERLAY_FS=y，
+见下）+ 同一套 systemd 配置，只换 rootfs 格式。每格式起机 3 次取中位数，KVM。
+实验开关：`kas/features/rootfs-{squashfs,cpio}.yml`（构建时叠加，不进默认 target）。
+
+| 格式 | kernel_ms | wall_ms | 产物体积 | 可写 | 内存 | 需要的额外配置 |
+|---|---:|---:|---:|---|---|---|
+| ext4（默认，virtio 磁盘） | 11353 | 15554 | 34.5MB（.zst，解压后 ~140MB） | ✅ | 低 | 无 |
+| squashfs（virtio 磁盘，只读） | 11375 | 15488 | 35.5MB | ❌（只读） | 低 | `QB_KERNEL_ROOT` 带 `ro rootfstype=squashfs rootwait` + `QB_DEFAULT_FSTYPE` |
+| cpio.gz（initramfs 全量入内存） | 11742 | 15884 | 35.5MB | ❌（tmpfs） | **高**（rootfs 全量驻留 RAM） | 无（runqemu 自动走 -initrd） |
+
+**结论**：三种格式启动时间**等价**（差异 < 400ms，在测量噪声内）。ext4 的读取
+在 QEMU virtio + 主机页缓存下本来就近乎免费，squashfs 省不了读取，cpio.gz 的
+解包反而多花 ~300ms。**推荐维持 ext4**：唯一可写、无额外配置、体积与压缩格式
+持平。换格式的真实收益场景是「无盘/只读固件」而非「更快开机」。
+
+**踩坑记录**（复现实验前必读）：
+
+1. **defconfig 里 SQUASHFS/OVERLAY_FS 根本没开**（连 `=m` 都不是）——上一版
+   fragment 的「保留清单」是空头支票。首测 `error -19` panic 就是它：设备 253:0
+   存在但文件系统未注册。已在 fragment 显式 `CONFIG_SQUASHFS=y` / `CONFIG_OVERLAY_FS=y`。
+2. **runqemu 默认给 root= 追加 `rw`**，squashfs 必须 `QB_KERNEL_ROOT` 显式带
+   `ro`（runqemu 只看 QB_KERNEL_ROOT 里有没有 ro/rw token）+ `rootwait`（virtio
+   磁盘注册晚于挂载尝试会直接 panic）。
+3. `QB_DEFAULT_FSTYPE ?= "ext4.zst"` 是 qemuboot.bbclass 的默认值，且 **kas 的
+   local.conf 在 distro conf 之前解析**——distro 追加的 ext4.zst 会盖回来，
+   feature 里要 `IMAGE_FSTYPES:remove` 收口，且 `:remove` 在 finalize 阶段晚于
+   一切 append，这个顺序依赖要在注释里写明。
+4. 多种格式并存时 runqemu 按 `qb_default_fstype` 解析，**实验时 deploy 里只留
+   一种格式**，否则测的和想测的不是同一个文件（首版 squashfs 数据就是 ext4 冒充的）。

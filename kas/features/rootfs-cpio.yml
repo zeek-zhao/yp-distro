@@ -1,0 +1,13 @@
+# rootfs 格式对比实验用的 kas overlay（#74）：
+#   KAS_WORK_DIR=work/kas-wrynose-custom kas build \
+#     kas/targets/wrynose-custom.yml:kas/machines/qemux86-64.yml:kas/features/rootfs-cpio.yml
+# cpio.gz 走 initramfs 全量载入内存，-m 1024 对 minimal 够用；只读，
+# 可写性结论见 boot-baseline.md 第 8 节。:remove 的必要性同 rootfs-squashfs.yml。
+header:
+  version: 14
+
+local_conf_header:
+  yp-rootfs-cpio: |
+    QB_DEFAULT_FSTYPE = "cpio.gz"
+    IMAGE_FSTYPES:remove = "ext4.zst tar.zst"
+    IMAGE_FSTYPES = "cpio.gz"
