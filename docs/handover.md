@@ -3,14 +3,14 @@
 > 面向「下一个接手的人」——包括三个月后的你自己。只写**现在的事实**和**还没做完的事**，
 > 过程记录留在 issue 与 `docs/qa/` 归档里。
 >
-> 最后更新：2026-11-01
+> 最后更新：2026-11-03
 
 ## 一、这个仓库现在是什么状态
 
 | 维度 | 现状 |
 |---|---|
 | 仓库 | `zeek-zhao/yp-distro`，公开，MIT，默认分支 `main`（**只有 `main` 一条长期分支**） |
-| 版本 | `v0.4.0` 已发布（6.0 语法组：六构建系统 + 服务模板）；当前在做 `v1.0.0` 四版收口，回归 7/8 |
+| 版本 | `v0.4.0` 已发布（6.0 语法组：六构建系统 + 服务模板）；四版回归 8/8 已恢复（2026-11-03），当前在做 `v0.5.0` 启动优化（#72–#75 串行实验） |
 | 构建 | 4 发行版（dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 / wrynose 6.0）× 2 variant（general/custom）。CI 只做静态；**真构建要在构建机上跑** |
 | 镜像 | `ghcr.io/zeek-zhao/yp-distro/{dunfell,kirkstone,scarthgap,wrynose}` 四个都公开，带 OCI 许可标签 |
 | 许可 | 仓库源码 MIT；**构建镜像与 Yocto 产物不是 MIT**，见 `THIRD_PARTY_NOTICES.md` |
@@ -20,8 +20,12 @@
 这些是花过真机成本换来的结论，重跑一遍只是烧时间：
 
 - **L3 真构建通**：9 个配方 `2184 tasks all succeeded`；full 镜像 `4367 tasks all succeeded`
-- **八组合回归 7/8 通过**（`f66f35b`）：wrynose / scarthgap / kirkstone 各 2 variant +
-  dunfell general，每份 `194 | 194 | 0 | 0`。归档在 `docs/qa/*/20261101-f66f35b*.md`
+- **八组合回归 8/8 通过**：`f66f35b` 时 7/8（归档在 `docs/qa/*/20261101-f66f35b*.md`），
+  dunfell custom 于 2026-11-03 重建恢复（2944 tasks 全绿 + `boot-exec` 起机取证）。
+  #109 的根因是 11-01 实验期在 deploy 里留下的新旧混合 rpm（`yp-collectd` 与
+  **python3 全系**带 0700 目录，含纯上游的 python3-tkinter），配方本身无罪——
+  `install -d` 在容器里实测 0755。教训：**do_rootfs 报目录属性冲突时先查 rpm
+  元数据再怀疑配方**，`deploy/rpm` 里新旧产物混存时错误线索会指向自家包互撞。
 - **四版 SDK/eSDK 都能出**：SDK 466 MB、eSDK 3003 MB，内含 gcc 13，`devtool` 可用，
   结论与命令见 `docs/sdk.md` §8
 - **起机取证通**：`yp-statusd` / `yp-collectd` 两个服务 `enabled`+`active`，
@@ -49,23 +53,15 @@
 
 按「能不能马上动手」排序，详细出口条件见 `docs/plan/milestones.md`：
 
-1. **#109 dunfell full 镜像 `do_rootfs` 目录属性冲突** —— 7/8 里唯一失败的那一项，
-   也是 `v1.0.0` 的唯一硬阻塞。15 条目录冲突（`/lib`、`/etc/default`、`/var/lib`、
-   `/usr/lib64/python3.8`…）冲突双方全部涉及 `meta-yp` 自己的包，甚至有两个自家包互撞。
-   已排除：umask 干净、`/etc/group` 已修、`tmp` 全清重建仍复现、`do_install` 双执行已消除。
-   下一步取证要拿 rpm 元数据说话，**但 dunfell 镜像里没有 `rpm` / `rpm2cpio`**，只有 `cpio`。
-2. **#110 `boot-time.sh` 真实起机拿不到 `login` 打点** —— `docs/qa/boot-baseline.md`
-   的表格因此填不了。串口日志末尾明明有 `yp-qemux86-64 login:`，
-   问题在 `scripts/lib/inner-boot-time.sh` 的 `tee >(monitor_stream)` 那一路没收到数据。
-   没修好之前**不要写全 0 基线**，那比没有基线更糟。
-3. **#86 文档收口** —— 剩余工作是逐条把文档里的命令实跑一遍（`15/16/17_syntax.bats`
-   已改并全绿），以及发版页校对。
-4. **v0.5.0 启动优化（#72–#75）** —— 依赖 #110。内核裁剪 / systemd 精简 / rootfs 格式
-   这三个是**同一组实验的三个变量**，要串行做才有可比性。
-5. **v0.6.0 只剩 #78** —— 服务数 × 启动耗时曲线，同样依赖 #110。
-6. **v0.7.0 scarthgap 对齐（#80–#84）** —— 五个 issue 挂在同一个前置上：scarthgap 首构建。
+1. **v0.5.0 启动优化（#72–#75）** —— 测量链前置（#110）已修（PR #113）。内核裁剪 /
+   systemd 精简 / rootfs 格式这三个是**同一组实验的三个变量**，必须串行做才有可比性；
+   #75 把结果汇总成 `docs/boot-optimization.md`。
+2. **v0.6.0 只剩 #78** —— 服务数 × 启动耗时曲线（三层镜像 × runs 5）。
+3. **v0.7.0 scarthgap 对齐（#80–#84）** —— 五个 issue 挂在同一个前置上：scarthgap 首构建。
    前置没通之前并行等于五个一起卡住。
-7. **#107 清 `refs/pull/*/head` 里的旧 commit 引用** —— 要 GitHub Support 介入，不占本地工期。
+4. **#85 四版全量回归与报告归档** —— 回归 8/8 已恢复，但 #85 的验收（全量 bats 0 失败
+   0 skip、8 份归档、启动基线落盘）要等上面的优化实验做完后**最后**跑，否则归档马上过时。
+5. **#107 清 `refs/pull/*/head` 里的旧 commit 引用** —— 要 GitHub Support 介入，不占本地工期。
 
 ## 四、纪律（违反会留下永久痕迹）
 
