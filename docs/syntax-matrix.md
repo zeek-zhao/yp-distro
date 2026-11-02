@@ -8,12 +8,12 @@
 | `CONF_VERSION` | `1` | `2` | `2` | `2` | `docs/kas.md`「CONF_VERSION 各版本不同」；上游 `local.conf.sample` 版本差异 |
 | 默认 init（poky 默认） | sysvinit | sysvinit | sysvinit | sysvinit | 待验证：需逐版核对上游 `meta-poky/conf/distro/poky.conf` |
 | 默认 init（YP 实际） | systemd | systemd | systemd | systemd | `layers/meta-yp/conf/distro/yp.conf` 显式设置 `INIT_MANAGER = "systemd"` |
-| Python 构建类 | `setuptools3` | `setuptools3` | `setuptools3` | `python_setuptools_build_meta` | 待验证：需逐版核对上游 `setuptools3` 与 `python_setuptools_build_meta` classes |
+| Python 构建类 | `setuptools3` | `setuptools3` | `setuptools3` | `python_setuptools_build_meta` | `yp-demo-python` 在 5.0 用 `setuptools3` 真构建通过（#82 配方级验证，2026-11-03）；6.0 列见 `docs/plan/milestones.md` v0.4.0 |
 | CVE 检查类 / 工具 | `cve-check` | `cve-check` | `cve-check` | `sbom-cve-check` | `docs/cve.md` §3；`docs/compliance.md` §2 |
 | SPDX 输出格式版本 | SPDX 2.2 | SPDX 2.2 | SPDX 2.2 | SPDX 3.0.1 | `docs/compliance.md` §2；各版本 `docs/qa/<release>/compliance` 记录 |
 | systemd adds `usrmerge` | No | No | Yes | Yes | `docs/distro-features.md`；本表原有记录 |
 | systemd suppresses sysvinit backfill | `_append` | `:append` | `:append` | No backfill line | `docs/distro-features.md`；`layers/meta-yp/conf/distro/yp-common.inc` |
-| `systemd_system_unitdir` | 待验证 | 待验证 | 待验证 | 待验证 | 待验证：本仓库没有逐版解析该变量取值的构建记录 |
+| `systemd_system_unitdir` | `/lib/systemd/system` | `/lib/systemd/system` | `/usr/lib/systemd/system` | `/usr/lib/systemd/system` | 逐版 rpm 元数据（`yp-collectd` 包内路径：dunfell/kirkstone=`/lib`、scarthgap=`/usr/lib`，2026-11-03 #82 取证）；wrynose 由真机 `systemctl show -p FragmentPath` 确认。与第 14 行 usrmerge 一致：3.1/4.0 无 usrmerge |
 | `YP_SRC_DIR` 兜底 | `UNPACKDIR` 不存在，取 `${WORKDIR}` | `UNPACKDIR` 不存在，取 `${WORKDIR}` | `UNPACKDIR` 不存在，取 `${WORKDIR}` | 取 `${UNPACKDIR}`（`${WORKDIR}/sources`） | `layers/meta-yp/classes/yp-service.bbclass`；`docs/kas.md`「6.0+ 禁止 `S = "${WORKDIR}"`」 |
 | `cargo.bbclass` 位置 | 不存在 | `meta/classes/` | `meta/classes-recipe/` | `meta/classes-recipe/` | `f66f35b`：dunfell 上 `inherit cargo` 直接 ParseError；`yp-demo-rust` 用 `BBMASK` + `YP_DEMO_RUST` 摘包 |
 | cargo `--config <file>` | n/a | 不支持（1.59，需 `-Z unstable-options`） | 支持（≥1.63） | 支持（≥1.63） | `f66f35b`：改写到 `${B}/.cargo/config.toml`，`directory` 换成绝对路径 |
