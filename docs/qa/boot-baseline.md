@@ -208,3 +208,24 @@ scarthgap-custom **minimal** 层，3 次中位数，KVM。与 6.0 同为 `-kerne
   的 bootcmd：那会让 5.0/6.0 的 bootloader 链语义分叉，测出来的
   「bootloader 段」没有可比性。
 - 测量产物：`work/artifacts/scarthgap/custom/boot-time-minimal.json`。
+
+## 10. 移植到 5.0/4.0（#72/#73 终态平移，2026-11-03）
+
+6.0 定稿的启动优化（内核裁剪 G1+G2+G3+ZSTD + `serial-getty@ttyS1` mask）经
+LAYERSERIES 门控扩展到 scarthgap/kirkstone，**终态移植**口径：单变量实验不重演
+（6.0 第 6 节已定案），每版只测「移植前基线 + 移植后」两轮 ×3 次中位数，KVM，
+minimal 层。两版 `KERNEL_FEATURES` 的 scc 构成（nfsd-enable/debug-kernel/sound）
+与 6.0 同名，摘除机制原样适用；ZSTD 在 5.15/6.6 内核均支持。
+
+| 版本 | 内核 | kernel_ms（前→后） | wall_ms（前→后） | bzImage | ttyS1 |
+|---|---|---|---|---|---|
+| scarthgap 5.0 | 6.6（6.15…见 commit） | 7588 → **7077**（-6.7%） | 10964 → **10218**（-6.8%） | 7603200 | masked ✓ |
+| kirkstone 4.0 | 5.15 | 6580 → **6178**（-6.1%） | 8194 → **7764**（-5.3%） | 6360192 | masked ✓ |
+| wrynose 6.0（参照） | 6.18 | 12861 → 11669（第 6 节） | 17390 → 15924 | 8614912 | masked ✓ |
+
+- 5.0 基线取自 #81（同口径），4.0 基线为本轮移植前实测。dunfell 3.1 不移植
+  （D12 冻结口径，只求能编）。
+- 三版的 kernel_ms 前后差都在 -6~-9% 一致区间，与 6.0 第 6 节「G1 是唯一启动
+  收益项」的结论同向；mask 的 wall 收益在 4.0/5.0 上低于噪声（本来串口就不是
+  这些版本的关键链尾部），保留理由是架构正确性而非数字。
+- 测量产物：`work/artifacts/{scarthgap,kirkstone}/custom/boot-time-minimal-{pre,post}-port.json`。

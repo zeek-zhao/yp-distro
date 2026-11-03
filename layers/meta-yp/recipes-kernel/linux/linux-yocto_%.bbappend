@@ -1,5 +1,5 @@
-# 内核裁剪 fragment（#72）——只在 6.0/5.0 生效（wrynose 首创、#72-移植扩展到
-# scarthgap），3.1/4.0 按 D12 冻结口径不动（4.0 的移植见后续 commit）。
+# 内核裁剪 fragment（#72）——只在 6.0/5.0/4.0 生效（wrynose 首创，#72-移植
+# 依次扩展到 scarthgap/kirkstone），3.1 按 D12 冻结口径不动（cargo 缺失同源）。
 #
 # FILESEXTRAPATHS 顶层的冒号版在 4.0+ 生效、3.1 静默丢弃：这只是把搜索路径加上，
 # 没引用就不会有副作用；真正把 fragment 挂进 SRC_URI 的动作在下面的 python 门控里 ——
@@ -15,7 +15,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/linux-yocto:"
 
 python __anonymous() {
-    if (d.getVar("LAYERSERIES_CORENAMES") or "") not in ("wrynose", "scarthgap"):
+    if (d.getVar("LAYERSERIES_CORENAMES") or "") not in ("wrynose", "scarthgap", "kirkstone"):
         return
     d.appendVar("SRC_URI", " file://yp-minimal.cfg")
     # 压缩定稿 ZSTD：bzImage 的压缩用**宿主**命令，构建容器里没有，

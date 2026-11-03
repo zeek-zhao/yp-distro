@@ -48,7 +48,7 @@ VIRTUAL-RUNTIME_ssh = "${YP_SSH}"
 # 6.0 实测（#73）后移植到 5.0（#72-移植）：runqemu 串口布局四版一致，
 # 理由可平移；4.0/3.1 按 D12 冻结口径不动。
 python __anonymous () {
-    if (d.getVar("LAYERSERIES_CORENAMES") or "") in ("wrynose", "scarthgap"):
+    if (d.getVar("LAYERSERIES_CORENAMES") or "") in ("wrynose", "scarthgap", "kirkstone"):
         d.setVar("YP_MASKED_UNITS", "serial-getty@ttyS1.service")
 }
 
