@@ -109,13 +109,15 @@ for release in "${rel_arr[@]}"; do
             echo "   REPORT FAILED（日志：/tmp/release-check-report-${release}-${variant}${machine_sfx}.log）"
             failed+=("${combo}:report")
         fi
+
+        # guard 逐组合跑而不是 --all：默认范围只有两个 LTS，EOL 组合（dunfell/
+        # kirkstone）的产物**有意**停在冻结口径，不该被本次检查牵连判 stale。
+        if ! bash "${ROOT_DIR}/scripts/deploy-guard.sh" \
+            --release "${release}" --variant "${variant}" --machine "${machine}"; then
+            failed+=("${combo}:guard")
+        fi
     done
 done
-
-echo "── deploy-guard"
-if ! bash "${ROOT_DIR}/scripts/deploy-guard.sh" --all; then
-    failed+=("deploy-guard")
-fi
 
 echo "── 汇总"
 if ((${#failed[@]} > 0)); then
