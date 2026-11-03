@@ -1,3 +1,3 @@
-# Source: release=kirkstone variant=general commit=c6d57e7
+# Source: release=kirkstone variant=general commit=2bbb1a8
 d283300ae306bc4bfc00a007aaf5f0d3fa34a732dcf786212a5eb927e8d7020e  work/kas-kirkstone-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.ext4
 a578d2dc0b22705d57027d5985e4c82860e49325017405bcef3bb0863c098a15  work/kas-kirkstone-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.tar.bz2

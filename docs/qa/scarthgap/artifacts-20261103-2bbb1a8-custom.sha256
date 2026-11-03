@@ -1,0 +1,5 @@
+# Source: release=scarthgap variant=custom commit=2bbb1a8
+f2754f06680dc835afd0e088374869e93d1aa725fb67b1d2a376f749d5ac76e7  work/kas-scarthgap-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs-20261103005719.ext4
+8950b71f879f77f33cfbe207101d54c05d71de15d1092143eedbb6e1a9c5456d  work/kas-scarthgap-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs-20261103005719.tar.bz2
+f2754f06680dc835afd0e088374869e93d1aa725fb67b1d2a376f749d5ac76e7  work/kas-scarthgap-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs.ext4
+8950b71f879f77f33cfbe207101d54c05d71de15d1092143eedbb6e1a9c5456d  work/kas-scarthgap-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs.tar.bz2
