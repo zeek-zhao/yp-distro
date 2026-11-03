@@ -40,11 +40,29 @@ release="" variant="" machine=""
 all=0
 while (($# > 0)); do
     case "$1" in
-        --all) all=1; shift ;;
-        --release) [[ $# -ge 2 ]] || die "--release 缺少参数"; release="$2"; shift 2 ;;
-        --variant) [[ $# -ge 2 ]] || die "--variant 缺少参数"; variant="$2"; shift 2 ;;
-        --machine) [[ $# -ge 2 ]] || die "--machine 缺少参数"; machine="$2"; shift 2 ;;
-        -h | --help) usage; exit 0 ;;
+        --all)
+            all=1
+            shift
+            ;;
+        --release)
+            [[ $# -ge 2 ]] || die "--release 缺少参数"
+            release="$2"
+            shift 2
+            ;;
+        --variant)
+            [[ $# -ge 2 ]] || die "--variant 缺少参数"
+            variant="$2"
+            shift 2
+            ;;
+        --machine)
+            [[ $# -ge 2 ]] || die "--machine 缺少参数"
+            machine="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
         *) die "未知参数：$1（--help 看用法）" ;;
     esac
 done
@@ -53,7 +71,10 @@ if ((all)) && [[ -n "${release}${variant}${machine}" ]]; then
     die "--all 不能与 --release/--variant/--machine 同用"
 fi
 if ((all == 0)); then
-    [[ -n "${release}" && -n "${variant}" ]] || { usage; die "必须指定 --release 和 --variant（或 --all）"; }
+    [[ -n "${release}" && -n "${variant}" ]] || {
+        usage
+        die "必须指定 --release 和 --variant（或 --all）"
+    }
     machine="${machine:-qemux86-64}"
 fi
 
