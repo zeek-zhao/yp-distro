@@ -3,7 +3,7 @@
 > 本文件由 `scripts/plan-sync.sh` 从 GitHub Issues 生成，**请勿手改**。
 > 想改内容就去改 issue；CI 会校验此文件是否与线上一致。
 >
-> 生成时共 15 个开放 issue、4 个开放里程碑。
+> 生成时共 17 个开放 issue、4 个开放里程碑。
 
 ## v1.0.0 · 四版收口
 
@@ -44,8 +44,10 @@
 |---|---|---|
 | [#107](https://github.com/zeek-zhao/yp-distro/issues/107) | chore(compliance): 清除指向重写前 commit 的 PR 引用 | `documentation`, `wave-1` |
 | [#114](https://github.com/zeek-zhao/yp-distro/issues/114) | chore(build): deploy 产物新鲜度防呆 —— 指纹戳 + guard 快速失败 | `P2`, `build-system` |
+| [#115](https://github.com/zeek-zhao/yp-distro/issues/115) | chore(release): LTS 点版本跟进流程 —— release-check.sh + 流程文档 | `P2`, `build-system` |
+| [#116](https://github.com/zeek-zhao/yp-distro/issues/116) | feat(security): dm-verity 只读根可行性验证（CRA secure defaults 第一步） | `enhancement`, `P3`, `security` |
 
 
 ---
 
-<!-- plan-sync fingerprint: 9ae8faf80d24fc3f -->
+<!-- plan-sync fingerprint: 48eb159e204b806f -->
