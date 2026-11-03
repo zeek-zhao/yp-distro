@@ -45,9 +45,10 @@ VIRTUAL-RUNTIME_ssh = "${YP_SSH}"
 # docs/qa/boot-baseline.md 第 7 节）。等一个没人用的串口，纯浪费。
 # mask（/dev/null 链接）而不是删除文件：unit 文件属于 systemd 包，删了会在
 # do_rootfs 后的 systemd 校验里丢属主；mask 是 systemd 官方语义。
-# 6.0 已实测；其余版本的关键链未测，不盲推（#83 起 5.0 对齐时单独验证）。
+# 6.0 实测（#73）后移植到 5.0（#72-移植）：runqemu 串口布局四版一致，
+# 理由可平移；4.0/3.1 按 D12 冻结口径不动。
 python __anonymous () {
-    if "wrynose" in (d.getVar("LAYERSERIES_CORENAMES") or "").split():
+    if (d.getVar("LAYERSERIES_CORENAMES") or "") in ("wrynose", "scarthgap"):
         d.setVar("YP_MASKED_UNITS", "serial-getty@ttyS1.service")
 }
 
