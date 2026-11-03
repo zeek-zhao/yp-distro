@@ -1,0 +1,6 @@
+# Source: release=wrynose variant=custom commit=ad7c52d
+da2775261d41d5b7322cff639a97a65bb760bcbf6557ee3bde1573c23215a066  work/kas-wrynose-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs-20261102193841.ext4
+eb35972813b65efaf704e778910b84027caf49bd65e5a21f6692b22e0d5b9c86  work/kas-wrynose-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs-20261103004516.ext4.zst
+188ecfec39978dd3986a64c782da51d51d7ac619f4a882bc7cc5776e1aa411bb  work/kas-wrynose-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs-20261103004516.tar.zst
+eb35972813b65efaf704e778910b84027caf49bd65e5a21f6692b22e0d5b9c86  work/kas-wrynose-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs.ext4.zst
+188ecfec39978dd3986a64c782da51d51d7ac619f4a882bc7cc5776e1aa411bb  work/kas-wrynose-custom/build/tmp/deploy/images/qemux86-64/yp-image-qemux86-64.rootfs.tar.zst
