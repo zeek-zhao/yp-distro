@@ -11,6 +11,8 @@
 |---|---|---|
 | [#85](https://github.com/zeek-zhao/yp-distro/issues/85) | chore(release): 四版全兼容回归与报告归档 | `ci`, `P3`, `wave-1` |
 | [#109](https://github.com/zeek-zhao/yp-distro/issues/109) | fix(dunfell): full 镜像 do_rootfs 目录属性冲突（7/8 组合的唯一阻塞项） | `bug`, `P1` |
+| [#114](https://github.com/zeek-zhao/yp-distro/issues/114) | chore(build): deploy 产物新鲜度防呆 —— 指纹戳 + guard 快速失败 | `P2`, `build-system` |
+| [#115](https://github.com/zeek-zhao/yp-distro/issues/115) | chore(release): LTS 点版本跟进流程 —— release-check.sh + 流程文档 | `P2`, `build-system` |
 
 ## v0.5.0 · 6.0 启动优化
 
@@ -43,11 +45,9 @@
 | Issue | 标题 | 标签 |
 |---|---|---|
 | [#107](https://github.com/zeek-zhao/yp-distro/issues/107) | chore(compliance): 清除指向重写前 commit 的 PR 引用 | `documentation`, `wave-1` |
-| [#114](https://github.com/zeek-zhao/yp-distro/issues/114) | chore(build): deploy 产物新鲜度防呆 —— 指纹戳 + guard 快速失败 | `P2`, `build-system` |
-| [#115](https://github.com/zeek-zhao/yp-distro/issues/115) | chore(release): LTS 点版本跟进流程 —— release-check.sh + 流程文档 | `P2`, `build-system` |
 | [#116](https://github.com/zeek-zhao/yp-distro/issues/116) | feat(security): dm-verity 只读根可行性验证（CRA secure defaults 第一步） | `enhancement`, `P3`, `security` |
 
 
 ---
 
-<!-- plan-sync fingerprint: 48eb159e204b806f -->
+<!-- plan-sync fingerprint: afb633c68490446e -->
