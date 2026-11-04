@@ -11,7 +11,7 @@
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
 > Yocto 版本代号。
 
-## 当前状态（2026-11-01）
+## 当前状态（2026-11-04）
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
@@ -19,16 +19,17 @@
 | `v0.2.0` | P1 打通：kas 版本锁、四版解析、QA 报告链路 | ✅ 已发布 |
 | `v0.3.0` | 6.0 发行版与镜像：U-Boot 启动链 + systemd 收口 | ✅ 已发布 |
 | `v0.4.0` | 6.0 语法组：六构建系统 + 服务模板 | ✅ 已发布 |
-| `v0.5.0` | 6.0 启动优化（内核裁剪 / rootfs 形态 / systemd 精简） | 🚧 进行中 |
-| `v0.6.0` | 6.0 服务与 demo 扩展 | 🚧 进行中 |
-| `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | 🚧 进行中 |
-| `v1.0.0` | 四版收口 | 🚧 进行中 |
+| `v0.5.0` | 启动优化（内核裁剪 / rootfs 形态 / systemd 精简），**已移植 5.0/4.0** | ✅ 出口条件达成（随 PR #113 合并生效） |
+| `v0.6.0` | 服务与 demo 扩展 + 服务数×耗时曲线 | ✅ 出口条件达成（随 PR #113 合并生效） |
+| `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | ✅ 出口条件达成（随 PR #113 合并生效） |
+| `v1.0.0` | 四版收口（回归 8/8 + 归档刷新 + 安全基线） | ✅ 出口条件达成（待合并发版） |
 
 计划与进度分三层看，别重复维护：
 
 | 想知道 | 看哪里 |
 |---|---|
-| **现在到哪了 / 下一件该做什么** | [`docs/handover.md`](docs/handover.md) |
+| **下一件该做什么（带优先级的待办）** | [`docs/backlog.md`](docs/backlog.md) |
+| **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/handover.md`](docs/handover.md) |
 | **什么才算做完**（每个版本的出口条件） | [`docs/plan/milestones.md`](docs/plan/milestones.md) |
 | **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
 | 阶段划分与约束 | [`docs/roadmap.md`](docs/roadmap.md) |
@@ -50,6 +51,21 @@ make help                                    # 所有入口
 bash scripts/build.sh --release wrynose --variant custom            # 最小镜像
 bash scripts/build.sh --release wrynose --variant custom --image full
 ```
+
+### 发版 / 点版本 / 日常取证
+
+```bash
+bash scripts/release-check.sh                        # 全量回归（两 LTS × 两 variant）：build→qemu→report→guard
+bash scripts/release-check.sh --machine qemuarm64    # arm64 抽查维度
+bash scripts/deploy-guard.sh --all                   # 构建产物新鲜度校验（指纹级）
+bash scripts/boot-time.sh --release wrynose --variant custom --image minimal --runs 3
+                                                     # 启动三段测量；文档见 docs/boot-optimization.md
+```
+
+点版本（x.y.z）跟进流程、安全基线（dm-verity）与启动优化结论：
+[`docs/point-releases.md`](docs/point-releases.md)、
+[`docs/qa/security/dm-verity-feasibility.md`](docs/qa/security/dm-verity-feasibility.md)、
+[`docs/boot-optimization.md`](docs/boot-optimization.md)。
 
 ## 镜像
 
