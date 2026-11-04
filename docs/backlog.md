@@ -38,6 +38,10 @@
 
 ## 已完成（2026-11 本轮，供对照）
 
+- [x] CI 间歇性 15 失败修复：GitHub runner 根盘基线 ~70%，job 内拉镜像后间歇越过
+  85% 默认水位，把 doctor/dry-run/preflight 全打红（与提交内容无关的固有抖动）；
+  ci.yml 两个 bats job 设 `WATERMARK_PCT=95`，`run_doctor` 同步支持覆盖
+
 - [x] #109 dunfell do_rootfs 冲突（sstate 污染，cleansstate 解决）
 - [x] #110 boot-time 测量链修复（set -e 静默打断）
 - [x] #72–#75 启动优化 + 三版移植（boot-baseline §6–§10）
