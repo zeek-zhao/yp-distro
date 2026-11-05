@@ -31,6 +31,8 @@
 | **下一件该做什么（带优先级的待办）** | [`docs/backlog.md`](docs/backlog.md) |
 | **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/handover.md`](docs/handover.md) |
 | **AI 协作者作业手册**（禁区/验证/决策边界） | [`docs/ai-handover.md`](docs/ai-handover.md) |
+| **知识库与工程规范**（KB-01~32，normative） | [`docs/knowledge-base.md`](docs/knowledge-base.md) |
+| **Feature 注册表**（已完成/进行中/规划中） | [`docs/features.md`](docs/features.md) |
 | **什么才算做完**（每个版本的出口条件） | [`docs/plan/milestones.md`](docs/plan/milestones.md) |
 | **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
 | 阶段划分与约束 | [`docs/roadmap.md`](docs/roadmap.md) |

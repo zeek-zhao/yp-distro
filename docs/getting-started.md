@@ -68,7 +68,9 @@ bash scripts/report.sh scarthgap --variant custom              # 全量 bats + �
 1. [`docs/point-releases.md`](point-releases.md) —— 点版本跟进流程（这是本仓库的
    「例行公事」；TAG 钉三处，漏一处会被门禁拦）
 2. [`docs/handover.md`](handover.md) —— 已验证结论与排查方法论（别重复烧时间）
-3. [`docs/ai-handover.md`](ai-handover.md) —— 若你用 AI 协作，这是硬性禁区与
+3. [`docs/knowledge-base.md`](knowledge-base.md) —— 工程规范（KB-01~32）：
+   踩坑的规范条款都在这里，写代码前扫一遍 A/C/F 三组
+4. [`docs/ai-handover.md`](ai-handover.md) —— 若你用 AI 协作，这是硬性禁区与
    验证手册；没有 AI 也值得一读（坑速查表是共用的）
 
 ## 6. 新手最容易踩的三个坑
