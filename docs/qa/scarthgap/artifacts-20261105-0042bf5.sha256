@@ -1,0 +1,5 @@
+# Source: release=scarthgap variant=general commit=0042bf5
+8b858d5fa11d802d2449c820e1a3e4d2c8fd6c26966513440f6e0f42ac82f6c8  work/kas-scarthgap-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.rootfs-20261104235939.ext4
+460692953b998e04d655adc216444b5df50d2aede07932421aa40b4556595917  work/kas-scarthgap-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.rootfs-20261104235939.tar.bz2
+8b858d5fa11d802d2449c820e1a3e4d2c8fd6c26966513440f6e0f42ac82f6c8  work/kas-scarthgap-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.rootfs.ext4
+460692953b998e04d655adc216444b5df50d2aede07932421aa40b4556595917  work/kas-scarthgap-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.rootfs.tar.bz2

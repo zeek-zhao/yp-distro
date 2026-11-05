@@ -123,16 +123,22 @@ runs_json=()
 for ((i = 1; i <= runs; i++)); do
     echo "── run ${i}/${runs} (${image_target})"
     run_out="/work/work/logs/boot-time-${release}-${variant}-r${i}.json"
-    if bash "${ROOT_DIR}/project.sh" shell --release "${release}" --variant "${variant}" \
+    inner_rc=0
+    bash "${ROOT_DIR}/project.sh" shell --release "${release}" --variant "${variant}" \
         --machine "${machine}" -- \
         env RELEASE="${release}" VARIANT="${variant}" IMAGE="${image_target}" \
         MACHINE="${machine}" BOOT_TIMEOUT="${boot_timeout}" RUN_INDEX="${i}" \
         OUT_FILE="${run_out}" \
-        bash /work/scripts/lib/inner-boot-time.sh 2>&1 | tail -6; then
-        host_out="${ROOT_DIR}/work/logs/boot-time-${release}-${variant}-r${i}.json"
-        [[ -f "${host_out}" ]] && runs_json+=("${host_out}")
-    else
+        bash /work/scripts/lib/inner-boot-time.sh 2>&1 | tail -6 || inner_rc=$?
+    host_out="${ROOT_DIR}/work/logs/boot-time-${release}-${variant}-r${i}.json"
+    # 内层 rc=3 才是「没起机」；其他非零是测量链自身的错误（曾把脚本 bug
+    # 也谎报成「未拿到 login」，排查时被带偏 —— 见 #110），分开报。
+    if ((inner_rc == 0)) && [[ -f "${host_out}" ]]; then
+        runs_json+=("${host_out}")
+    elif ((inner_rc == 3)); then
         echo "run ${i} 未拿到 login，跳过（不计入中位数）"
+    else
+        echo "run ${i} 测量链失败（rc=${inner_rc}，json 未产出），跳过（不计入中位数）" >&2
     fi
 done
 

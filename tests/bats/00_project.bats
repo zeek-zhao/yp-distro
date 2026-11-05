@@ -17,7 +17,7 @@ setup() {
     done <<'EOF'
 dunfell poky yocto-3.1.33
 kirkstone poky yocto-4.0.35
-scarthgap poky yocto-5.0.20
+scarthgap poky yocto-5.0.21
 wrynose split yocto-6.0.4
 EOF
 }

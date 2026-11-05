@@ -159,7 +159,8 @@ run_doctor() {
                 "${RELEASE}" "${VARIANT}" "${REPO_MODE}" "${DISTRO}" "${IMAGE}"
         done
     done
-    check_disk_watermark || disk_status=$?
+    # 水位阈值可被 WATERMARK_PCT 覆盖（CI runner 磁盘基线高，见 ci.yml 同名 env）
+    check_disk_watermark "${WATERMARK_PCT:-85}" || disk_status=$?
     exit "${disk_status}"
 }
 

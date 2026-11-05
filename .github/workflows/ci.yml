@@ -24,6 +24,12 @@ jobs:
   bats:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    # 磁盘水位门禁是为共享构建机设计的（work/ 大卷基线 69%）；GitHub runner
+    # 的根盘基线就有 ~70%，job 内拉镜像后间歇性越过 85% 默认阈值，把所有走
+    # check_disk_watermark 的用例（doctor/dry-run/preflight，共 15 个）打红。
+    # 一次性 runner 上这个检查没有保护对象，放宽到 95%。
+    env:
+      WATERMARK_PCT: "95"
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
@@ -67,6 +73,8 @@ jobs:
   bats-release-matrix:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      WATERMARK_PCT: "95"
     strategy:
       fail-fast: false
       matrix:

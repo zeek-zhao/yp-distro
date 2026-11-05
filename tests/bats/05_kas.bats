@@ -11,9 +11,10 @@ setup() {
     local yml_count target_count release variant
     yml_count="$(find "${KAS_DIR}" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
     target_count="$(find "${KAS_DIR}/targets" -name '*.yml' ! -name '*.lock.yml' | wc -l)"
-    # 20 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
-    #      + 3 feature（kas/features/cve.yml、spdx.yml、uboot.yml —— --cve/--spdx/--uboot 时追加）
-    [ "${yml_count}" -eq 20 ]
+    # 22 = 1 base + 4 release + 2 variant + 2 machine（x86-64 / arm64）+ 8 target
+    #      + 5 feature（cve.yml、spdx.yml、uboot.yml 为 --cve/--spdx/--uboot 追加；
+    #        rootfs-squashfs.yml、rootfs-cpio.yml 为 #74 的 rootfs 格式实验开关）
+    [ "${yml_count}" -eq 22 ]
     [ "${target_count}" -eq 8 ]
     for release in dunfell kirkstone scarthgap wrynose; do
         for variant in general custom; do
@@ -36,7 +37,10 @@ setup() {
     mkdir -p "${test_root}"
     cp -R "${KAS_DIR}" "${test_root}/kas"
     cp -R "${ROOT_DIR}/config" "${test_root}/config"
-    sed -i 's/tag: yocto-5\.0\.20/tag: yocto-5.0.21/' \
+    # 漂移注入必须版本无关：真实 tag 会随点版本跟进变动（#115 首演踩过
+    # 硬编码 5.0.20 的 sed 在 5.0.21 后落空）。把 scarthgap 的 tag 换成
+    # 一个必然与 config 不一致的假版本。
+    sed -i 's|tag: yocto-[0-9.]*$|tag: yocto-9.9.drift|' \
         "${test_root}/kas/releases/scarthgap.yml"
     run python3 "${VERIFY_SCRIPT}" --engine builtin --root "${test_root}"
     [ "${status}" -ne 0 ]
@@ -52,7 +56,7 @@ import yaml
 root = Path(sys.argv[1])
 files = [p for p in sorted((root / "kas").rglob("*.yml"))
          if not p.name.endswith(".lock.yml")]
-assert len(files) == 20, len(files)
+assert len(files) == 22, len(files)
 for path in files:
     assert yaml.safe_load(path.read_text())["header"]["version"] == 14, path
 ' "${ROOT_DIR}"

@@ -148,3 +148,20 @@ check_disk_watermark() {
         return 1
     fi
 }
+
+# 项目源码指纹：config/docker/scripts/layers 四个路径的 HEAD tree hash 拼接，
+# 外加未提交改动（diff --binary）的 sha256。单一真源在 common.sh——report.sh
+# 用它给归档报告署名，deploy-guard.sh 用它校验构建产物新鲜度（#114）。
+# 注意材料里没有 kas/：kas overlay 是实验开关不是代码，overlay 构建后的
+# 产物会被 guard 判成 stale，这是有意为之（见 deploy-guard.sh 头注）。
+source_fingerprint() {
+    local path revision material="" working_tree
+    for path in config docker scripts layers; do
+        revision="$(git -C "${ROOT_DIR}" rev-parse --short=7 "HEAD:${path}" 2>/dev/null || true)"
+        [[ -n "${revision}" ]] && material+="${revision}"
+    done
+    working_tree="$(git -C "${ROOT_DIR}" diff --binary HEAD -- config docker scripts layers |
+        sha256sum | awk '{print $1}')"
+    material+="${working_tree}"
+    printf '%s' "${material}" | sha256sum | awk '{print $1}'
+}

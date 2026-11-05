@@ -25,17 +25,7 @@ Usage:
 EOF
 }
 
-source_fingerprint() {
-    local path revision material="" working_tree
-    for path in config docker scripts layers; do
-        revision="$(git -C "${ROOT_DIR}" rev-parse --short=7 "HEAD:${path}" 2>/dev/null || true)"
-        [[ -n "${revision}" ]] && material+="${revision}"
-    done
-    working_tree="$(git -C "${ROOT_DIR}" diff --binary HEAD -- config docker scripts layers |
-        sha256sum | awk '{print $1}')"
-    material+="${working_tree}"
-    printf '%s' "${material}" | sha256sum | awk '{print $1}'
-}
+# source_fingerprint 在 scripts/lib/common.sh（#114：deploy-guard 也要用，单一真源）。
 
 if [[ "${1:-}" == "--print-fingerprint" ]]; then
     [[ $# -eq 1 ]] || die "--print-fingerprint 不接受其他参数"

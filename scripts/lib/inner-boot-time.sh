@@ -81,45 +81,10 @@ start_writer() {
 }
 
 # 监视端：打点写文件而不是写变量 —— 它跑在 tee 的进程替换里（子 shell），
-# 变量赋值回不到父 shell（踩过，别改回变量）。
-#
-# 为什么不 tail -F 读日志文件：
-#   1) getty 的 `... login: ` 提示末尾不带换行，按行读会一直等行尾，
-#      等到 qemu 被 kill 才随最后一块输出吐出来，那时 login 早已过去；
-#   2) tail 写管道走 stdio 全缓冲，容器里又没有 stdbuf，实时性没有保证。
-# 改为直接消费 runqemu 的 stdout 管道：管道无缓冲，read -n 1 逐字符即可实时。
-monitor_stream() {
-    local buf="" ch now
-    while IFS= read -r -n 1 ch; do
-        buf+="${ch}"
-        if [[ "${buf}" == *"[    0.000000]"* && ! -f "${MARKS}.kernel" ]]; then
-            now="$(date +%s%3N)"
-            echo "kernel ${now}" >>"${MARKS}"
-            : >"${MARKS}.kernel"
-        fi
-        if [[ "${buf}" == *"Starting kernel"* && ! -f "${MARKS}.loader" ]]; then
-            now="$(date +%s%3N)"
-            echo "loader ${now}" >>"${MARKS}"
-            : >"${MARKS}.loader"
-        fi
-        if [[ "${buf}" == *"U-Boot 20"* && ! -f "${MARKS}.uboot" ]]; then
-            now="$(date +%s%3N)"
-            echo "uboot ${now}" >>"${MARKS}"
-            : >"${MARKS}.uboot"
-        fi
-        if [[ "${buf}" == *"login:"* && ! -f "${MARKS}.login" ]]; then
-            now="$(date +%s%3N)"
-            echo "login ${now}" >>"${MARKS}"
-            : >"${MARKS}.login"
-        fi
-        # 只保留尾部：最长模式不到 20 字符，缓冲没必要越积越大
-        ((${#buf} > 2048)) && buf="${buf: -64}"
-    done
-}
-
-mark() {
-    awk -v k="$1" '$1 == k { print $2; exit }' "${MARKS}" 2>/dev/null
-}
+# 变量赋值回不到父 shell（踩过，别改回变量）。函数本体在 boot-marks.sh，
+# 抽出来是为了让 14_boottime.bats 能对同一段代码做管道回放测试（#110）。
+# shellcheck source=scripts/lib/boot-marks.sh
+source "$(dirname "${BASH_SOURCE[0]}")/boot-marks.sh"
 
 # dunfell 的 runqemu 把第一个位置参数当 machine；kirkstone+ 反过来
 if [[ "${RELEASE}" == "dunfell" ]]; then
@@ -140,7 +105,11 @@ timeout --signal=TERM --kill-after=20 "${BOOT_TIMEOUT}" \
 rc=${PIPESTATUS[0]}
 set -e
 
-kill "${writer_pid}" 2>/dev/null
+# writer 可能已经自然退走（它最后一次 sleep 120 的设计时长比 timeout 的
+# 等待更短，见 start_writer）—— kill 打到已退出进程会返回非零，而这里
+# set -e 已经恢复。曾经就是这一行把整条测量链在「写结果之前」静默打断：
+# marks 里明明有 login，json 却永远出不来，外层只会看到 exit 1（#110）。
+kill "${writer_pid}" 2>/dev/null || true
 rm -f "${FIFO}"
 
 case "${MACHINE}" in

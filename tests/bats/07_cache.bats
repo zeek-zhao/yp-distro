@@ -167,6 +167,9 @@ NOTE: Tasks Summary: Attempted 100 tasks of which 80 didn't need to be rerun and
 # Keep Current different from Local so using the cache total as hits fails this test.
 Sstate summary: Wanted 50 Local 20 Mirrors 0 Missed 30 Current 40 (40% match, 0 missed)
 EOF
+    # degraded.txt 是活文件（#81 起 scarthgap 有 uboot-qfw-chain），本测试关心的是
+    # 渲染逻辑不是降级清单内容——钉死沙箱里的清单，断言才不会跟着真实降级项漂。
+    printf '# aspect | release | 理由 | 需求条款\n' >"${test_root}/config/degraded.txt"
     run bash "${test_root}/scripts/report.sh" --release scarthgap --variant general --render-only
     [ "${status}" -eq 0 ]
     local archive="${test_root}/${output##*Archive: }"

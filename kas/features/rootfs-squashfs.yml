@@ -1,0 +1,19 @@
+# rootfs 格式对比实验用的 kas overlay（#74）：
+#   KAS_WORK_DIR=work/kas-wrynose-custom kas build \
+#     kas/targets/wrynose-custom.yml:kas/machines/qemux86-64.yml:kas/features/rootfs-squashfs.yml
+# 一次只出一种格式：多种格式并存时 runqemu 按 qb_default_fstype 解析，
+# 实验口径才干净。YP 发行版在 local.conf 的 = 之后追加 ext4.zst/tar.zst，
+# 所以必须配 :remove（finalize 阶段生效，晚于一切 append）。
+# squashfs 只读：guest 写 /var 依赖 systemd 的 volatile 语义（tmpfs），
+# 起不来就是 overlay 语义没配对，记录进 boot-baseline.md。
+header:
+  version: 14
+
+local_conf_header:
+  yp-rootfs-squashfs: |
+    QB_DEFAULT_FSTYPE = "squashfs"
+    # runqemu 默认给 root= 追加 rw；squashfs 必须显式 ro（runqemu 只认
+    # QB_KERNEL_ROOT 里带 ro/rw 才不追加），rootfstype 跳过 ext4 探测。
+    QB_KERNEL_ROOT = "/dev/vda ro rootfstype=squashfs rootwait"
+    IMAGE_FSTYPES:remove = "ext4.zst tar.zst"
+    IMAGE_FSTYPES = "squashfs"
