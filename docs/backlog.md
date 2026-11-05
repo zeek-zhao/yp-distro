@@ -4,13 +4,14 @@
 > 「已完成」；新想法先进 [issues](https://github.com/zeek-zhao/yp-distro/issues)
 > 再落到这里。最后更新：2026-11-04
 
-## P0 · 收口（不依赖任何前置，只差人工动作）
+## P0 · 收口
 
-| 事项 | 说明 | 依赖 |
+| 事项 | 说明 | 状态 |
 |---|---|---|
-| [ ] 合并 PR #113 | v0.5/v0.6/v0.7 出口条件 + v1.0.0 回归归档 + 14 个 issue 自动关闭。CI 全绿 | 人工确认 |
-| [ ] 打 tag `v1.0.0` + 建 Release | 合并后在 `main` 上打 annotated tag（`zeek.zhao <zeek.zhao@foxmail.com>`），Release 页引用 `docs/qa/20261104-*` 归档；关四个里程碑 | 合并 |
+| [x] 合并 PR #113 | squash 合入 main（`1e1ff48`），16 个 issue 自动关闭 | ✅ 2026-11-05 |
+| [x] tag `v1.0.0` + Release | annotated tag 已推，[Release](https://github.com/zeek-zhao/yp-distro/releases/tag/v1.0.0) 文案按草稿发布，四个里程碑已关 | ✅ 2026-11-05 |
 | [ ] #107 GitHub Support 工单 | 英文措辞草稿已在 issue 回帖；需仓库所有者账号提交 | 人工 |
+| [ ] PR 分支后的 plan-sync | 合并使 16 个 issue 关闭，issues.md 需重生成并走 PR 进 main（随本 PR） | 随本 PR |
 
 ## P1 · 活发行版的例行义务（有明确时间窗）
 
@@ -23,17 +24,17 @@
 
 | 事项 | 说明 | 前置 |
 |---|---|---|
-| [ ] #116 dm-verity 生产化评估 | spike 已证可行；评估两条集成路线的成本：自建 `cryptsetup-native` vs 引入 `meta-security`（`dm-verity-img.bbclass` 官方路线，要评估四版兼容成本） | 无 |
+| [x] #116 dm-verity 生产化评估 | 完成（`docs/qa/security/dm-verity-production-assessment.md`）；**决策：路线一（meta-security@5.0）+ 路线二（cmdline@6.0）综合使用**，实施跟踪见 [#117](https://github.com/zeek-zhao/yp-distro/issues/117) |
 | [ ] 只读根的可写目录方案 | dm-verity 根是只读的：/var 等 overlay 到独立分区/tmpfs；与 #74「维持 ext4」的取舍要重新权衡（安全场景 vs 可写场景可并存为两种镜像形态） | dm-verity 集成 |
-| [ ] 签名链设计 | root hash 走 cmdline 明文防盘上篡改、不防整镜像替换。设计题：ARM 走 FIT+U-Boot 校验 / x86 QEMU 走 UEFI SB（OVMF）——与现有 QFW 链的关系要先画图 | 签名方案讨论 |
-| [ ] guard 内容级扫描 | #114 已知盲区：指纹匹配但 deploy 内容被旧 sstate 污染（#109 型）。可选门禁：rpm 元数据逐包扫 0700（约 3 分钟/组合），挂进 release-check 的 `--deep` 开关 | 无 |
+| [ ] 签名链设计 | root hash 走 cmdline 明文防盘上篡改、不防整镜像替换。设计题：ARM 走 FIT+U-Boot 校验 / x86 QEMU 走 UEFI SB（OVMF）——与现有 QFW 链的关系要先画图 | [#118](https://github.com/zeek-zhao/yp-distro/issues/118) |
+| [ ] guard 内容级扫描 | #114 已知盲区：指纹匹配但 deploy 内容被旧 sstate 污染（#109 型）。`release-check.sh --deep`：rpm 元数据逐包扫 0700（约 3 分钟/组合） | [#119](https://github.com/zeek-zhao/yp-distro/issues/119) |
 
 ## P3 · 测试面与矩阵扩展
 
 | 事项 | 说明 |
 |---|---|
-| [ ] qemuarm64 常态化抽查 | `release-check.sh --machine qemuarm64`（#27 验证过的 scarthgap/wrynose × general）；建议每个点版本窗口顺带跑一次 |
-| [ ] ptest 运行时测试 | 上游 runtime testing 的主路径；挑 3–5 个关键包（busybox/python3/openssl）先接，产出进回归报告 |
+| [ ] qemuarm64 常态化抽查 | `release-check.sh --machine qemuarm64`（#27 验证过的 scarthgap/wrynose × general）；每个点版本窗口顺带跑一次 | [#121](https://github.com/zeek-zhao/yp-distro/issues/121) |
+| [ ] ptest 运行时测试 | 上游 runtime testing 的主路径；先接 busybox/python3/openssl 三包，产出进回归报告 | [#120](https://github.com/zeek-zhao/yp-distro/issues/120) |
 | [ ] boot 基线扩到 base/full 的 systemd-analyze | minimal/base 串口 root 无空密码（`empty-root-password` 只开 full），两层采不到 analyze；若需要完整三段，给 base 开 `empty-root-password` 并更新 degraded.txt |
 
 ## 已完成（2026-11 本轮，供对照）
