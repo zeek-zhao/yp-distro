@@ -21,7 +21,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=lib/common.sh
+# shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/common.sh"
 
 usage() {
@@ -39,16 +39,40 @@ USAGE
 release="" variant="custom" machine="qemux86-64" do_tamper=0 do_revert=0
 while (($# > 0)); do
     case "$1" in
-        --release) (($# >= 2)) || die "--release 缺少参数"; release="$2"; shift 2 ;;
-        --variant) (($# >= 2)) || die "--variant 缺少参数"; variant="$2"; shift 2 ;;
-        --machine) (($# >= 2)) || die "--machine 缺少参数"; machine="$2"; shift 2 ;;
-        --tamper-test) do_tamper=1; shift ;;
-        --revert) do_revert=1; shift ;;
-        -h | --help) usage; exit 0 ;;
+        --release)
+            (($# >= 2)) || die "--release 缺少参数"
+            release="$2"
+            shift 2
+            ;;
+        --variant)
+            (($# >= 2)) || die "--variant 缺少参数"
+            variant="$2"
+            shift 2
+            ;;
+        --machine)
+            (($# >= 2)) || die "--machine 缺少参数"
+            machine="$2"
+            shift 2
+            ;;
+        --tamper-test)
+            do_tamper=1
+            shift
+            ;;
+        --revert)
+            do_revert=1
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
         *) die "未知参数：$1（--help 看用法）" ;;
     esac
 done
-[[ -n "${release}" ]] || { usage; die "必须指定 --release"; }
+[[ -n "${release}" ]] || {
+    usage
+    die "必须指定 --release"
+}
 
 machine_sfx=""
 [[ "${machine}" == "qemux86-64" ]] || machine_sfx="-${machine}"
@@ -85,7 +109,10 @@ root_hash="$(printf '%s\n' "${vf_output}" | awk '/^Root hash:/{print $3}')"
 salt="$(printf '%s\n' "${vf_output}" | awk '/^Salt:/{print $2}')"
 data_blocks="$(printf '%s\n' "${vf_output}" | awk '/^Data blocks:/{print $3}')"
 [[ -n "${root_hash}" && -n "${salt}" && -n "${data_blocks}" ]] ||
-    { echo "${vf_output}" >&2; die "veritysetup 输出解析失败"; }
+    {
+        echo "${vf_output}" >&2
+        die "veritysetup 输出解析失败"
+    }
 table_sectors=$((data_blocks * 8))
 echo "dm-verity: blocks=${data_blocks} root_hash=${root_hash:0:12}… salt=${salt:0:12}…"
 
