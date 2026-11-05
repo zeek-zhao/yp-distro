@@ -81,6 +81,7 @@ release-matrix + branch-guard。**push 前先本地跑 L1**；CI 红过的两个
 | 内核裁剪不生效 | KERNEL_FEATURES 的 scc 后合并覆盖 fragment | bbappend 里同步 `.replace` 摘 scc（#72） |
 | dm 表 EINVAL / 设备建不出 | salt 必需 / 长度单位是 512 扇区 / hash_start=1 | 照抄 `docs/qa/security/dm-verity-feasibility.md` 的表 |
 | 3.1 上配置静默失效 | 变量级冒号 override 3.1 不认 | python `__anonymous` 门控补下划线版（任务级冒号两版都认） |
+| 点版本 bump 后 kas-verify 红 / kas 仍 checkout 旧 commit | TAG 钉在**三处**：kas/releases/*.yml 的 tag、kas/targets/*.lock.yml 的 commit（每 target 一份）、config/*.env | 三处同改；浅克隆没新 tag 就删对应 repo 目录重克隆。流程见 point-releases.md |
 | CI 上 doctor/dry-run/preflight 集体红 | GitHub runner 根盘基线 ~70%，job 内拉镜像间歇越过 85% 水位（与提交无关） | ci.yml 已设 `WATERMARK_PCT=95`；本地无此问题（69%） |
 
 ## 七、当前在途状态（2026-11-04）

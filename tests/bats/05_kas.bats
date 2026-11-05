@@ -37,7 +37,10 @@ setup() {
     mkdir -p "${test_root}"
     cp -R "${KAS_DIR}" "${test_root}/kas"
     cp -R "${ROOT_DIR}/config" "${test_root}/config"
-    sed -i 's/tag: yocto-5\.0\.20/tag: yocto-5.0.21/' \
+    # 漂移注入必须版本无关：真实 tag 会随点版本跟进变动（#115 首演踩过
+    # 硬编码 5.0.20 的 sed 在 5.0.21 后落空）。把 scarthgap 的 tag 换成
+    # 一个必然与 config 不一致的假版本。
+    sed -i 's|tag: yocto-[0-9.]*$|tag: yocto-9.9.drift|' \
         "${test_root}/kas/releases/scarthgap.yml"
     run python3 "${VERIFY_SCRIPT}" --engine builtin --root "${test_root}"
     [ "${status}" -ne 0 ]

@@ -20,7 +20,7 @@ local_conf_header:
 repos:
   poky:
     url: https://git.yoctoproject.org/poky
-    tag: yocto-5.0.20
+    tag: yocto-5.0.21
     layers:
       meta:
       meta-poky:
