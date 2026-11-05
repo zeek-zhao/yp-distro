@@ -1,8 +1,9 @@
 # 交接文档
 
 > 面向「下一个接手的人」——包括三个月后的你自己。只写**现在的事实**和**还没做完的事**，
-> 过程记录留在 issue 与 `docs/qa/` 归档里。待办事项的优先级清单见
-> [`docs/backlog.md`](backlog.md)；AI 协作者另有作业手册 [`ai-handover.md`](ai-handover.md)。
+> 过程记录留在 issue 与 `docs/qa/` 归档里。待办见 [`backlog.md`](backlog.md)；
+> AI 协作者另有作业手册 [`ai-handover.md`](ai-handover.md)；踩坑结论的
+> **规范条目**（KB-01~32）统一在 [`knowledge-base.md`](knowledge-base.md)。
 >
 > 最后更新：2026-11-04
 

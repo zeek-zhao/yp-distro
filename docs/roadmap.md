@@ -58,3 +58,17 @@
 3. 在 `main` 上打 annotated tag `vX.Y.Z`，tagger 必须是 `zeek.zhao <zeek.zhao@foxmail.com>`；
 4. 建 Release，关闭里程碑；
 5. 更新 `docs/plan/milestones.md` 的勾选与 `docs/handover.md` 的「当前位置」。
+
+## v1.0.0 之后（规划，2026-11-05 定）
+
+v1.0.0 发布后项目进入「活发行版」阶段，三条线并行，全部有 issue 跟踪：
+
+| 线 | 内容 | issue |
+|---|---|---|
+| 安全线 | dm-verity 生产化（路线一@5.0 + 路线二@6.0 综合）→ 签名链设计 → /var overlay 方案 | #117 → #118 |
+| 质量线 | deploy-guard 内容级扫描（--deep）→ ptest 接入 → qemuarm64 常态化 | #119 → #120 → #121 |
+| 合规线 | CRA 第 14 条流程文档化（2026-09 已生效）→ VEX 产出 → shipping-accurate SBOM 校验（2027-12 全面执行前完成） | backlog 认领 |
+| 节奏线 | LTS 点版本跟进（流程与首演见 docs/point-releases.md），下一窗口 2026-12-07 | 按窗口触发 |
+
+规范与知识沉淀统一进 `docs/knowledge-base.md`（KB-01~32，normative）；
+feature 的单一索引在 `docs/features.md`。
