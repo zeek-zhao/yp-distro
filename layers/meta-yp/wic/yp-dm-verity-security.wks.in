@@ -1,0 +1,13 @@
+# short-description: YP dm-verity 镜像（UEFI/systemd-boot + GPT + 独立 hash 分区）
+# 基于 meta-security 的 systemd-bootdisk-dmverity-hash.wks.in：
+#   - 去掉 microcode.cpio initrd（那是 meta-intel 的依赖，QEMU 不需要）
+#   - bootloader --append 加 console=ttyS0（串口取证）与 root=/dev/mapper/rootfs
+#     （initramfs-framework 的 dmverity 模块挂 /dev/mapper/rootfs 后交接）
+# verity 分区的 ROOT_UUID/RHASH_UUID 由 dm-verity-img class 生成的动态 include 写入。
+part /boot --source bootimg-efi --sourceparams="loader=systemd-boot" --ondisk sda --label msdos --active --align 1024 --use-uuid
+
+include ${STAGING_VERITY_DIR}/${IMAGE_BASENAME}.${DM_VERITY_IMAGE_TYPE}.wks.in
+
+bootloader --ptable gpt --timeout=5 --append="root=/dev/mapper/rootfs console=ttyS0"
+
+part swap --ondisk sda --size 44 --label swap1 --fstype=swap --use-uuid
