@@ -70,9 +70,11 @@ if [[ "${RELEASE}" == "dunfell" ]]; then
 else
     RUNQEMU_ARGS=("${IMAGE}")
 fi
+# YP_RUNQEMU_EXTRA：宿主侧可透传 runqemu 位置参数（如 dm-verity 路线一的
+# "ovmf"——runqemu 原生支持，自动找 ovmf.qcow2 并挂 pflash，见 #117）
 set +e
 timeout --signal=TERM --kill-after=30 "${BOOT_TIMEOUT}" \
-    runqemu "${RUNQEMU_ARGS[@]}" nographic snapshot slirp 2>&1 | tee "${LOG}"
+    runqemu "${RUNQEMU_ARGS[@]}" nographic snapshot slirp ${YP_RUNQEMU_EXTRA:-} 2>&1 | tee "${LOG}"
 rc=$?
 set -e
 

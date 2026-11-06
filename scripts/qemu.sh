@@ -22,6 +22,7 @@ Options:
   --variant <variant>  general | custom（默认 general）
   --machine <machine>  qemux86-64 | qemuarm64（默认 qemux86-64）
   --timeout <seconds>  起机超时，超时后用 SIGTERM 收尾（默认 300）
+  YP_RUNQEMU_EXTRA     环境变量：透传 runqemu 位置参数（如 dm-verity 的 "ovmf"）
   -h, --help           显示本帮助
 EOF
 }
@@ -93,5 +94,6 @@ cd -- "${ROOT_DIR}" || exit 1
     ./project.sh shell --release "${release}" --variant "${variant}" -- \
         bash -lc "RELEASE=${release} VARIANT=${variant} IMAGE=${IMAGE} \
             MACHINE=${machine} BOOT_TIMEOUT=${boot_timeout} \
+            YP_RUNQEMU_EXTRA='${YP_RUNQEMU_EXTRA:-}' \
             bash /work/scripts/lib/inner-qemu.sh"
 } 2>&1 | tee "${log}"

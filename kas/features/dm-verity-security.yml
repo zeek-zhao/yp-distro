@@ -1,0 +1,43 @@
+# dm-verity 生产化路线一（#117）：meta-security 官方集成，scarthgap 先行。
+#
+#   KAS_WORK_DIR=work/kas-scarthgap-custom kas build \
+#     kas/targets/scarthgap-custom.yml:kas/machines/qemux86-64.yml:kas/features/dm-verity-security.yml
+#
+# 引入两个上游 layer（浅克隆，与 build.sh 的 KAS_CLONE_DEPTH 口径一致）：
+#   meta-security(scarthgap 分支) —— dm-verity-img.bbclass + dm-verity-image-initramfs
+#   meta-openembedded(meta-oe)     —— cryptsetup/veritysetup 配方（oe-core 不带）
+# 运行时模型：initramfs 里 veritysetup 挂根（与路线二的 cmdline 建表并存，
+# 取舍见 docs/qa/security/dm-verity-production-assessment.md）。
+header:
+  version: 14
+
+repos:
+  meta-security:
+    url: https://git.yoctoproject.org/meta-security
+    branch: scarthgap
+    # 仓库根即 layer 本体（conf/、classes/ 在根目录）——上游自家 kas 文件
+    # 也用 ../<repo-name> 指回仓库根的技巧
+    layers:
+      ../meta-security:
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    branch: scarthgap
+    layers:
+      meta-oe:
+
+local_conf_header:
+  yp-dm-verity: |
+    # 与上游 kas-security-dm.yml 对齐：integrity 是 dm-verity 的 distro 前置
+    DISTRO_FEATURES:append = " integrity"
+    IMAGE_CLASSES += "dm-verity-img"
+    DM_VERITY_IMAGE = "yp-image-minimal"
+    DM_VERITY_IMAGE_TYPE = "ext4"
+    DM_VERITY_SEPARATE_HASH = "1"
+    INITRAMFS_IMAGE = "dm-verity-image-initramfs"
+    INITRAMFS_IMAGE_BUNDLE = "1"
+    # wic/UEFI：meta-security 的 initramfs 模块按 GPT PARTUUID 找 verity 分区，
+    # 需要 wic 布局 + OVMF 固件（oe-core 自带 ovmf 配方）
+    IMAGE_FSTYPES += "wic"
+    WKS_FILE = "yp-dm-verity-security.wks.in"
+    EXTRA_IMAGEDEPENDS += "ovmf"
+    QB_DEFAULT_BIOS = "OVMF.fd"
