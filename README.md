@@ -5,7 +5,12 @@
 
 4 个 Yocto release（dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 / wrynose 6.0）× 2 个 variant
 （`general` / `custom` 独立 distro）的工程化流水线：版本锁、容器化构建、BATS 门禁、
-镜像分发、SBOM / CVE / FOSS 合规证据采集。
+镜像分发、SBOM / CVE 合规证据采集。
+
+> **当前保障范围只有 wrynose 6.0**（2026-11-09 决策）。3.1 / 4.0 / 5.0 的配置与配方
+> 冻结保留在仓库中、退出构建与保障，待 6.0 达到完成门槛后回移。验证环境为
+> QEMU + x86-64，未使用实体硬件。范围、理由与已知边界见
+> [`docs/engineering-overview.md`](docs/engineering-overview.md) §2 与 §9。
 
 > **本项目不是 Yocto Project 或 OpenEmbedded 的官方项目**，与 Linux Foundation
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
@@ -28,6 +33,9 @@
 
 | 想知道 | 看哪里 |
 |---|---|
+| **这仓库是什么、承诺什么、不承诺什么** | [`docs/engineering-overview.md`](docs/engineering-overview.md) |
+| **从配置到镜像经过哪些环节**（功能流程图） | [`docs/functional-flow.md`](docs/functional-flow.md) |
+| **怎么证明产物是对的、我怎么自己验**（验证流程图） | [`docs/verification-flow.md`](docs/verification-flow.md) |
 | **下一件该做什么（带优先级的待办）** | [`docs/backlog.md`](docs/backlog.md) |
 | **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/handover.md`](docs/handover.md) |
 | **AI 协作者作业手册**（禁区/验证/决策边界） | [`docs/ai-handover.md`](docs/ai-handover.md) |
