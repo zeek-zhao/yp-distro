@@ -24,7 +24,15 @@
 #   - layers/meta-yp/conf/distro/yp.conf（PREFERRED_PROVIDER_virtual/cpp-hello）
 #   - kas/variants/custom.yml（DEFAULTTUNE virtclass-multilib-lib32）
 #
-# 任务级追加（do_install:append）没有这个退路：3.1 会把冒号写法解析成
-# 一个没人调用的函数名，静默丢掉整个追加逻辑。需要按版本差异时直接重定义
-# 整个任务函数（见 cpp-hello-cus-pack）。
+# 任务级追加（do_install:append / do_configure:prepend）**不受影响**：3.1 也认
+# 任务级冒号语法。实测见 2026-11-01 的探针配方（3.1.33 / BitBake 1.46.0）：
+# do_install 写 base、do_install:append 写 append，产物里两行都在，run.do_install
+# 里 append 的函数体已并入。
+#
+# 所以任务级**只能写一份**。再补一份 do_install_append 会让同一任务执行两遍，
+# 症状是 do_install 里出现重复调用、最后以 exit 127 收尾（"xxx: not found"）。
+#
+# 变量级与任务级不对称，别互相类推：
+#   变量级 3.1 不认冒号 → 双写（未命中的那行是惰性变量）
+#   任务级 3.1 认冒号   → 单写（写了下划线版就是 bug）
 # ---------------------------------------------------------------------------

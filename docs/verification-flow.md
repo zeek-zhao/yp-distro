@@ -1,8 +1,12 @@
-# 可验证性流程
+# 可验证性与测试说明
 
 > 本文件回答一个问题：**别人凭什么相信这里的产物是对的，以及他自己怎么复核。**
 > 功能性流程在 [`functional-flow.md`](functional-flow.md)——那里讲「做出了什么」，
 > 这里讲「怎么证明它是真的」。
+>
+> **本文件同时是测试文档**：§1 讲验证分层，§1.1 定证据级别，§4 定阈值，
+> §5 讲失败分流，§6 是**功能 → 证据映射矩阵**（25 条 feature 逐条对应验证方法），
+> §7 是外部复现命令。
 >
 > **验证边界（2026-11-09 决策）**：全部验证在 **QEMU + x86-64** 上完成。
 > 不使用实体硬件，不覆盖 arm64。这两个边界是**主动声明**，写在 README 显眼位置，
@@ -36,7 +40,7 @@ flowchart TD
     end
 
     subgraph L2G["L2 · 静态跨组合（分钟级，GitHub runner）"]
-        L2["bats 207 项<br/>+ release-matrix"]
+        L2["bats 207 项"]
     end
 
     subgraph L3G["L3 · 真构建（小时级，构建机 215）"]
@@ -44,7 +48,7 @@ flowchart TD
     end
 
     subgraph L4G["L4 · 运行时内容（分钟级，构建机）"]
-        L4["smoke 动作集<br/>规格已定，待实现"]
+        L4["smoke 动作集<br/>待实现 · #132"]
     end
 
     L1 --> L2
@@ -69,6 +73,38 @@ flowchart TD
 > L3 到 L4 这个缺口是本仓库最实质的质量漏洞：`#109` 那类事故（旧 sstate 恢复出
 > 属性错乱的文件）正是在「构建成功 + 能起机」之后才被发现，而 207 项静态断言
 > 那时**全绿**。静态断言测的是「文件在不在、内容长什么样」，不是「能不能跑」。
+
+## 1.1 证据级别：四档，不是一刀切
+
+「6.0 所有功能正常」这句话要可判定，就必须先回答：**每条功能的「正常」，证到什么程度算数？**
+
+四档定义如下。**每条 feature 在 `config/features.txt` 的第 6 列标明它应达的档位。**
+
+| 档位 | 含义 | 判定方式 | 在哪跑 | 能发现 | **发现不了** |
+|---|---|---|---|---|---|
+| `static` | 配置存在且正确 | bats 断言 | CI | 文件缺失、字段写错、路径不通、断言与现实不符 | 能不能编出来、跑起来 |
+| `build` | 真构建通过 | `N tasks all succeeded`，无 error | 215 | 解析错误、构建失败、依赖缺失、包内容错乱 | 装进去的东西能不能用 |
+| `boot` | 起机到 login | 串口 `login:` 且无 panic | 215 | 启动链断、init 起不来、服务依赖顺序错 | 服务是不是假活 |
+| `runtime` | 客户机内动作可执行 | smoke 动作集 rc=0 | 215 | 二进制不可执行、库缺失、服务假活、端点不返回 | 上游测试是否全过（那是 ptest） |
+
+### 为什么不能全部要求 runtime
+
+CI / 容器 / kas / 语法矩阵这类**工程能力在客户机里没有运行时形态**。硬要给它们造一个「运行时验证」，造出来的动作与结论是脱钩的——比如「在客户机里 curl 一个 URL」并不能证明 CI 工作流配置正确。那不是验证，是仪式。
+
+所以判据是：**每条 feature 达到它应有的那一档，而不是所有条都达到最高档。**
+
+### 档位与文件的关系
+
+```
+config/features.txt  ← 机器可读，第 6 列声明档位（99_coverage 校验）
+docs/features.md     ← 人读说明书，逐条解释「是什么 / 怎么用 / 边界」
+本文件 §6            ← 映射矩阵，逐条给出「用什么验、在哪验、现在到没到」
+```
+
+三处**必须一致**。`99_coverage.bats` 会校验 `runtime` 档的 feature 必须在 smoke 动作集里有对应项——这就把「功能清单」和「验证动作」用一条声明绑死了，不能只标一个 `runtime` 却没人验。
+
+> **这一节的直接作用**：填完档位之后，「6.0 完成了多少」不再是一句感觉，而是可数的事实——
+> `awk -F'|' '$6 ~ /runtime/ {n++} END {print n}' config/features.txt`。
 
 ## 2. 一次改动的完整验证链
 
@@ -191,36 +227,101 @@ flowchart TD
 于是任何想把它改成 `1.0.0` 的人都会被判红——**门禁在保护一个 bug**。
 正确写法是「必须等于最近 tag」。
 
-## 6. L4 运行时 smoke：规格（当前未实现）
+## 6. 功能 → 证据映射矩阵
 
-这是 `DoD` 第③条，也是本仓库从「能起机」跨到「内容能用」的唯一一步。
-**现在没有实现**，下面是待实现的规格。
+这是「6.0 所有功能正常」的**唯一判据表**。25 条 feature 逐条对应：应达档位 / 用什么验 / 在哪验 / 当前到没到。
 
-### 6.1 动作集
+**现状列的三种值含义不同，别混**：
 
-起机到 login 后在目标镜像内执行，全部以退出码判定。
+| 值 | 含义 |
+|---|---|
+| ✅ | 有**脚本化、可复现**的证据（归档里能按五要素核对） |
+| ⚠️ | 证据存在但**不可复现**（一次性手工取证），或**显式降级**（`config/degraded.txt` 有登记） |
+| ⬜ | 无证据 |
 
-| 组 | 动作 | 通过条件 |
-|---|---|---|
-| busybox applet | `sh ls cat cp mv rm mkdir grep sed awk sort uniq head tail wc find tar gzip ping ip` 共 20 个 | 每个 `--help` 或最小执行 rc=0 |
-| python3 | `python3 -c 'import json,sqlite3,ssl,hashlib'` | rc=0，且 `ssl.OPENSSL_VERSION` 可打印 |
-| openssl | 自签证书 + `openssl s_client` 本地握手 | 握手成功，证书主题可读 |
-| systemd | `systemctl list-units --failed` | 输出为空 |
-| 自有服务 | `curl -s localhost:<port>/status`（若有 curl）/ `cat` 该端点 | 返回合法 JSON，含版本字段 |
+### 6.1 矩阵
 
-### 6.2 阈值与形态
+| # | feature | 档位 | 验证方式 | 在哪 | 现状 | 归属 |
+|---|---|---|---|---|---|---|
+| 1 | `entry-unified` | static | `00_project` 四版 commit 断言 | CI | ✅ | v0.1.0 |
+| 2 | `docker-images` | build | `01_dockerfile` + `images.yml` 真构建 + `pull-check` 匿名拉取 | CI | ✅ | v0.1.0 |
+| 3 | `ci-workflows` | static | `02_workflows` | CI | ✅ | v0.2.0 |
+| 4 | `container-runtime` | build | `03_container` + CI 拉镜像后真跑 `docker run` | CI | ✅ | v0.1.0 |
+| 5 | `layer-structure` | static | `04_layer` | CI | ✅ | v0.3.0 |
+| 6 | `kas-layer` | static | `05_kas` | CI | ✅ | v0.3.0 |
+| 7 | `spdx-format` | build | `compliance.sh --only sbom` + `11_compliance` | 215 | ✅ | v0.3.0 |
+| 8 | `cve-tool` | static | `11_compliance` | CI | ✅ | v0.3.0 |
+| 9 | `cve-db` | build | `09_cvedb` + `cve-db.sh` 离线库构建 | 215 | ✅ | v0.3.0 |
+| 10 | `foss-scan` | static | `11_compliance` | CI | ⚠️ 降级 | v1.0.0 |
+| 11 | `sdk` | build | `10_sdk` + `sdk.sh` | 215 | ✅ | v1.0.0 |
+| 12 | `distro-backfill` | static | `config/degraded.txt` 登记 | — | ⚠️ 降级 | v1.0.0 |
+| 13 | `report-archive` | static | `06_report` | CI | ✅ | v0.1.0 |
+| 14 | `shared-cache` | static | `07_cache` | CI | ✅ | v0.2.0 |
+| 15 | `cross-version-diff` | static | `08_crossdiff` | CI | ✅ | v1.0.0 |
+| 16 | `do-scancode` | — | `11_scancode`（验脚本能力） | CI | ⚠️ 降级 | v1.0.0 |
+| 17 | `distro-features` | build | `12_distro` 体积单调 + 真构建 | 215 | ✅ | v0.3.0 |
+| 18 | `kvm-accel` | boot | `03_container` KVM 透传 + 起机 | CI / 215 | ✅ | v0.1.0 |
+| 19 | `yp-service` | runtime | smoke：`is-enabled` + `is-active` 都成立 | 215 | ⚠️ 一次性取证 | **v1.0.2** |
+| 20 | `boot-time` | runtime | `boot-time.sh` 三段测量 + 归档 | 215 | ✅ | 已达成 |
+| 21 | `syntax-matrix` | static | `15_syntax` | CI | ✅ | v1.0.0 |
+| 22 | `demo-statusd` | runtime | smoke：`/status` 返回合法 JSON 且含版本字段 | 215 | ⚠️ 一次性取证 | **v1.0.2** |
+| 23 | `demo-collectd` | runtime | smoke：`is-active` + `journalctl` 有采集记录 | 215 | ⚠️ 一次性取证 | **v1.0.2** |
+| 24 | `deploy-guard` | static | `18_deployguard` | CI | ✅ | v1.0.0 |
+| 25 | `release-check` | build | `19_releasecheck` + 真跑一次编排 | 215 | ✅ | v1.0.0 |
 
-- 任一动作 rc≠0 → 整体判红，失败项逐条列出（不是「smoke 失败」一句话）。
-- 结果输出为 JUnit XML，与 L3 的 bats 报告**分开归档**，避免混在一起看不出是哪层挂的。
-- 运行时长预算：单组合 < 2 分钟（不含起机）。
-- 只对 `custom` variant 的 `base` 与 `full` 跑；`minimal` 不含这些工具，跳过并注明。
+**统计（2026-11-09）**：25 条中 ✅ 17 条、⚠️ 6 条、⬜ 0 条。
 
-### 6.3 它不证明什么
+### 6.2 未达档位的六条，以及为什么
 
-避免把它当成 ptest 的替代品：
+| feature | 现状 | 缺口是什么 | 怎么补 |
+|---|---|---|---|
+| `yp-service` | ⚠️ 一次性取证 | 曾在 v0.6.0 用 `boot-exec.sh` 手工验过 `is-enabled`/`is-active`，但**没有脚本、没有归档**，别人无法复现 | `#132` smoke 动作集 |
+| `demo-statusd` | ⚠️ 一次性取证 | 同上。`/status` 返回 JSON 是手工 `curl` 看到的 | `#132` |
+| `demo-collectd` | ⚠️ 一次性取证 | 同上。`journalctl` 里有采集记录是手工查的 | `#132` |
+| `foss-scan` | ⚠️ 降级 | 范围收缩后**默认不执行**（scancode 停用） | 显式决策，不补。恢复条件=出现真实出货/客户尽调 |
+| `do-scancode` | ⚠️ 降级 | 同上。脚本保留，用例仍跑（验的是脚本能力） | 同上 |
+| `distro-backfill` | ⚠️ 降级 | 6.0 起 systemd 是 nodistro 默认，本项目不需要 backfill 兼容层 | 不需要补，理由已登记 |
+
+**关键区分**：前三条是**真缺口**（证据有但不可复现），必须补；后三条是**显式降级**（有理由、有登记），补不补是决策问题不是能力问题。
+
+「一次性取证」为什么不算 ✅：按 §0 的定义，证据必须能定位到 commit / 命令 / 环境 / 阈值 / 产物摘要五要素。手工 `boot-exec.sh` 跑一次，命令与输出可能留在聊天记录或临时日志里，但**没有归档到 `docs/qa/`**，也就无法核对。**能复现的证据才叫证据。**
+
+### 6.3 L4 动作集规格（`scripts/smoke.sh` 的实现依据，`#132`）
+
+这是 `DoD` 第③条。**当前未实现**（`#132`）。
+
+起机到 login 后在目标镜像内执行，全部以退出码判定：
+
+| 组 | 动作 | 通过条件 | 适用层 |
+|---|---|---|---|
+| systemd | `systemctl is-system-running` | `running` 或 `degraded`，不接受 `offline`/`unknown` | 三层 |
+| systemd | `systemctl list-units --failed --no-legend \| wc -l` | `0` | 三层 |
+| 自有服务 | `systemctl is-enabled yp-statusd` / `is-active yp-statusd` | `enabled` / `active` | base, full |
+| statusd | `curl -s localhost:<port>/status` | 合法 JSON，含版本字段 | full |
+| collectd | `is-active yp-collectd` + `journalctl -u yp-collectd -n 20` | `active` 且日志有采集记录 | full |
+| 六构建系统 | `yp-demo-{make,cmake,autotools,meson,python,go}` 各跑一次 | 每个 rc=0 | full |
+| 品牌化 | `grep '^ID=' /etc/os-release` / `hostname` / `cat /etc/motd` | 与 `yp-branding` 定义一致 | 三层 |
+| busybox | 20 个 applet 最小执行 | 每个 rc=0 | 三层 |
+| python3 | `python3 -c 'import json,sqlite3,ssl,hashlib;print(ssl.OPENSSL_VERSION)'` | rc=0 且能打印 | 三层 |
+| openssl | 自签证书 + `s_client` 本地握手 | 握手成功 | full |
+| demo 二进制 | `cpp-hello` / `yp-hello-svc` 可执行 | rc=0 | full |
+
+**三层都跑，不是只跑 full**：`minimal` 层最容易出事——`yp-demo-*` 全摘、`IMAGE_INSTALL` 按 variant 门控，它与 full 的差异很大。不适用的组要在报告里**明确记录跳过原因**，不是静默 skip。
+
+**失败判定**：一个动作 rc≠0 → 整轮红；但**动作之间失败不中断**，一个挂了继续跑下一个，最后汇总。否则永远不知道后面还有几个坏。
+
+**已知 degraded 项不进动作集**——它们已在 `config/degraded.txt` 登记，不该混进 smoke 冒红。
+
+**产物**：JUnit XML 与 L3 的 bats 报告**分目录归档**；`docs/qa/wrynose/smoke-<date>-<sha>.md`（三层各一份）；同目录 `artifacts-smoke-<sha>.sha256`。
+
+**时长预算**：单组合 < 2 分钟（不含起机）。
+
+### 6.4 它不证明什么
+
+避免把 smoke 当成 ptest 的替代品：
 
 - 不证明上游测试全过（那是 `ptest` 的事，已 icebox）
-- 不证明性能达标（那是启动基线的事）
+- 不证明性能达标（那是 `boot-time` 与 `docs/qa/boot-baseline.md` 的事）
 - 不证明所有包可用（只覆盖被点名的工具集）
 - **不证明镜像可以长期运行**（只验证「装进去的东西能用一次」）
 
@@ -249,6 +350,9 @@ bash scripts/qemu.sh --timeout 180
 bash scripts/report.sh
 ls docs/qa/wrynose/ | tail -3
 sha256sum -c docs/qa/wrynose/artifacts-<sha>.sha256
+
+# 6. 运行时内容（L4）—— 待实现 #132
+# bash scripts/smoke.sh --release wrynose --variant custom --image full   # 待实现 #132
 ```
 
 **核对点**（不止看 rc=0）：
@@ -256,27 +360,32 @@ sha256sum -c docs/qa/wrynose/artifacts-<sha>.sha256
 1. 报告的用例总数是否与 `tests/bats/` 里的 `@test` 数量一致——不一致说明有文件没被跑到。
 2. 串口日志末尾是否有 `login:`，且镜像 banner 里的版本与当前 tag 一致。
 3. `sha256sum -c` 是否全 OK——不 OK 说明归档与产物不是同一份。
+4. `awk -F'|' '$6 ~ /runtime/ {n++} END {print n}' config/features.txt`——这个数字就是「还需要运行时验证的条数」，别把它当成已完成的条数。
 
 > 第 4 步的 `--timeout` 必须给。不给就会一直等，看起来像卡死，
 > 实际是在等一个永远不来的提示符。
 
 ## 8. 当前缺口
 
-诚实清单。这些不是「以后可能做」，是**现在确实没有**：
+诚实清单。这些不是「以后可能做」，是**现在确实没有**。带 issue 编号的是已排期。
 
 | 缺口 | 影响 | 状态 |
 |---|---|---|
-| L4 smoke 未实现 | 「内容能用」无证据，`DoD` 卡在第③条 | 规格已定（§6），待实现 |
+| L4 smoke 未实现 | 「内容能用」无证据，`DoD` 卡在第③条；3 条 `runtime` 档只有一次性取证 | `#132`，规格见 §6.3 |
+| `runtime` 档 3 条不可复现 | `yp-service` / `demo-statusd` / `demo-collectd` 手工验过但无归档 | `#132` 一并解决 |
+| 只读根 `/var` 不可写 | dm-verity 镜像 `journald` 落不了盘，`/var/lib` 只读 | `#133`，`DoD` 第④条 |
 | 无实体硬件验证 | 全部证据来自 QEMU；板级时序、电源、外设未覆盖 | **主动声明**，不计划补 |
-| 单架构（x86-64） | arm64 及其他架构未覆盖 | 暂停，扩架构需先查硬编码假设 |
-| 207 项断言偏静态 | 只测「文件在/内容长什么样」 | L4 补 |
-| `--deep` 内容级扫描未做 | 旧 sstate 恢复型污染只能靠 L3 偶然撞见 | icebox |
-| ptest 未接入 | 上游测试通过率未知 | icebox |
-| 只读根 `/var` 不可写 | dm-verity 镜像 `journald` 落不了盘，`/var/lib` 只读 | `DoD` 第④条，待实现 |
+| 单架构（x86-64） | arm64 及其他架构未覆盖 | 暂停（`#121` icebox） |
+| 207 项断言偏静态 | 只测「文件在/内容长什么样」 | `#132` 补 L4 |
+| `--deep` 内容级扫描未做 | 旧 sstate 恢复型污染只能靠 L3 偶然撞见 | icebox（`#119`） |
+| ptest 未接入 | 上游测试通过率未知 | icebox（`#120`） |
+| VEX 与 SBOM 一致性未做 | 不是 CRA 意义上的完整技术文档 | **显式不做**（非制造商） |
 
 ## 9. 相关文档
 
 - 功能全景 → [`functional-flow.md`](functional-flow.md)
+- 功能说明书（每条功能的定义与边界） → [`features.md`](features.md)
+- 工程结构为什么这样 → [`design.md`](design.md)
 - 范围与取舍 → [`engineering-overview.md`](engineering-overview.md)
 - 归档目录约定 → [`qa/README.md`](qa/README.md)
 - 排障方法论（更细） → [`handover.md`](handover.md) §三

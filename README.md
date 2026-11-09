@@ -3,9 +3,11 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![ci](https://github.com/zeek-zhao/yp-distro/actions/workflows/ci.yml/badge.svg)](https://github.com/zeek-zhao/yp-distro/actions/workflows/ci.yml)
 
-4 个 Yocto release（dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 / wrynose 6.0）× 2 个 variant
-（`general` / `custom` 独立 distro）的工程化流水线：版本锁、容器化构建、BATS 门禁、
-镜像分发、SBOM / CVE 合规证据采集。
+以 **wrynose 6.0** 为保障目标的 Yocto 发行版工程：版本锁、容器化构建、BATS 门禁、
+镜像分发、SPDX / CVE 合规证据采集，外加一套**可复现、可核对**的验证管线。
+
+仓库同时保留 dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 的配置与兼容层，作为**四版语法
+差异的知识资产**（冻结、不构建、不保障）——迁移时不需考古。
 
 > **当前保障范围只有 wrynose 6.0**（2026-11-09 决策）。3.1 / 4.0 / 5.0 的配置与配方
 > 冻结保留在仓库中、退出构建与保障，待 6.0 达到完成门槛后回移。验证环境为
@@ -16,7 +18,7 @@
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
 > Yocto 版本代号。
 
-## 当前状态（2026-11-04）
+## 当前状态（2026-11-09）
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
@@ -24,23 +26,31 @@
 | `v0.2.0` | P1 打通：kas 版本锁、四版解析、QA 报告链路 | ✅ 已发布 |
 | `v0.3.0` | 6.0 发行版与镜像：U-Boot 启动链 + systemd 收口 | ✅ 已发布 |
 | `v0.4.0` | 6.0 语法组：六构建系统 + 服务模板 | ✅ 已发布 |
-| `v0.5.0` | 启动优化（内核裁剪 / rootfs 形态 / systemd 精简），**已移植 5.0/4.0** | ✅ 出口条件达成（随 PR #113 合并生效） |
-| `v0.6.0` | 服务与 demo 扩展 + 服务数×耗时曲线 | ✅ 出口条件达成（随 PR #113 合并生效） |
-| `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | ✅ 出口条件达成（随 PR #113 合并生效） |
-| `v1.0.0` | 四版收口（回归 8/8 + 归档刷新 + 安全基线） | ✅ 出口条件达成（待合并发版） |
+| `v0.5.0` | 启动优化（内核裁剪 / rootfs 形态 / systemd 精简） | ✅ **随 v1.0.0 累积发布** |
+| `v0.6.0` | 服务与 demo 扩展 + 服务数×耗时曲线 | ✅ **随 v1.0.0 累积发布** |
+| `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | ✅ **随 v1.0.0 累积发布** |
+| `v1.0.0` | 四版收口（回归 8/8 + 归档刷新 + 安全基线） | ✅ 已发布（2026-11-05，`1e1ff48`） |
+| `v1.0.1 · 6.0 全面收口` | 25 条功能各达证据档位 + DoD 五条 | 🚧 进行中（含 `v1.0.1`/`v1.0.2`/`v1.1.0` 三个批次） |
+
+> `v0.5.0` / `v0.6.0` / `v0.7.0` 三个里程碑**从未单独打 tag**——它们的全部内容挤在
+> `v1.0.0` 指向的一个 squash commit 里，在同一 commit 上补三个 tag 等于伪造发布点。
+> 所以口径是「累积发布」，不是「各自发过」。详见
+> [`docs/engineering-overview.md`](docs/engineering-overview.md) §2。
 
 计划与进度分三层看，别重复维护：
 
 | 想知道 | 看哪里 |
 |---|---|
 | **这仓库是什么、承诺什么、不承诺什么** | [`docs/engineering-overview.md`](docs/engineering-overview.md) |
+| **每条功能是什么、怎么用、边界在哪** | [`docs/features.md`](docs/features.md) |
+| **工程结构为什么这样**（分层/class/注入点/扩展方式） | [`docs/design.md`](docs/design.md) |
 | **从配置到镜像经过哪些环节**（功能流程图） | [`docs/functional-flow.md`](docs/functional-flow.md) |
-| **怎么证明产物是对的、我怎么自己验**（验证流程图） | [`docs/verification-flow.md`](docs/verification-flow.md) |
+| **怎么证明产物是对的、我自己怎么验**（测试说明） | [`docs/verification-flow.md`](docs/verification-flow.md) |
 | **下一件该做什么（带优先级的待办）** | [`docs/backlog.md`](docs/backlog.md) |
 | **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/handover.md`](docs/handover.md) |
 | **AI 协作者作业手册**（禁区/验证/决策边界） | [`docs/ai-handover.md`](docs/ai-handover.md) |
 | **知识库与工程规范**（KB-01~32，normative） | [`docs/knowledge-base.md`](docs/knowledge-base.md) |
-| **Feature 注册表**（已完成/进行中/规划中） | [`docs/features.md`](docs/features.md) |
+| **机器可读功能注册表**（含证据级别） | [`config/features.txt`](config/features.txt) |
 | **什么才算做完**（每个版本的出口条件） | [`docs/plan/milestones.md`](docs/plan/milestones.md) |
 | **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
 | 阶段划分与约束 | [`docs/roadmap.md`](docs/roadmap.md) |
@@ -66,8 +76,8 @@ bash scripts/build.sh --release wrynose --variant custom --image full
 ### 发版 / 点版本 / 日常取证
 
 ```bash
-bash scripts/release-check.sh                        # 全量回归（两 LTS × 两 variant）：build→qemu→report→guard
-bash scripts/release-check.sh --machine qemuarm64    # arm64 抽查维度
+bash scripts/release-check.sh                        # 受保障组合全量回归（版本清单见 #127）：build→qemu→report→guard
+bash scripts/release-check.sh --machine qemuarm64    # arm64 不在保障范围，仅手动抽查用
 bash scripts/deploy-guard.sh --all                   # 构建产物新鲜度校验（指纹级）
 bash scripts/boot-time.sh --release wrynose --variant custom --image minimal --runs 3
                                                      # 启动三段测量；文档见 docs/boot-optimization.md
