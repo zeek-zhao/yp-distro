@@ -649,7 +649,7 @@ print_sbom=0
 release=""
 variant="general"
 machine="qemux86-64"
-only="sbom,cve"  # 默认不再跑 FOSS 扫描（#129：scancode 暂停，--only foss 可手动触发）
+only="sbom,cve" # 默认不再跑 FOSS 扫描（#129：scancode 暂停，--only foss 可手动触发）
 force=0
 while (($# > 0)); do
     case "$1" in
@@ -708,7 +708,8 @@ only_ok() {
             for item in "${items[@]}"; do
                 case "${item}" in sbom | cve | foss) ;; *) return 1 ;; esac
             done
-            return 0 ;;
+            return 0
+            ;;
         *) return 1 ;;
     esac
 }
