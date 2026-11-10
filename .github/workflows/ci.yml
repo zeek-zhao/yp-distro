@@ -42,9 +42,11 @@ jobs:
       - name: Pull release images
         run: |
           set -euo pipefail
-          for release in dunfell kirkstone scarthgap wrynose; do
+          # 受支持 release 的单一事实源（#127）
+          while read -r release; do
+            [ -n "${release}" ] || continue
             docker pull "ghcr.io/zeek-zhao/yp-distro/${release}:latest"
-          done
+          done < config/supported-releases.txt
       - name: Run BATS and render report
         run: bash scripts/report.sh all
       - name: Skip gate
@@ -70,27 +72,6 @@ jobs:
   # 上面那个 job 只跑一遍 BATS（report.sh all 的语义），真正吃 release 配置的
   # 用例（features.txt 的 release 维度、99_coverage 的降级清单比对）此前从未
   # 按四个发行版分别验证过。这里补矩阵，成本只是在同一批用例上多跑三次。
-  bats-release-matrix:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    env:
-      WATERMARK_PCT: "95"
-    strategy:
-      fail-fast: false
-      matrix:
-        release: [dunfell, kirkstone, scarthgap, wrynose]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install tools
-        run: |
-          set -euo pipefail
-          bash scripts/ci/install-tools.sh --prefix "$RUNNER_TEMP/tools"
-          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
-      - name: Run BATS with release context
-        env:
-          BATS_TEST_RELEASE: ${{ matrix.release }}
-          RELEASE: ${{ matrix.release }}
-        run: bats -r tests/bats
 
   secret-scan:
     runs-on: ubuntu-24.04

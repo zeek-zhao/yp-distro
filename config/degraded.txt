@@ -3,3 +3,4 @@ distro-backfill | wrynose | DISTRO_FEATURES_BACKFILL 已在 6.0 移除 | §7.3
 do-scancode | all | scancode 是 Python 应用做不成可行的 native recipe；recipe 内扫描与构建后批量扫描覆盖完全等价，却要多付 146 个 recipe x 4.5s 的进程启动开销，故只保留 demo 形态、默认关闭、不进任何镜像 | C26 / §7.3
 empty-root-login | wrynose | full 层为演示与自动取证放开 root 空密码登录；minimal/base 不开，交付层的登录策略由各层自己决定 | §4.2
 uboot-qfw-chain | scarthgap | u-boot 2024.01 没有 BOOTMETH_QFW（2024.07+ 才引入，6.0 的 2026.01 有），QFW bootmeth 链在 5.0 结构上不可用；U-Boot 本体能起（SPL→proper）但引导不了 -kernel 传入的 bzImage。5.0 的启动基线按 -kernel 直启口径测，bootloader 段记 n/a（#81） | §7.3
+foss-scan | all | scancode 暂停：合规范围收窄为 SPDX SBOM + CVE 报告（#129）；恢复条件=出现真实出货/客户尽调要求 FOSS 扫描证据；scripts/scancode.sh 保留不删，--only foss 仍可用 | §7.3

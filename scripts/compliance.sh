@@ -49,7 +49,7 @@ usage() {
   scripts/compliance.sh status --release <r> [--variant general|custom]
   scripts/compliance.sh --print-sbom --release <r> [--variant V] [--machine M]
 
---only      只跑某一件，其余节保留上一次的结果（默认三件全跑）
+--only      只跑某一件，其余节保留上一次的结果（默认 sbom,cve；FOSS 扫描已暂停，见 degraded.txt do-scancode）
 --foss-limit    批量扫描的源码包上限，默认 20，0 表示不限
 --force     丢弃 compliance.d/ 后重跑
 --print-sbom   只打印镜像级 SBOM 的绝对路径（找不到则返回非零）
@@ -649,7 +649,7 @@ print_sbom=0
 release=""
 variant="general"
 machine="qemux86-64"
-only="all"
+only="sbom,cve"  # 默认不再跑 FOSS 扫描（#129：scancode 暂停，--only foss 可手动触发）
 force=0
 while (($# > 0)); do
     case "$1" in
@@ -698,10 +698,21 @@ done
     usage >&2
     exit 2
 }
-case "${only}" in
-    all | sbom | cve | foss) ;;
-    *) die_usage "--only 只能是 sbom / cve / foss / all" ;;
-esac
+# 合法值：单个（all/sbom/cve/foss）或逗号分隔组合（默认 sbom,cve，#129）
+only_ok() {
+    case "$1" in
+        all | sbom | cve | foss) return 0 ;;
+        *,*)
+            local item
+            IFS=',' read -r -a items <<<"$1"
+            for item in "${items[@]}"; do
+                case "${item}" in sbom | cve | foss) ;; *) return 1 ;; esac
+            done
+            return 0 ;;
+        *) return 1 ;;
+    esac
+}
+only_ok "${only}" || die_usage "--only 只能是 sbom / cve / foss / all 或其逗号组合"
 [[ "${FOSS_LIMIT}" =~ ^[0-9]+$ ]] || die_usage "--foss-limit 必须是非负整数"
 
 resolve_all "${release}" "${variant}" "${machine}"
@@ -726,16 +737,19 @@ if ((force)); then
     mkdir -p -- "${SECTIONS_DIR}"
 fi
 
-case "${only}" in
-    sbom) step_sbom ;;
-    cve) step_cve ;;
-    foss) step_foss ;;
-    all)
-        step_sbom
-        step_cve
-        step_foss
-        ;;
-esac
+# 逗号组合逐个执行；默认 sbom,cve 不跑 foss（#129）
+step_wanted() {
+    local item
+    IFS=',' read -r -a wanted <<<"${only}"
+    for item in "${wanted[@]}"; do
+        case "${item}" in
+            sbom) step_sbom ;;
+            cve) step_cve ;;
+            foss) step_foss ;;
+        esac
+    done
+}
+step_wanted
 
 out="$(merge_sections "$(artifact_dir)/compliance.json")"
 printf '\n合规证据：%s\n' "$(relpath "${out}")"

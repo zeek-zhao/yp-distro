@@ -14,10 +14,10 @@ setup() {
 }
 
 # bats test_tags=release-check
-@test "default scope is the two supported LTS only" {
-    grep -q 'releases="wrynose,scarthgap"' "${SCRIPT}"
-    grep -q 'wrynose/scarthgap）' "${SCRIPT}"
-    ! grep -q 'releases="dunfell' "${SCRIPT}"
+@test "default scope follows the supported-releases single source" {
+    # #127：默认范围从 config/supported-releases.txt 读，不再硬编码
+    grep -q 'config/supported-releases.txt' "${SCRIPT}"
+    ! grep -Eq 'releases="(dunfell|kirkstone)' "${SCRIPT}"
 }
 
 # bats test_tags=release-check

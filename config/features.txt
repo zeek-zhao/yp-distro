@@ -1,26 +1,27 @@
 # feature_id | 适用 release | bats 文件 | bats tag | status
-entry-unified | all | tests/bats/00_project.bats | entry | ok
-docker-images | all | tests/bats/01_dockerfile.bats | dockerfile | ok
-ci-workflows | all | tests/bats/02_workflows.bats | ci | ok
-container-runtime | all | tests/bats/03_container.bats | container | ok
-layer-structure | all | tests/bats/04_layer.bats | layer | ok
-kas-layer | all | tests/bats/05_kas.bats | kas | ok
-spdx-format | all | tests/bats/11_compliance.bats | compliance | ok
-cve-tool | all | tests/bats/11_compliance.bats | compliance | ok
-cve-db | dunfell,kirkstone,scarthgap | tests/bats/09_cvedb.bats | cvedb | ok
-foss-scan | all | tests/bats/11_compliance.bats | compliance | ok
-sdk | all | tests/bats/10_sdk.bats | sdk | ok
-distro-backfill | wrynose | - | - | degraded
-report-archive | all | tests/bats/06_report.bats | report | ok
-shared-cache | all | tests/bats/07_cache.bats | cache | ok
-cross-version-diff | all | tests/bats/08_crossdiff.bats | crossdiff | ok
-do-scancode | all | tests/bats/11_scancode.bats | scancode | degraded
-distro-features | all | tests/bats/12_distro.bats | distro | ok
-kvm-accel | all | tests/bats/03_container.bats | container | ok
-yp-service | wrynose | tests/bats/13_service.bats | service | ok
-boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok
-syntax-matrix | all | tests/bats/15_syntax.bats | syntax | ok
-demo-statusd | wrynose | tests/bats/16_statusd.bats | demo | ok
-demo-collectd | wrynose | tests/bats/17_collectd.bats | demo | ok
-deploy-guard | all | tests/bats/18_deployguard.bats | deploy-guard | ok
-release-check | all | tests/bats/19_releasecheck.bats | release-check | ok
+entry-unified | all | tests/bats/00_project.bats | entry | ok | static
+docker-images | all | tests/bats/01_dockerfile.bats | dockerfile | ok | static
+ci-workflows | all | tests/bats/02_workflows.bats | ci | ok | static
+container-runtime | all | tests/bats/03_container.bats | container | ok | build
+layer-structure | all | tests/bats/04_layer.bats | layer | ok | static
+kas-layer | all | tests/bats/05_kas.bats | kas | ok | static
+spdx-format | all | tests/bats/11_compliance.bats | compliance | ok | build
+cve-tool | all | tests/bats/11_compliance.bats | compliance | ok | static
+cve-db | dunfell,kirkstone,scarthgap | tests/bats/09_cvedb.bats | cvedb | ok | build
+foss-scan | all | tests/bats/11_compliance.bats | compliance | degraded | build
+sdk | all | tests/bats/10_sdk.bats | sdk | ok | build
+distro-backfill | wrynose | - | - | degraded | static
+report-archive | all | tests/bats/06_report.bats | report | ok | static
+shared-cache | all | tests/bats/07_cache.bats | cache | ok | static
+cross-version-diff | all | tests/bats/08_crossdiff.bats | crossdiff | ok | static
+do-scancode | all | tests/bats/11_scancode.bats | scancode | degraded | static
+distro-features | all | tests/bats/12_distro.bats | distro | ok | build
+kvm-accel | all | tests/bats/03_container.bats | container | ok | static
+yp-service | wrynose | tests/bats/13_service.bats | service | ok | runtime
+boot-time | wrynose | tests/bats/14_boottime.bats | boottime | ok | boot
+syntax-matrix | all | tests/bats/15_syntax.bats | syntax | ok | build
+demo-statusd | wrynose | tests/bats/16_statusd.bats | demo | ok | runtime
+demo-collectd | wrynose | tests/bats/17_collectd.bats | demo | ok | runtime
+deploy-guard | all | tests/bats/18_deployguard.bats | deploy-guard | ok | build
+release-check | all | tests/bats/19_releasecheck.bats | release-check | ok | build
+supported-releases | all | tests/bats/20_supported_releases.bats | release-check | ok | static

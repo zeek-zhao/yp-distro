@@ -552,7 +552,9 @@ if ((render_only == 0)); then
     # 与工作机上行为一致。
     # stdin 必须重定向：部分用例的 teardown 会 rm -r 含只读 git 对象的临时仓库，
     # rm 在 tty 上会停在 “remove write-protected regular file?” 提示上永久阻塞。
-    if bash "${ROOT_DIR}/scripts/dev.sh" bats --formatter junit \
+    # BATS_TEST_RELEASE 显式导出（#127）：不再依赖 99_coverage 的 ${BATS_TEST_RELEASE:-wrynose}
+    # 兜底——报告与哪个 release 的镜像对应，由调用方声明，不靠默认值猜
+    if bash "${ROOT_DIR}/scripts/dev.sh" env BATS_TEST_RELEASE="${release}" bats --formatter junit \
         -r /work/tests/bats >"${target_xml}" </dev/null; then
         bats_status=0
     else
