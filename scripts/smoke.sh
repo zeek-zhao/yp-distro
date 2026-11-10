@@ -163,7 +163,6 @@ cd -- "${ROOT_DIR}" || exit 1
 
 # ---- 解析 SM| 行 ----
 sm_lines="$(sed -n '/__BEGIN__/,/__END__/p' "${serial_abs}" | tr -d '\r' | grep -E '^SM\|' || true)"
-login_ok="$(grep -qi 'login:' "${serial_abs}" && echo yes || echo no)"
 if [[ -z "${sm_lines}" && "${image_layer}" != "full" ]]; then
     # wrynose 的 minimal/base 串口 root 无空密码（degraded.txt:
     # empty-root-login）——自动登录不成立，动作集无法执行。
