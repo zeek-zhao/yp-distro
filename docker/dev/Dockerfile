@@ -36,7 +36,7 @@ ARG DEV_GID=2000
 ARG DEV_USER=dev
 
 # ── 软件源（全部可覆盖回官方，对应需求 §11 网络与源策略）──────────────────
-ARG APT_MIRROR=cn.archive.ubuntu.com
+ARG APT_MIRROR=archive.ubuntu.com
 ARG PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
 ARG NPM_REGISTRY=https://registry.npmjs.org
 ARG NODE_DIST=https://registry.npmmirror.com/-/binary/node
