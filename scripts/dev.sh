@@ -152,6 +152,7 @@ do_build() {
         --build-arg "DEV_UID=$(id -u)" \
         --build-arg "DEV_GID=$(id -g)" \
         --build-arg "DEV_USER=$(id -un)" \
+        --build-arg "APT_MIRROR=${APT_MIRROR:-archive.ubuntu.com}" \
         -t "${IMAGE}" \
         "${BUILD_CTX}"
     log "构建完成：${IMAGE}"

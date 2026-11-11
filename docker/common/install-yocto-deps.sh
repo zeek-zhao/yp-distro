@@ -23,7 +23,7 @@ if (($#)); then
     exit 0
 fi
 
-APT_MIRROR="${APT_MIRROR:-cn.archive.ubuntu.com}"
+APT_MIRROR="${APT_MIRROR:-archive.ubuntu.com}"
 SDL_PKG="${SDL_PKG:?SDL_PKG is required}"
 EXTRA_PKGS="${EXTRA_PKGS:-}"
 UBUNTU_VERSION="${UBUNTU_VERSION:?UBUNTU_VERSION is required}"

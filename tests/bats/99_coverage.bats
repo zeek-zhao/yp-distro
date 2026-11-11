@@ -74,25 +74,28 @@ _trim() {
     done
 }
 
-# Test 4: feature records have five fields, valid releases, and valid status.
+# Test 4: feature records have five or six fields (第六列 = 证据级别，#131)，
+#         valid releases, and valid status.
 @test "features file has five fields, known releases, and valid status" {
-    local line line_number=0 field_count feature release bats_file tag status
+    local line line_number=0 field_count feature release bats_file tag status evidence
     local releases=" all dunfell kirkstone scarthgap wrynose "
+    local evidence_levels=" static build boot runtime "
     while IFS= read -r line || [[ -n "${line}" ]]; do
         ((line_number += 1))
         [[ "${line}" =~ ^[[:space:]]*$ || "${line}" =~ ^[[:space:]]*# ]] && continue
         field_count="${line//[^|]/}"
-        if [[ "${#field_count}" -ne 4 ]]; then
-            printf 'features.txt line %s: %s (expected exactly five | separated fields)\n' \
+        if [[ "${#field_count}" -ne 4 && "${#field_count}" -ne 5 ]]; then
+            printf 'features.txt line %s: %s (expected five or six | separated fields)\n' \
                 "${line_number}" "${line}" >&2
             return 1
         fi
-        IFS='|' read -r feature release bats_file tag status <<<"${line}"
+        IFS='|' read -r feature release bats_file tag status evidence rest <<<"${line}"
         feature="$(_trim "${feature}")"
         release="$(_trim "${release}")"
         bats_file="$(_trim "${bats_file}")"
         tag="$(_trim "${tag}")"
         status="$(_trim "${status}")"
+        evidence="$(_trim "${evidence:-}")"
         if [[ -z "${feature}" || -z "${release}" || -z "${bats_file}" ||
             -z "${tag}" || -z "${status}" ]]; then
             printf 'features.txt line %s: %s (fields must not be empty)\n' \
@@ -102,6 +105,11 @@ _trim() {
         if [[ "${status}" != "ok" && "${status}" != "degraded" ]]; then
             printf 'features.txt line %s: %s (invalid status: %s)\n' \
                 "${line_number}" "${line}" "${status}" >&2
+            return 1
+        fi
+        if [[ -n "${evidence}" && "${evidence_levels}" != *" ${evidence} "* ]]; then
+            printf 'features.txt line %s: %s (invalid evidence level: %s)\n' \
+                "${line_number}" "${line}" "${evidence}" >&2
             return 1
         fi
         if [[ "${bats_file}" == "-" && "${tag}" != "-" ]] ||
@@ -130,13 +138,16 @@ _trim() {
 }
 
 # Test 5: every degraded feature has a release-matching reason.
+# （解析兼容六字段格式：多余列忽略）
 @test "every degraded feature has a matching degraded-list reason" {
     local line feature release bats_file tag status aspect degraded_release reason requirement
     local feature_line=0 found degraded_covers release_item
     local -a feature_releases=()
+    local extra
     while IFS= read -r line || [[ -n "${line}" ]]; do
         [[ "${line}" =~ ^[[:space:]]*$ || "${line}" =~ ^[[:space:]]*# ]] && continue
-        IFS='|' read -r feature release bats_file tag status <<<"${line}"
+        # 六字段格式（#131 证据级别列）：extra 吃掉多余列，status 保持纯净
+        IFS='|' read -r feature release bats_file tag status extra <<<"${line}"
         feature="$(_trim "${feature}")"
         release="$(_trim "${release}")"
         status="$(_trim "${status}")"

@@ -23,7 +23,7 @@ usage() {
     cat <<'USAGE'
 用法：scripts/release-check.sh [--releases 列表] [--variants 列表] [--machine m]
 
-  --releases  逗号分隔（默认 wrynose,scarthgap）
+  --releases  逗号分隔（默认取 config/supported-releases.txt）
   --variants  逗号分隔（默认 custom,general）
   --machine   单值（默认 qemux86-64；qemuarm64 组合目录带后缀）
   --timeout   单组合构建超时秒数（默认 3600）
@@ -33,7 +33,11 @@ usage() {
 USAGE
 }
 
-releases="wrynose,scarthgap"
+# 受支持 release 的单一事实源：config/supported-releases.txt（#127）
+SUPPORTED_RELEASES_FILE="${ROOT_DIR}/config/supported-releases.txt"
+[[ -s "${SUPPORTED_RELEASES_FILE}" ]] || die "缺少 ${SUPPORTED_RELEASES_FILE}（受支持 release 单一事实源）"
+releases="$(grep -vE '^\s*(#|$)' "${SUPPORTED_RELEASES_FILE}" | paste -sd, -)"
+[[ -n "${releases}" ]] || die "${SUPPORTED_RELEASES_FILE} 为空"
 variants="custom,general"
 machine="qemux86-64"
 build_timeout=3600

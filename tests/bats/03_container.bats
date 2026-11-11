@@ -61,7 +61,8 @@ EOF
 # bats test_tags=container
 @test "all local release images pass container preflight" {
     local release image
-    for release in dunfell kirkstone scarthgap wrynose; do
+    while read -r release; do
+        [ -n "${release}" ] || continue
         require_release_image "${release}"
         image="$(release_image "${release}"):local"
         if ! docker image inspect "${image}" >/dev/null 2>&1; then
@@ -71,7 +72,7 @@ EOF
         [ "${status}" -eq 0 ]
         [[ "${output}" == *"RELEASE=${release}"* ]]
         [[ "${output}" == *"Resolved image: ${image}"* ]]
-    done
+    done < "${ROOT_DIR}/config/supported-releases.txt"
 }
 
 # bats test_tags=container

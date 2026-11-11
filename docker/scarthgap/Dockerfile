@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 FROM ubuntu:24.04
 
-ARG APT_MIRROR=cn.archive.ubuntu.com
+ARG APT_MIRROR=archive.ubuntu.com
 ARG BUILD_UID=1000
 ARG BUILD_GID=1000
 ARG BUILD_USER=builder
