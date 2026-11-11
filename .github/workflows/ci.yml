@@ -35,7 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # 04_layer 的 DISTRO_VERSION↔git tag 动态断言（#130）走 git describe：
+          # 浅克隆下 HEAD 没有祖先链，fetch-tags 只送来 tag 对象，describe 摸不到
+          # 最近 tag，断言拿到空串必挂——这个 job 需要全历史（同 identity-guard）
           fetch-tags: true
+          fetch-depth: 0
       - name: Install tools
         run: |
           set -euo pipefail
