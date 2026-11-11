@@ -48,8 +48,12 @@ setup() {
 @test "release include is the sole source of version codename and maintainer" {
     local variable
     [ -f "${DISTRO_DIR}/include/yp-release.inc" ]
-    # 版本号跟里程碑走：v0.3.0 = 6.0 发行版与镜像（P3 第一段）
-    grep -qx 'DISTRO_VERSION = "0.3.0"' "${DISTRO_DIR}/include/yp-release.inc"
+    # 版本号与仓库最新 tag 一致（#130）：忘改 DISTRO_VERSION 会红，
+    # 而不是「改了才红」——门禁语义是保护一致性，不是锁死一个值
+    local expected_version
+    expected_version="$(git -C "${ROOT_DIR}" describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//')"
+    [ -n "${expected_version}" ]
+    grep -qx "DISTRO_VERSION = \"${expected_version}\"" "${DISTRO_DIR}/include/yp-release.inc"
     grep -qx 'DISTRO_CODENAME = "yp-product"' "${DISTRO_DIR}/include/yp-release.inc"
     grep -Eq '^MAINTAINER = "[^"]+"' "${DISTRO_DIR}/include/yp-common.inc"
     for variable in DISTRO_VERSION DISTRO_CODENAME; do
