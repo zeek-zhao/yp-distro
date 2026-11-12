@@ -18,7 +18,7 @@
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
 > Yocto 版本代号。
 
-## 当前状态（2026-11-09）
+## 当前状态（2026-11-12）
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
@@ -30,7 +30,7 @@
 | `v0.6.0` | 服务与 demo 扩展 + 服务数×耗时曲线 | ✅ **随 v1.0.0 累积发布** |
 | `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | ✅ **随 v1.0.0 累积发布** |
 | `v1.0.0` | 四版收口（回归 8/8 + 归档刷新 + 安全基线） | ✅ 已发布（2026-11-05，`1e1ff48`） |
-| `v1.0.1 · 6.0 全面收口` | 25 条功能各达证据档位 + DoD 五条 | 🚧 进行中（含 `v1.0.1`/`v1.0.2`/`v1.1.0` 三个批次） |
+| `v1.0.1 · 6.0 全面收口` | 26 条功能各达证据档位 + DoD 五条 | 🚧 进行中——batch1 已合并（#138），余下 #135 文档同步与点版本（`v1.0.1`/`v1.0.2`/`v1.1.0` 三个批次） |
 
 > `v0.5.0` / `v0.6.0` / `v0.7.0` 三个里程碑**从未单独打 tag**——它们的全部内容挤在
 > `v1.0.0` 指向的一个 squash commit 里，在同一 commit 上补三个 tag 等于伪造发布点。
@@ -62,6 +62,8 @@
 bash scripts/dev.sh --build                  # 建开发容器 yocto-dev:local
 bash scripts/dev.sh bash scripts/ci/lint.sh  # L1 四段：shellcheck/shfmt/hadolint/actionlint
 bash scripts/dev.sh bats tests/bats/         # BATS 全量（零 skip 要求）
+bash scripts/smoke.sh --release wrynose --variant custom --image full
+                                             # runtime 取证：一次起机跑动作集，出 JUnit + 归档（#132）
 ./project.sh config wrynose                  # 打印某 release 的生效配置
 make help                                    # 所有入口
 ```
@@ -76,7 +78,7 @@ bash scripts/build.sh --release wrynose --variant custom --image full
 ### 发版 / 点版本 / 日常取证
 
 ```bash
-bash scripts/release-check.sh                        # 受保障组合全量回归（版本清单见 #127）：build→qemu→report→guard
+bash scripts/release-check.sh                        # 受保障组合全量回归（清单 = config/supported-releases.txt，现仅 wrynose）：build→qemu→report→guard
 bash scripts/release-check.sh --machine qemuarm64    # arm64 不在保障范围，仅手动抽查用
 bash scripts/deploy-guard.sh --all                   # 构建产物新鲜度校验（指纹级）
 bash scripts/boot-time.sh --release wrynose --variant custom --image minimal --runs 3

@@ -1,3 +1,8 @@
+> **历史记录（#135，2026-11-12）**：本文是 #116 后续的生产化评估快照（只评估，
+> 未引入任何新 layer 或 recipe）。现行保障范围只有 wrynose 6.0
+> （`config/supported-releases.txt`），涉及其他版本的路线比较按历史记录看待。
+> 正文一字未动。
+
 # dm-verity 生产化评估（#116 后续，2026-11-04）
 
 > spike（`dm-verity-feasibility.md`）证明可行后，本文评估「从手工步骤到构建

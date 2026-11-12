@@ -1,3 +1,8 @@
+> **历史记录（#135，2026-11-12）**：本文件是 normative 规范，条目编号（KB-xx）
+> 仍可继续引用；但部分条目的实测背景来自四版保障时期。现行保障范围只有
+> wrynose 6.0（`config/supported-releases.txt`），文中涉及「四版受保」的表述
+> 以现行范围为准。正文按历史原样保留。
+
 # 知识库与工程规范（Knowledge Base）
 
 > **本文件是 normative reference（规范）**：条目编号（KB-xx）可被 issue、PR、

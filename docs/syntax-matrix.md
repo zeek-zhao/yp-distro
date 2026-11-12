@@ -1,3 +1,8 @@
+> **历史记录（#135，2026-11-12）**：本矩阵是四版时期沉淀的语法知识资产，
+> dunfell / kirkstone / scarthgap 三列已随保障范围收缩冻结（对应版本不再受保）。
+> 现行保障范围只有 wrynose 6.0（`config/supported-releases.txt`），wrynose 列
+> 继续有效。正文按历史原样保留。
+
 # BitBake syntax matrix
 
 | Item | dunfell (3.1) | kirkstone (4.0) | scarthgap (5.0) | wrynose (6.0) | 来源 / 证据 |

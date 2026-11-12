@@ -1,11 +1,12 @@
 # LTS 点版本跟进流程
 
-> 本项目对受支持的 Yocto LTS 做点版本（x.y.z）跟进：只跟 **wrynose 6.0** 与
-> **scarthgap 5.0** 两个 LTS；kirkstone/dunfell 已 EOL（D12 冻结口径），不跟。
+> 本项目对受支持的 Yocto LTS 做点版本（x.y.z）跟进：**只跟 wrynose 6.0**
+> （单一事实源 `config/supported-releases.txt`）；scarthgap 5.0 已随 #138 范围
+> 收缩退出跟进，kirkstone/dunfell 已 EOL（D12 冻结口径），不跟。
 >
 > 节奏与日期看 [Yocto Releases wiki](https://wiki.yoctoproject.org/wiki/Releases)
 > 与 [endoflife.date/yocto](https://endoflife.date/yocto)——每半年一个大版本，
-> LTS 每隔几周出一个点版本（如 2026-12-07 的 6.0.x / 5.0.x）。
+> LTS 每隔几周出一个点版本（如 2026-12-07 的 6.0.x）。
 
 ## 为什么要跟点版本
 
