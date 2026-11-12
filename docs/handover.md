@@ -5,18 +5,18 @@
 > AI 协作者另有作业手册 [`ai-handover.md`](ai-handover.md)；踩坑结论的
 > **规范条目**（KB-01~32）统一在 [`knowledge-base.md`](knowledge-base.md)。
 >
-> 最后更新：2026-11-09
+> 最后更新：2026-11-12
 
 ## 一、这个仓库现在是什么状态
 
 | 维度 | 现状 |
 |---|---|
 | 仓库 | `zeek-zhao/yp-distro`，公开，MIT，默认分支 `main`（**只有 `main` 一条长期分支**） |
-| 版本 | `v1.0.0` 已发布（2026-11-05，`1e1ff48`）。当前唯一在途容器是里程碑 **`v1.0.1 · 6.0 全面收口`**，关闭条件 = 25 条功能各达证据档位 + DoD 五条，内含 `v1.0.1`/`v1.0.2`/`v1.1.0` 三个批次 |
+| 版本 | `v1.0.0` 已发布（2026-11-05，`1e1ff48`）。`v1.0.1` batch1 已合并（#138，2026-11-12：单一事实源 / CI 收缩 / 版本断言 / 合规收缩 / 证据级别 / runtime smoke）。在途容器仍是里程碑 **`v1.0.1 · 6.0 全面收口`**（关闭条件 = 26 条功能各达证据档位 + DoD 五条，含 `v1.0.1`/`v1.0.2`/`v1.1.0` 三批次），余下 #135 文档同步 + 点版本 |
 | 保障范围 | **只有 wrynose 6.0**（2026-11-09 决策）。dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 **冻结保留**：配置与配方留仓、退出 CI 与回归、标 untested。理由见 `engineering-overview.md` §2.2 |
 | 验证环境 | **QEMU + x86-64**。不用实体硬件（从未上板）、不覆盖 arm64。两者是主动声明，不是缺陷 |
-| 门禁 | bats **207 项**（0 失败 0 skip）+ lint + secret-scan + identity-guard + plan-sync + branch-guard。`bats-release-matrix` 在收缩后删除（见 #128） |
-| 回归 | `scripts/release-check.sh` 一条命令跑受保障组合（build→qemu→report→guard），8 组合同源指纹归档 |
+| 门禁 | `ci.yml` 五个 job：lint / bats / secret-scan / identity-guard / plan-sync；bats **210 项**（JUnit 口径，0 失败 0 skip）。`bats-release-matrix` 已删（#128），branch-guard 仅 push main（ruleset 的备份门禁） |
+| 回归 | `scripts/release-check.sh` 一条命令跑受保障组合（build→qemu→report→guard）；组合清单由 `config/supported-releases.txt` 驱动，现仅 wrynose × custom/general 两组合同源指纹归档 |
 | 安全 | dm-verity 只读根**路线二已完成**（`b1dc237`，篡改检出 + revert 验证）；`/var` 可写方案待做（#133）。路线一（5.0 + UEFI）已砍 |
 
 ## 二、已经验证过的能力与结论（别重复验证）
@@ -65,22 +65,27 @@
 见 [`docs/backlog.md`](backlog.md)（按里程碑批次整理的待办）与
 [`docs/plan/milestones.md`](plan/milestones.md)（出口条件）。要点：
 
-- **里程碑 `v1.0.1 · 6.0 全面收口` 是唯一容器**，关闭条件 = 25 条功能各达证据档位
-  + DoD 五条。当前 25 条中 ✅ 17 / ⚠️ 6 / ⬜ 0。
-- **两个 P0**：#130（`DISTRO_VERSION` + 断言改动态校验）、#132（runtime smoke）。
-  这两个直接卡 DoD ⑤ 与 ③。
+- **里程碑 `v1.0.1 · 6.0 全面收口` 是唯一容器**，关闭条件 = 26 条功能各达证据档位
+  + DoD 五条。当前 26 条中 ✅ 23 / ⚠️ 3 / ⬜ 0（⚠️ = foss-scan / do-scancode
+  暂停降级、只读根 `/var` 待做）。
+- **P0 已清零**：#130/#127/#128/#129 + #132/#131/#134 随 #138（batch1）于
+  2026-11-12 合并关闭。
+- **#135** 全工程文档同步进行中（`docs/135-full-sync` 分支）。
 - **#133** 只读根 `/var` overlay 是唯一真功能缺口，属 `v1.1.0`。
 - **#107** GitHub Support 工单（人工，外部阻塞，不阻塞完成判定）。
 - **例行**：wrynose 点版本跟进（下一窗口 2026-12-07）。**5.0 已退出保障，不再跟。**
 
 ## 五、纪律（违反会留下永久痕迹）
 
-- **提交身份**：author + committer **优先** `zeek.zhao <zeek.zhao@foxmail.com>`，
-  带 DCO `Signed-off-by`。
-  **已知例外（显式豁免，不是漏网）**：网页上直接 Merge 会产生 GitHub 合成身份
-  （`zeek-zhao <42319166+zeek-zhao@users.noreply.github.com>`），现存 **9 条**。
+- **提交身份**：author + committer 统一 `zeek-zhao <42319166+zeek-zhao@users.noreply.github.com>`（2026-11-12
+  起仓库 local config 已切换；`identity-guard` 放行该格式）。
+  企业身份 `zeek.zhao <zeek.zhao@foxmail.com>` 只存在于 2026-11-01 重写点之前的历史
+  提交、三个旧 tag 的 Tagger 与部分 squash message 的 `Signed-off-by`，完整公开
+  残留盘点记 #107，不再用于新提交。
+  **已知例外（显式豁免，不是漏网）**：网页上直接 Merge 会产生 GitHub 合成 committer
+  （`noreply@github.com`），现存 **13 条** squash 提交以 GitHub 身份落地。
   不重写历史的原因：第三次重写会再次重置全部 SHA，并再毁一次 `refs/pull` 引用
-  （#107 已经够痛），而 noreply 身份不泄露真实信息。`identity-guard` 已放行该格式。
+  （#107 已经够痛），而 noreply 身份不泄露真实信息。
 - **禁 AI 署名**：`Co-authored-by: <工具>`、`Generated with ...`、`🤖` 一律拒。
   三层门禁：本地 `.githooks/commit-msg`、CI `identity-guard`、GitHub ruleset。
 - **改历史前先备份**：`git bundle create --all`。改完 `branch-guard` 会因 SHA 全变

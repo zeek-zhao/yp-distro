@@ -2,7 +2,7 @@
 
 | 层级 / 位置 | 触发者与条件 | 产物与预计耗时 |
 |---|---|---|
-| L1：GitHub 托管 runner，`ci.yml` | main push、所有 PR、手动 | lint、凭据扫描、身份门禁、问题清单校验、BATS（含 4 版本矩阵）；约 5–20 分钟 |
+| L1：GitHub 托管 runner，`ci.yml` | main push、所有 PR、手动 | lint、BATS、凭据扫描、身份门禁、问题清单校验五个 job（无版本矩阵）；约 5–20 分钟 |
 | L2：GitHub 托管 runner，`images.yml` | main 上 docker、image.sh、scripts/ci 或本 workflow 变更；手动 | 4 个 GHCR 镜像，GHA 分 release 缓存；约 10–60 分钟 |
 | 出口验收：GitHub 托管 runner，`pull-check.yml` | main push、手动指定 tag、每周一北京时间 06:00 | 匿名拉取并断言非 root、release、工具链、UTF-8；约 2–15 分钟 |
 | L3：构建机构建节点 | 派单方按真实构建任务触发 | Yocto 构建及运行产物，**不在 GitHub 托管 runner 构建** |
@@ -16,8 +16,7 @@
 | job | 做什么 | 失败了说明什么 |
 |---|---|---|
 | `lint` | shellcheck / shfmt / hadolint / actionlint | 代码风格或 Dockerfile/workflow 有实质问题 |
-| `bats` | 拉齐 4 个发行版镜像后跑全量 BATS，再执行 skip 门禁 | 有回归，或有用例被悄悄跳过 |
-| `bats-release-matrix` | 按 4 个发行版各跑一遍 BATS | 某个 release 的配置分支坏了 |
+| `bats` | 按 `config/supported-releases.txt`（现仅 wrynose）拉镜像后跑全量 BATS，再执行 skip 门禁 | 有回归，或有用例被悄悄跳过 |
 | `secret-scan` | 扫描跟踪文件里的凭据形态 | 可能提交了密钥 |
 | `identity-guard` | **全历史**校验身份、内部信息、AI 署名 | 历史里混进了不该有的东西 |
 | `plan-sync` | 校验 `docs/issues.md` 与线上 issue 一致 | 文档漂移了，跑 `scripts/plan-sync.sh` |
@@ -27,8 +26,10 @@
 
 `03_container.bats` 的容器用例需要本地有发行版镜像，此前在 CI 上恒 skip——
 镜像明明就公开在 GHCR 上，这是纯资源妥协。仓库转公开后 runner 不再限量，
-所以先 `docker pull` 四个镜像，让这些用例真跑。
-`scripts/ci/skip-gate.sh` 兜底：跳过数超过上限就让 job 红，避免「悄悄跳过」再发生。
+所以按 `config/supported-releases.txt` 先 `docker pull` 受保障镜像（现仅 wrynose），
+让这些用例真跑。`scripts/ci/skip-gate.sh` 兜底：跳过数超过上限就让 job 红，
+避免「悄悄跳过」再发生。bats job 另设 `WATERMARK_PCT=95`——一次性 runner 上
+没有需要磁盘水位保护的对象（#128 收缩矩阵后）。
 
 ### 为什么 L3 不进 CI
 
@@ -84,7 +85,7 @@ lint 检查全部跟踪的 shell 脚本（`*.sh` 递归，含 `docker/common/` �
 ## 常见故障
 
 - 匿名 pull 返回 403：检查四个包是否仍为 private；由派单方公开后重跑验收。
-- 境外镜像构建卡在 apt：确认 `build-args` 覆盖 `APT_MIRROR=archive.ubuntu.com`，不要沿用构建机的国内源。
+- 境外镜像构建卡在 apt：`APT_MIRROR` 默认已是 `archive.ubuntu.com`（脚本透传环境变量可覆盖）；若被覆盖成国内源，构建前显式改回。
 - 找不到 actionlint：运行安装器并将对应 `<prefix>/bin` 加到 PATH；静态 BATS 不会跳过此项。
 
   四个 release 构建镜像与 dev 镜像自 #46 起已在 `/usr/local/bin` 内置
