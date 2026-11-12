@@ -1,3 +1,7 @@
+> **历史记录（#135，2026-11-12）**：本文是四版时期的一次性可行性取证（spike）。
+> 现行保障范围只有 wrynose 6.0（`config/supported-releases.txt`）；结论对
+> wrynose 仍适用，涉及其他版本的步骤按历史记录看待。正文一字未动。
+
 # dm-verity 只读根可行性验证（#116，2026-11-03）
 
 > **结论：可行。** wrynose-custom minimal + squashfs 只读根 + dm-verity 在现有

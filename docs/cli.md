@@ -3,6 +3,10 @@
 `project.sh` 是项目命令的唯一入口。`Makefile` 只将目标转发给它；`scripts/dev.sh`
 用于进入开发容器执行验收和开发命令，不替代项目 CLI。
 
+> **范围（#135，2026-11-12）**：现行保障范围只有 wrynose 6.0
+> （`config/supported-releases.txt`）；下文示例中的 `--release scarthgap` 仅
+> 演示参数写法，换成 `wrynose` 即可。
+
 ## CLI 契约
 
 | 子命令 | 行为 | 选项 |

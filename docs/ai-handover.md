@@ -1,3 +1,8 @@
+> **历史记录（#135，2026-11-12）**：本文的 AI 协作流程与红线仍然有效；但其中
+> 保障范围、版本状态等描述停留在四版时期。现行范围见
+> `config/supported-releases.txt`，最新工程状态见 `docs/handover.md`。正文按
+> 历史原样保留。
+
 # AI 协作交接文档
 
 > 给 AI 协作者（agent / coding assistant）的作业手册：本仓库欢迎 AI 参与产出，

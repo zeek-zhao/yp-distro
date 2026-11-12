@@ -1,6 +1,9 @@
 # 构建环境：并行度、磁盘闸、buildhistory、源码镜像包
 
-这四组配置都在 `kas/base.yml` 的 `base:` 段，四个 release 共用。它们不改变产物内容，
+这四组配置都在 `kas/base.yml` 的 `base:` 段，四个 release 共用。**现行保障
+范围只有 wrynose 6.0**（`config/supported-releases.txt`），涉及其余三版差异的
+段落（如 §3 磁盘闸对 dunfell 的兼容限制）描述的是冻结配置的历史事实，保留作
+参考。它们不改变产物内容，
 但决定「构建会不会把机器打爆 / 数据能不能回溯 / 断网能不能重建」。
 
 改动它们**不会触发重编译**（实测：加完全部四项，scarthgap general 仍是
