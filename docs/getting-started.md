@@ -5,6 +5,9 @@
 >
 > 术语：release = Yocto 版本（dunfell 3.1 … wrynose 6.0）；
 > variant = `general`（贴近上游默认）/ `custom`（独立 distro `yp` + 自有镜像）。
+>
+> **现行保障范围只有 wrynose 6.0**（单一事实源 `config/supported-releases.txt`）；
+> 下文部分示例沿用 scarthgap 参数写法，把 `--release` 换成 `wrynose` 即可。
 
 ## 0. 前置条件
 

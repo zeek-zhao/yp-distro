@@ -5,6 +5,10 @@
 再由 `scripts/report.sh --compliance` 渲染成
 `docs/qa/<release>/compliance-<date>-<sha>[-<variant>].md`。
 
+> **范围（#135，2026-11-12）**：现行保障范围只有 wrynose 6.0，默认采集
+> `--only sbom,cve`（foss-scan 暂停，登记 `config/degraded.txt`）。下文与
+> dunfell/kirkstone/scarthgap 并列的对照表是四版时期的历史实测，保留作参考。
+
 ## 1. 为什么是「采集 + 渲染」两段
 
 主报告（`<date>-<sha>.md`）已经被 150+ 例 BATS 与 `99_coverage.bats` 校验，
