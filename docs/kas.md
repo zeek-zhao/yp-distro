@@ -1,3 +1,9 @@
+> **历史记录（#135，2026-11-12）**：本文件写于四版保障时期（dunfell / kirkstone /
+> scarthgap / wrynose 全量受保），「四个 release × 2 variant = 8 组合」描述的是
+> 当时的组合面。现行保障范围只有 wrynose 6.0（单一事实源
+> `config/supported-releases.txt`），其余三版的 kas 配置已冻结保留、不再受保。
+> 正文按历史原样保留，不随范围收缩更新。
+
 # kas 静态配置层
 
 `kas/` 为四个 Yocto release 和 `general`/`custom` 两种 variant 提供 8 个
