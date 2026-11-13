@@ -3,7 +3,7 @@
 # 已合并到本文件。版本号跟仓库最新 tag 走（v1.0.0 = 四版收口发布）；
 # 04_layer.bats 的断言保护「版本号与 git tag 一致」，不是某个具体值。
 DISTRO_NAME = "YP (Yocto Platform)"
-DISTRO_VERSION = "1.0.1"
+DISTRO_VERSION = "1.0.2"
 DISTRO_CODENAME = "yp-product"
 
 # 品牌文案要的 variant 与构建日期。
