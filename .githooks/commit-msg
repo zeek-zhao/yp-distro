@@ -6,10 +6,10 @@
 #     git config core.hooksPath .githooks
 #
 # 拦截这几类问题：
-#   1. 维护者身份不统一 —— 本仓库历史上曾同时存在 4 种身份（工作邮箱、
-#      GitHub noreply、Jenkins 全局身份、另一个个人邮箱），2026-11-01 已
-#      统一为 zeek.zhao <zeek.zhao@foxmail.com>。凡邮箱里带 zeek 的提交，
-#      必须正好是这个地址。
+#   1. 维护者身份不统一 —— 2026-11-12 决策：统一为 zeek-zhao
+#      <GitHub 邮箱>（2026-11-01 曾统一为工作邮箱，该身份现仅存于历史
+#      提交，盘点记录见 #107）。凡邮箱里带 zeek 的提交，必须正好是
+#      这个 GitHub 邮箱（GitHub noreply 形态也满足）。
 #   2. 外部贡献者缺 DCO 签名 —— 非维护者身份可以提交，但消息里必须有
 #      Signed-off-by（见 CONTRIBUTING.md）。
 #   3. AI 协作者 trailer：Co-authored-by: Copilot / Claude / GPT / Cursor ...
@@ -30,8 +30,8 @@ if [[ -z "${MSG_FILE}" || ! -f "${MSG_FILE}" ]]; then
     exit 2
 fi
 
-WANT_NAME="${WB_GIT_NAME:-zeek.zhao}"
-WANT_MAIL="${WB_GIT_EMAIL:-zeek.zhao@foxmail.com}"
+WANT_NAME="${WB_GIT_NAME:-zeek-zhao}"
+WANT_MAIL="${WB_GIT_EMAIL:-42319166+zeek-zhao@users.noreply.github.com}"
 AI_RE='copilot|claude|anthropic|openai|chatgpt|\bgpt-?[0-9]|\bgemini\b|cursor|codeium|tabnine|devin|aider|codex'
 
 fail() {

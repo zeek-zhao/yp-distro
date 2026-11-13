@@ -18,6 +18,9 @@
 set -euo pipefail
 
 readonly WANT_MAIL="zeek.zhao@foxmail.com"
+# 2026-11-12 起本地新提交统一用 zeek-zhao <GitHub noreply 邮箱>：该邮箱
+# 命中上面的 noreply 放行分支；本地钩子的等价校验见 .githooks/commit-msg。
+# WANT_MAIL 保持历史口径——改它会让全历史检查变红（残留盘点见 #107）。
 # 内部域名与内网网段。本脚本自身也在工作树里，靠下面的 :(exclude) 排除，
 # 所以这里可以直接写完整字面量。
 readonly SENSITIVE_RE='rollingwireless\.[a-z]+|@devops\.com|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}'
