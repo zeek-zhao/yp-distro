@@ -96,12 +96,16 @@ lint  bats  secret-scan  identity-guard  plan-sync
   `branch-guard` 因 SHA 全变失效——恢复方式是**用 API 合并一个 PR**，不是 force push。
 - **提交信息**：多行一律脚本文件 + `git commit -F <file>`（内联双引号会把 `\n` 变字面量，已踩过）。
 - **任务卡与分支一致**：`tasks/<ID>.md` 元信息里的「分支」字段必须与实际任务分支同名。
+- **发版同步**：打 batch tag 的 PR 必须同时反映该版本状态到五份计划文档
+  （README 状态表、`plan/milestones.md`、`roadmap.md`、`backlog.md`、`handover.md`）
+  并补记 `CHANGELOG.md`。计数只在 milestones 判定表维护，他处只引用不写数。
+  （防复发：「最后更新」三次失守的根因是日期与内容脱钩 + 数字复制漂移。）
 
 ## 5. 与 AI 派单的关系
 
 在构建机的仓库工作树里直接跑 AI CLI 时，**切分支是派单前置动作**：
 先 `git switch -c feat/<TASK-ID>-<slug> main`，再进入派单执行。
-（原 WF3 派单脚本 `scripts/wf3.sh` 已于 2026-11-14 随工程清理移出仓库，
+（原 WF3 派单脚本 scripts/wf3.sh 已于 2026-11-14 随工程清理移出仓库，
 本地备份在构建机 `~/backup-wf3/`；`scripts/copilot-wrap.sh` 保留，
 仍可作为 AI CLI 运行时的 PAT 安全包装使用。）
 
@@ -114,3 +118,5 @@ lint  bats  secret-scan  identity-guard  plan-sync
 | 2026-11-01 | 删除 34 条历史分支；历史重写统一身份 | 开源合规 |
 | 2026-11-01 | 取消 `dev`，回到单长期分支；改用 ruleset 强制门禁 | 转公开 + `delete_branch_on_merge` 生效 |
 | 2026-11-14 | 必需状态检查按 ruleset 实况修正为 5 项；CI 触发矩阵去掉已删的 4 版本矩阵；清理 `dev` 残留文案 | 工程审查核对 ruleset |
+| 2026-11-09 | 范围收窄至 wrynose 6.0：3.1/4.0/5.0 冻结保留、退出构建与保障，6.0 达标后回移 | 单点资源下四版都保 = 四版都不深；详见 `engineering-overview.md` §2.2 |
+| 2026-11-14 | 文档树重组为七类编号目录 + INDEX 集中导航（PR #148） | 文档管理审查：路径语义化、死链可校验 |

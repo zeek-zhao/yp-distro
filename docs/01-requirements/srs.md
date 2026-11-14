@@ -20,7 +20,7 @@
 - **证据级别**：static（静态断言）/ build（构建产物断言）/ boot（起机日志断言）/ runtime（起机后在线行为断言）——由 features.txt 第 6 列注册。
 - **FR**：功能需求，编号 `FR-001…FR-026` 与 features.txt 行序一一对应。
 - **NFR**：非功能需求，编号 `NFR-001…NFR-008`。
-- **degraded**：显式登记的能力降级（`docs/qa/degraded.txt`），验收时可豁免但不可隐匿。
+- **degraded**：显式登记的能力降级（`config/degraded.txt`），验收时可豁免但不可隐匿。
 
 ## 2. 总体描述
 

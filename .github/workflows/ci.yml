@@ -116,6 +116,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/plan-sync.sh --check
 
+  # 文档管理审查（D2/D4）的 CI 化：md 链接与反引号仓库路径必须真实存在。
+  # 注意：这是增量校验，暂不进 ruleset 必需检查（改 ruleset 属对外动作）；
+  # 红了通常意味着文档引用了被移动/删除的文件。
+  doc-links:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      - name: 校验文档引用存在性
+        run: bash scripts/ci/check-doc-links.sh
+
   # 仓库转公开后 rulesets 已解锁，main 的保护改由平台级 ruleset 强制
   # （禁止直推 / 强制 PR / 强制状态检查 / 禁止 force push），见 docs/06-process/branching.md §4。
   # 这个 job 保留作备份：ruleset 被误删或临时放开时，它仍会判红。

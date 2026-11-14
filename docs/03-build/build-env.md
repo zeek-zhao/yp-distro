@@ -55,7 +55,8 @@ ABORT,${TMPDIR},100M,1K ABORT,${DL_DIR},100M,1K ABORT,${SSTATE_DIR},100M,1K ABOR
 | `ABORT` | 剩余 < 100M 或 inode < 1K | 立即中止整个构建 |
 
 阈值刻意压得很低 —— 这是「别把共享盘写满」的最后一道闸，不是水位管理。
-日常拦截看 `scripts/lib/disk-guard.sh` 的 85% 门禁，那个才会在构建开始前就拒绝。
+日常拦截看 `scripts/lib/common.sh` 的 `check_disk_watermark`（默认 85%，
+`scripts/container.sh` 在构建开始前调用），它才会拒绝。
 
 只写 `STOPTASKS` 会在低水位无限等（永远派不出新任务，也不报错）；
 只写 `ABORT` 会一有压力就整锅端。两档都要有。

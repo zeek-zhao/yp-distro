@@ -5,14 +5,14 @@
 > AI 协作者另有作业手册 [`ai-handover.md`](../07-ai/ai-handover.md)；踩坑结论的
 > **规范条目**（KB-01~32）统一在 [`knowledge-base.md`](knowledge-base.md)。
 >
-> 最后更新：2026-11-12
+> 最后更新：2026-11-14
 
 ## 一、这个仓库现在是什么状态
 
 | 维度 | 现状 |
 |---|---|
 | 仓库 | `zeek-zhao/yp-distro`，公开，MIT，默认分支 `main`（**只有 `main` 一条长期分支**） |
-| 版本 | `v1.0.0` 已发布（2026-11-05，`1e1ff48`）。`v1.0.1` batch1 已合并（#138，2026-11-12：单一事实源 / CI 收缩 / 版本断言 / 合规收缩 / 证据级别 / runtime smoke）。在途容器仍是里程碑 **`v1.0.1 · 6.0 全面收口`**（关闭条件 = 26 条功能各达证据档位 + DoD 五条，含 `v1.0.1`/`v1.0.2`/`v1.1.0` 三批次），余下 #135 文档同步 + 点版本 |
+| 版本 | `v1.0.0` 已发布（2026-11-05，`1e1ff48`）。批次 tag `v1.0.1`（修正，`bf748c1`）与 `v1.0.2`（验证，`2157a6c`）已发布（2026-11-14）。在途容器仍是里程碑 **`v1.0.1 · 6.0 全面收口`**（关闭条件 = 26 条功能各达证据档位 + DoD 五条，判定表只在 [`plan/milestones.md`](plan/milestones.md)），余下 #135 文档同步 + C 功能 `v1.1.0`（#133） |
 | 保障范围 | **只有 wrynose 6.0**（2026-11-09 决策）。dunfell 3.1 / kirkstone 4.0 / scarthgap 5.0 **冻结保留**：配置与配方留仓、退出 CI 与回归、标 untested。理由见 `engineering-overview.md` §2.2 |
 | 验证环境 | **QEMU + x86-64**。不用实体硬件（从未上板）、不覆盖 arm64。两者是主动声明，不是缺陷 |
 | 门禁 | `ci.yml` 五个 job：lint / bats / secret-scan / identity-guard / plan-sync；bats **210 项**（JUnit 口径，0 失败 0 skip）。`bats-release-matrix` 已删（#128），branch-guard 仅 push main（ruleset 的备份门禁） |
@@ -24,7 +24,9 @@
 这些是花过真机成本换来的，重跑一遍只是烧时间：
 
 - **L3 真构建通**：9 配方 2184 tasks；full 镜像 4367/2944/4382 tasks（各版本）
-- **八组合回归 8/8**：`docs/qa/*/20261104-ad7c52d*.md`，每份 202/202/0/0，串口全命中 `login:`
+- **回归 202/202/0/0**（v1.0.0 期口径），串口全命中 `login:`；入库归档仅
+  wrynose 两份 `docs/qa/wrynose/20261104-ad7c52d*.md`（general/custom），其余组合
+  当日报告未归档入库（远端留存与否未确认）
 - **启动优化（#72–#75）三版移植**：唯一有启动收益的是裁调试设施（kernel_ms -6~-9% 三版一致）；
   ZSTD 定稿（bzImage -37.5%）；rootfs 换格式启动无收益（维持 ext4）；服务并行已由 systemd 实现
   （均摊 134ms/unit）。数据：`docs/qa/boot-baseline.md` §6–§10 + `docs/02-development/boot-optimization.md`
@@ -66,11 +68,12 @@
 [`docs/06-process/plan/milestones.md`](plan/milestones.md)（出口条件）。要点：
 
 - **里程碑 `v1.0.1 · 6.0 全面收口` 是唯一容器**，关闭条件 = 26 条功能各达证据档位
-  + DoD 五条。当前 26 条中 ✅ 23 / ⚠️ 3 / ⬜ 0（⚠️ = foss-scan / do-scancode
-  暂停降级、只读根 `/var` 待做）。
+  + DoD 五条。条件 A/B 判定与当前计数只在 [`plan/milestones.md`](plan/milestones.md)
+  维护（真源 `config/features.txt` + `config/degraded.txt`），此处不重复写数。
 - **P0 已清零**：#130/#127/#128/#129 + #132/#131/#134 随 #138（batch1）于
   2026-11-12 合并关闭。
-- **#135** 全工程文档同步进行中（`docs/135-full-sync` 分支）。
+- **#135** 全工程文档同步进行中（2026-11-14 起，`feat/p0-review-fixes` 承接其
+  文档同步批次）。
 - **#133** 只读根 `/var` overlay 是唯一真功能缺口，属 `v1.1.0`。
 - **#107** GitHub Support 工单（人工，外部阻塞，不阻塞完成判定）。
 - **例行**：wrynose 点版本跟进（下一窗口 2026-12-07）。**5.0 已退出保障，不再跟。**
