@@ -119,7 +119,7 @@ wrynose 的两份归档（general / custom）在 `docs/qa/wrynose/20261101-f66f3
 |---|---|---|---|
 | ① | 构建全绿 | ✅ `20261104-ad7c52d` 202/202/0/0 | 已达成 |
 | ② | 起机到 login | ✅ 各组合串口全命中 | 已达成 |
-| ③ | runtime smoke 全绿 | ✅ `#132` 已实现，归档 `docs/qa/wrynose/smoke-*.md` | 已达成（#138） |
+| ③ | runtime smoke 全绿 | ✅ `#132` 已实现，归档 `docs/qa/wrynose/smoke-*.md`。仅 full 层出检查点；minimal/base 无串口写 SKIP 是已知边界，不是静默放过 | 已达成（#138） |
 | ④ | 只读根 `/var` 可写 | ⬜ 只有 `ro`，靠 tmpfs 兜底 | `#133` → v1.1.0 |
 | ⑤ | 宣称与事实一致 | ✅ `DISTRO_VERSION=1.0.2`，`04_layer` 动态断言与 git tag 一致 | 已达成（#138） |
 

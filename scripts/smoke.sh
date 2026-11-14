@@ -261,7 +261,7 @@ junit="${ROOT_DIR}/reports/smoke/smoke-${release}-${variant}-${image_layer}.xml"
                     echo "  <testcase name=\"${tag}\"/>"
                 else
                     parse_fail=1
-                    printf '  <testcase name="%s"><failure message="is-enabled/is-active=%s（期望 enabled/active）"/></testcase>\n' "${tag}" "${value}"
+                    printf '  <testcase name="%s"><failure message="is-enabled/is-active=%s（期望 enabled/active）"/></testcase>\n' "${tag}" "${value//\"/\'}"
                 fi
                 ;;
             statusd-json)
@@ -278,7 +278,7 @@ junit="${ROOT_DIR}/reports/smoke/smoke-${release}-${variant}-${image_layer}.xml"
                     fi
                 else
                     parse_fail=1
-                    printf '  <testcase name="statusd-json"><failure message="not-json-or-no-version=%s"/></testcase>\n' "${value}"
+                    printf '  <testcase name="statusd-json"><failure message="not-json-or-no-version=%s"/></testcase>\n' "${value//\"/\'}"
                 fi
                 ;;
             *)
@@ -286,7 +286,7 @@ junit="${ROOT_DIR}/reports/smoke/smoke-${release}-${variant}-${image_layer}.xml"
                     echo "  <testcase name=\"${tag}\"/>"
                 else
                     parse_fail=1
-                    printf '  <testcase name="%s"><failure message="output=%s"/></testcase>\n' "${tag}" "${value}"
+                    printf '  <testcase name="%s"><failure message="output=%s"/></testcase>\n' "${tag}" "${value//\"/\'}"
                 fi
                 ;;
         esac
