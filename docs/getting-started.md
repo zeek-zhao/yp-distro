@@ -41,7 +41,7 @@ bash scripts/report.sh scarthgap --variant custom              # 全量 bats + �
 产物与证据：
 - 镜像：`work/kas-scarthgap-custom/build/tmp/deploy/images/qemux86-64/`
 - 串口日志：`work/artifacts/scarthgap/custom/qemu-serial.log`
-- 归档报告：`docs/qa/scarthgap/`（自动按「日期-指纹」命名）
+- 归档报告：`docs/qa/wrynose/`（自动按「日期-指纹」命名）
 
 **看什么**：报告末尾的 BATS 表（应 0 失败 0 跳过）+ 串口段是否命中 `login:`。
 
