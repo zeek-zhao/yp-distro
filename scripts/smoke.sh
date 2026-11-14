@@ -4,7 +4,7 @@
 #
 #   scripts/smoke.sh --release wrynose --variant custom --image <minimal|base|full>
 #
-# 动作集与证据级别（docs/verification-flow.md §6）绑定：features.txt 里
+# 动作集与证据级别（docs/01-requirements/verification-flow.md §6）绑定：features.txt 里
 # evidence=runtime 的 feature 必须在这里有对应动作。
 #
 # 口径：

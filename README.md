@@ -12,7 +12,7 @@
 > **当前保障范围只有 wrynose 6.0**（2026-11-09 决策）。3.1 / 4.0 / 5.0 的配置与配方
 > 冻结保留在仓库中、退出构建与保障，待 6.0 达到完成门槛后回移。验证环境为
 > QEMU + x86-64，未使用实体硬件。范围、理由与已知边界见
-> [`docs/engineering-overview.md`](docs/engineering-overview.md) §2 与 §9。
+> [`docs/06-process/engineering-overview.md`](docs/06-process/engineering-overview.md) §2 与 §9。
 
 > **本项目不是 Yocto Project 或 OpenEmbedded 的官方项目**，与 Linux Foundation
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
@@ -35,25 +35,25 @@
 > `v0.5.0` / `v0.6.0` / `v0.7.0` 三个里程碑**从未单独打 tag**——它们的全部内容挤在
 > `v1.0.0` 指向的一个 squash commit 里，在同一 commit 上补三个 tag 等于伪造发布点。
 > 所以口径是「累积发布」，不是「各自发过」。详见
-> [`docs/engineering-overview.md`](docs/engineering-overview.md) §2。
+> [`docs/06-process/engineering-overview.md`](docs/06-process/engineering-overview.md) §2。
 
 计划与进度分三层看，别重复维护：
 
 | 想知道 | 看哪里 |
 |---|---|
-| **这仓库是什么、承诺什么、不承诺什么** | [`docs/engineering-overview.md`](docs/engineering-overview.md) |
-| **每条功能是什么、怎么用、边界在哪** | [`docs/features.md`](docs/features.md) |
-| **工程结构为什么这样**（分层/class/注入点/扩展方式） | [`docs/design.md`](docs/design.md) |
-| **从配置到镜像经过哪些环节**（功能流程图） | [`docs/functional-flow.md`](docs/functional-flow.md) |
-| **怎么证明产物是对的、我自己怎么验**（测试说明） | [`docs/verification-flow.md`](docs/verification-flow.md) |
-| **下一件该做什么（带优先级的待办）** | [`docs/backlog.md`](docs/backlog.md) |
-| **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/handover.md`](docs/handover.md) |
-| **AI 协作者作业手册**（禁区/验证/决策边界） | [`docs/ai-handover.md`](docs/ai-handover.md) |
-| **知识库与工程规范**（KB-01~32，normative） | [`docs/knowledge-base.md`](docs/knowledge-base.md) |
+| **这仓库是什么、承诺什么、不承诺什么** | [`docs/06-process/engineering-overview.md`](docs/06-process/engineering-overview.md) |
+| **每条功能是什么、怎么用、边界在哪** | [`docs/01-requirements/features.md`](docs/01-requirements/features.md) |
+| **工程结构为什么这样**（分层/class/注入点/扩展方式） | [`docs/02-development/design.md`](docs/02-development/design.md) |
+| **从配置到镜像经过哪些环节**（功能流程图） | [`docs/02-development/functional-flow.md`](docs/02-development/functional-flow.md) |
+| **怎么证明产物是对的、我自己怎么验**（测试说明） | [`docs/01-requirements/verification-flow.md`](docs/01-requirements/verification-flow.md) |
+| **下一件该做什么（带优先级的待办）** | [`docs/06-process/backlog.md`](docs/06-process/backlog.md) |
+| **现在到哪了 / 交接要点 / 踩坑结论** | [`docs/06-process/handover.md`](docs/06-process/handover.md) |
+| **AI 协作者作业手册**（禁区/验证/决策边界） | [`docs/07-ai/ai-handover.md`](docs/07-ai/ai-handover.md) |
+| **知识库与工程规范**（KB-01~32，normative） | [`docs/06-process/knowledge-base.md`](docs/06-process/knowledge-base.md) |
 | **机器可读功能注册表**（含证据级别） | [`config/features.txt`](config/features.txt) |
-| **什么才算做完**（每个版本的出口条件） | [`docs/plan/milestones.md`](docs/plan/milestones.md) |
+| **什么才算做完**（每个版本的出口条件） | [`docs/06-process/plan/milestones.md`](docs/06-process/plan/milestones.md) |
 | **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
-| 阶段划分与约束 | [`docs/roadmap.md`](docs/roadmap.md) |
+| 阶段划分与约束 | [`docs/06-process/roadmap.md`](docs/06-process/roadmap.md) |
 | 在线看板 | [issues](https://github.com/zeek-zhao/yp-distro/issues) · [Projects #4](https://github.com/users/zeek-zhao/projects/4) |
 
 ## 快速开始
@@ -82,13 +82,13 @@ bash scripts/release-check.sh                        # 受保障组合全量回�
 bash scripts/release-check.sh --machine qemuarm64    # arm64 不在保障范围，仅手动抽查用
 bash scripts/deploy-guard.sh --all                   # 构建产物新鲜度校验（指纹级）
 bash scripts/boot-time.sh --release wrynose --variant custom --image minimal --runs 3
-                                                     # 启动三段测量；文档见 docs/boot-optimization.md
+                                                     # 启动三段测量；文档见 docs/02-development/boot-optimization.md
 ```
 
 点版本（x.y.z）跟进流程、安全基线（dm-verity）与启动优化结论：
-[`docs/point-releases.md`](docs/point-releases.md)、
+[`docs/05-release/point-releases.md`](docs/05-release/point-releases.md)、
 [`docs/qa/security/dm-verity-feasibility.md`](docs/qa/security/dm-verity-feasibility.md)、
-[`docs/boot-optimization.md`](docs/boot-optimization.md)。
+[`docs/02-development/boot-optimization.md`](docs/02-development/boot-optimization.md)。
 
 ## 镜像
 
@@ -111,15 +111,15 @@ scripts/           入口脚本（dev / build / image / report / compliance / ci
 scripts/container.sh  构建容器入口（命名/UID/磁盘落点）
 layers/meta-yp/    Yocto layer（distro conf + image + recipes）
 tests/bats/        BATS 用例（含 CI workflow 静态门禁）
-tasks/             任务卡（一卡一分支一 PR）
+docs/08-tasks/     任务卡（历史卡已归档，见 docs/INDEX.md）
 docs/              分支模型、CI、路线图、合规口径、qa 报告
 ```
 
 ## 开发方式
 
 - **分支**：`main` 是唯一长期分支（可发布、可复现），改动一律走
-  `feat/<ID>-<slug>` 短分支 + PR，合并即删；见 [`docs/branching.md`](docs/branching.md)
-- **一次改动**：一个 issue → 一张任务卡 `tasks/<ID>.md` → 一个任务分支 → 一个 PR
+  `feat/<ID>-<slug>` 短分支 + PR，合并即删；见 [`docs/06-process/branching.md`](docs/06-process/branching.md)
+- **一次改动**：一个 issue → 一张任务卡 `docs/08-tasks/<ID>.md` → 一个任务分支 → 一个 PR
 - **提交**：Conventional Commits，见 [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## 约束（实践中踩出来的）
@@ -129,8 +129,8 @@ docs/              分支模型、CI、路线图、合规口径、qa 报告
 - `DL_DIR` / `SSTATE_DIR` 必须落在大容量卷上，不能落在系统盘。
 - 构建镜像内不得含任何凭据 —— GHCR 上的镜像默认对外可见。
 - 四个 release 的 `file://` 源码布局、SPDX 形态、CVE 采集通路各不相同，
-  差异记录在 [`docs/compliance.md`](docs/compliance.md) 与
-  [`docs/syntax-matrix.md`](docs/syntax-matrix.md)。
+  差异记录在 [`docs/05-release/compliance.md`](docs/05-release/compliance.md) 与
+  [`docs/02-development/syntax-matrix.md`](docs/02-development/syntax-matrix.md)。
 
 ## 许可与声明
 

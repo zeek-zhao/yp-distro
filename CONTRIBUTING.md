@@ -9,7 +9,7 @@
   machine、以及能复现的最小命令。
 - 功能 → 开 issue 说明动机与影响面。较大的改动请先在 issue 里对齐方向，
   避免 PR 返工。
-- 开放中的工作与阶段目标见 [`docs/roadmap.md`](docs/roadmap.md)。
+- 开放中的工作与阶段目标见 [`docs/06-process/roadmap.md`](docs/06-process/roadmap.md)。
 
 ## 2. 提交身份与 DCO
 
@@ -53,7 +53,7 @@ AI 可以参与产出，但提交责任与署名只能是人类。
 
 ## 4. 分支与 PR
 
-分支模型见 [`docs/branching.md`](docs/branching.md)。要点：
+分支模型见 [`docs/06-process/branching.md`](docs/06-process/branching.md)。要点：
 
 - 从 `dev` 切出短生命周期分支：`feat/<slug>` / `fix/<slug>` / `docs/<slug>`
 - PR 目标为 `dev`；阶段收口时才 `dev` → `main`

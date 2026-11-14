@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# 生成 docs/requirements/scenarios/*.feature 与 traceability.md
+# 生成 docs/01-requirements/scenarios/*.feature 与 traceability.md
 # 数据源: config/features.txt（唯一事实源） + tests/bats/*.bats（test_tags + @test）
 import os, re, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))  # scripts/ci -> repo root
-REQ = os.path.join(ROOT, "docs", "requirements")
+REQ = os.path.join(ROOT, "docs", "01-requirements")
 SCN = os.path.join(REQ, "scenarios")
 
 # ---------- 解析 features.txt ----------
@@ -127,7 +127,7 @@ for fid, frid in FR.items():
         L.append("")
         L.append("  Scenario: 文档证据——无自动化用例，按 degraded 登记口径归档")
         L.append("    Given features.txt 将该特性标记为 degraded 且无 bats 映射")
-        L.append("    When 审阅 docs/features.md 与 docs/qa/ 对应 degraded 登记")
+        L.append("    When 审阅 docs/01-requirements/features.md 与 docs/qa/ 对应 degraded 登记")
         L.append("    Then 证据级别为 static 且 degraded.txt 有对应登记原因")
     else:
         base = os.path.basename(f["bats"])
@@ -170,7 +170,7 @@ T += ["", f"覆盖合计：{covered} 个 bats 用例（99_coverage 为元测试�
       "| NFR-002 | 提交身份合规：GitHub noreply 身份，identity-guard 全历史扫描 | scripts/ci/identity-guard.sh |",
       "| NFR-003 | 容器非 root：builder 用户 + host uid/gid 映射 | tests/bats/01_dockerfile.bats、03_container.bats |",
       "| NFR-004 | 磁盘自保：BB_DISKMON_DIRS 双阈值（STOPTASKS/ABORT） | tests/bats/05_kas.bats |",
-      "| NFR-005 | APT 镜像可配：默认官方源，构建机可覆写 | docker/common/install-yocto-deps.sh + docs/ci.md |",
+      "| NFR-005 | APT 镜像可配：默认官方源，构建机可覆写 | docker/common/install-yocto-deps.sh + docs/06-process/ci.md |",
       "| NFR-006 | CVE 离线模式：CVE_DB_UPDATE_INTERVAL=-1，离线库优先 | tests/bats/09_cvedb.bats |",
       "| NFR-007 | 凭据安全：tracked 仓库无明文凭据，workflow 用自动 token | tests/bats/02_workflows.bats + secret-scan job |",
       "| NFR-008 | 测试覆盖完整性：features↔bats 双向注册校验（99_coverage 元测试 6 用例） | tests/bats/99_coverage.bats |",
@@ -182,7 +182,7 @@ with open(os.path.join(REQ, "traceability.md"), "w", encoding="utf-8") as f:
     f.write("\n".join(T) + "\n")
 
 # ---------- README ----------
-R = ["# docs/requirements —— 需求与 BDD 场景层（ISO/IEC/IEEE 29148 轻量落地）", "",
+R = ["# docs/01-requirements —— 需求与 BDD 场景层（ISO/IEC/IEEE 29148 轻量落地）", "",
      "- `srs.md`：软件需求规格（29148 结构：引言/总体描述/具体需求/验收准则）",
      "- `traceability.md`：FR/NFR → Gherkin 场景 → bats 用例 → QA 证据 的追溯矩阵（生成物）",
      "- `scenarios/*.feature`：BDD 场景层，按 9 个模块组织，映射 205 个 bats 用例（生成物，勿手改用例名）",

@@ -129,7 +129,7 @@ cp.read(qb)
 s = 'config_bsp'
 # 表：0 <len 扇区> verity 1 <data> <hash> 4096 4096 <blocks> 1 sha256 <roothash> <salt>
 # （长度单位是 512 字节扇区 = 数据块数 × 8；hash_start=1 跳过 cryptsetup superblock；
-#   salt 是第 10 个必需参数——三条规则的出处见 docs/knowledge-base.md KB-15）
+#   salt 是第 10 个必需参数——三条规则的出处见 docs/06-process/knowledge-base.md KB-15）
 data_blocks = int(sectors) // 8
 dm_table = f'0 {sectors} verity 1 /dev/vda /dev/vdb 4096 4096 {data_blocks} 1 sha256 {root_hash} {salt}'
 dm = f'dm-mod.create="verityroot,,,ro,{dm_table}"'

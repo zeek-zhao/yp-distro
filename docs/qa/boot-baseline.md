@@ -18,7 +18,7 @@
   `kill writer_pid` 打在已退走的 writer 上把整条链静默打断；marks 一直都有。
 - 主机：构建机共享节点，KVM 加速（容器 `/dev/kvm`），QEMU `-smp 4 -m 1024`。
 - 本表为 **v0.5.0 优化定稿后**（内核裁剪 #72 + ttyS1 mask #73 + ext4 rootfs）的
-  基线，5 次取中位数；各优化项的实验过程见第 6/7/8 节与 `docs/boot-optimization.md`。
+  基线，5 次取中位数；各优化项的实验过程见第 6/7/8 节与 `docs/02-development/boot-optimization.md`。
 - `userspace` 段只有 full 层有数（`systemd-analyze` 需要登进 guest；minimal/base
   的串口 root 无空密码，见 `config/degraded.txt`）。
 

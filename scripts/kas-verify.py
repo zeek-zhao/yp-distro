@@ -585,7 +585,7 @@ def check_version_knobs(
 ) -> None:
     """版本相关开关必须与目标 release 匹配。
 
-    这些差异都是真跑 bitbake -p 才暴露的（见 docs/kas.md）：
+    这些差异都是真跑 bitbake -p 才暴露的（见 docs/03-build/kas.md）：
     dunfell 的 local.conf.sample 是 CONF_VERSION=1；6.0+ 禁止 S=${WORKDIR}
     且解包目录改到 UNPACKDIR（5.0 没有这个变量）；6.0 用 sbom-cve-check 取代
     cve-check；bitbake 仓库不能当 layer。

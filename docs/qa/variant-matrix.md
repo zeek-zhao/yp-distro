@@ -22,7 +22,7 @@
 | wrynose | custom | **yp** | `yp-image-qemux86-64.rootfs-*.ext4.zst` | 60871153 | `972d6a705d2f` | 5825 | 1557s | 50340 | `wrynose/20261029-17cc392-custom.md` |
 
 四份 custom 报告都是 112 例全过（0 失败 0 跳过）；串口全部匹配到 `login:`。
-产物命名的版本差异见 `docs/kas.md`：3.1/4.0 是 `<image>-qemux86-64.<ext>`，
+产物命名的版本差异见 `docs/03-build/kas.md`：3.1/4.0 是 `<image>-qemux86-64.<ext>`，
 5.0 是 `<image>-qemux86-64.rootfs-<ts>.<ext>`，6.0 再压成 `.zst`。
 
 ## 二、custom 的 distro 确实是 `yp`（验收第 2 条）

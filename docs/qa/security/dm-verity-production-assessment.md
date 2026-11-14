@@ -64,4 +64,4 @@
    （比如要保持启动测量口径稳定）时才走，native 依赖链先做 1 人日
    摸底再决定。
 4. 无论哪条路线，**只读根的 /var overlay 与签名链**（cmdline 明文 root hash
-   的保护边界）都是前置设计项——见 `docs/backlog.md` P2。
+   的保护边界）都是前置设计项——见 `docs/06-process/backlog.md` P2。

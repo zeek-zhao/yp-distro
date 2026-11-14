@@ -4,7 +4,7 @@
 #
 # 采集口径（四版本）：
 #   SBOM  3.1/4.0/5.0 出 SPDX 2.2，6.0 只出 3.0.1 —— 不强行统一，
-#         报告层出「格式差异」节说明语义差别（见 docs/compliance.md）。
+#         报告层出「格式差异」节说明语义差别（见 docs/05-release/compliance.md）。
 #   CVE   3.1/4.0/5.0 读构建期 cve-check 的清单；6.0 没有 cve-check.bbclass，
 #         构建后跑 sbom-cve-check CLI 导出 yocto-cve-check-manifest，
 #         两者字段与 status 取值一致，所以统计口径可以复用。

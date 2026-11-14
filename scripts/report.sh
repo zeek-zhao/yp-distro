@@ -519,7 +519,7 @@ fi
 
 if ((render_only == 0)); then
     command -v docker >/dev/null 2>&1 ||
-        die "找不到 docker（BATS 在开发容器里跑，见 docs/build-env.md）"
+        die "找不到 docker（BATS 在开发容器里跑，见 docs/03-build/build-env.md）"
     command -v python3 >/dev/null 2>&1 || die "找不到 python3（解析 JUnit 报告需要）"
 fi
 

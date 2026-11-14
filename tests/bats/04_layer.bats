@@ -147,7 +147,8 @@ setup() {
 # bats test_tags=layer
 @test "active layer config tests and docs contain no retired names" {
     local retired_names='meta-''zeek\|zeek-''distro\|core-image-''zeek'
-    run git -C "${ROOT_DIR}" grep -n "${retired_names}" -- layers config tests docs
+    # docs/08-tasks/archive 是历史任务卡归档，保留改名史叙述，豁免 retired-names 检查。
+    run git -C "${ROOT_DIR}" grep -n "${retired_names}" -- layers config tests docs ':(exclude)docs/08-tasks/archive'
     [ "${status}" -eq 1 ]
     [ -z "${output}" ]
 }
