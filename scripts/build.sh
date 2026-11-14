@@ -105,7 +105,7 @@ esac
 # cve-update-nvd2-native 上等 4 小时（#48）。
 #
 # 6.0 是另一条路：没有 cve-check.bbclass，用构建后的 sbom-cve-check CLI 读 SBOM
-# 出清单（见 docs/compliance.md），所以这里只需要 SBOM 与 nvd-fkie 的 git 缓存。
+# 出清单（见 docs/05-release/compliance.md），所以这里只需要 SBOM 与 nvd-fkie 的 git 缓存。
 cve_db=""
 if ((with_cve)); then
     [[ "${variant}" == "custom" ]] ||

@@ -121,7 +121,7 @@ jobs:
         run: bash scripts/plan-sync.sh --check
 
   # 仓库转公开后 rulesets 已解锁，main 的保护改由平台级 ruleset 强制
-  # （禁止直推 / 强制 PR / 强制状态检查 / 禁止 force push），见 docs/branching.md §4。
+  # （禁止直推 / 强制 PR / 强制状态检查 / 禁止 force push），见 docs/06-process/branching.md §4。
   # 这个 job 保留作备份：ruleset 被误删或临时放开时，它仍会判红。
   branch-guard:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -139,7 +139,7 @@ jobs:
           set -euo pipefail
           count="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq 'length')"
           if [ "${count}" -eq 0 ]; then
-            echo "::error::提交 ${SHA} 未经 PR 直接进入 main；流程见 docs/branching.md §4"
+            echo "::error::提交 ${SHA} 未经 PR 直接进入 main；流程见 docs/06-process/branching.md §4"
             exit 1
           fi
           echo "来自 ${count} 个 PR，通过"

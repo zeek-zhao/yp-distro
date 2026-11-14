@@ -10,7 +10,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
                 printf '\n[pre-push] 拒绝直接推送到 main\n' >&2
                 printf '  流程：feat/* → PR → dev →（阶段收口）PR → main\n' >&2
                 printf '  紧急放行：ALLOW_MAIN_PUSH=1 git push origin main\n' >&2
-                printf '  说明：docs/branching.md §4\n\n' >&2
+                printf '  说明：docs/06-process/branching.md §4\n\n' >&2
                 blocked=1
             fi
             ;;

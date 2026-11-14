@@ -33,7 +33,7 @@ local_conf_header:
     # 这里只定义我们自己的别名，绝不能去 ??= 上游的 UNPACKDIR（会污染默认值）。
     YP_SRC_DIR ??= "${WORKDIR}"
 
-    # ---- 构建资源与安全阀（P2 基础设施，说明见 docs/build-env.md）----
+    # ---- 构建资源与安全阀（P2 基础设施，说明见 docs/03-build/build-env.md）----
     # 并行度 = min(可用核数, 20)。
     # 坑：bitbake.conf 里 BB_NUMBER_THREADS / PARALLEL_MAKE 本身就是 `?=`，而它
     # 比 local.conf 先解析，所以在 local.conf 里再写 `?=` 是空操作 —— 必须用 `=`。

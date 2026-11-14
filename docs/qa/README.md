@@ -18,7 +18,7 @@
 - `docs/qa/<release>/compliance-<date>-<sha>[-<variant>][-<machine>].md` 是一次
   合规证据归档（`scripts/report.sh --compliance`），五节：SBOM / CVE / FOSS /
   格式差异 / 降级清单。文件名以 `compliance-` 开头，同样不会被
-  `99_coverage.bats` 当成「最新构建报告」。采集与渲染细节见 `docs/compliance.md`。
+  `99_coverage.bats` 当成「最新构建报告」。采集与渲染细节见 `docs/05-release/compliance.md`。
 - 2026-10-30 已产出 8 组合（4 release × 2 variant）全 PASS 的 SDK 归档；
   实测数据与 dunfell 的 eSDK workaround 见 `docs/sdk.md` 第 6、7 节，
   「做不做 SDK」的结论见第 8 节。

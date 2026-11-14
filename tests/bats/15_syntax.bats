@@ -2,7 +2,7 @@
 
 setup() {
     ROOT_DIR="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
-    MATRIX="${ROOT_DIR}/docs/syntax-matrix.md"
+    MATRIX="${ROOT_DIR}/docs/02-development/syntax-matrix.md"
 }
 
 # bats test_tags=syntax

@@ -13,7 +13,7 @@ header:
 #
 # 不在这里开 `SPDX_INCLUDE_VEX`：它只有 6.0 有，且 5.3 之前的实现会让 SPDX 涨到
 # 1 GB 量级（上游原文「不推荐」）。CRA 的 VEX 属于 P2 之外的钩子，见
-# `docs/compliance.md`。
+# `docs/05-release/compliance.md`。
 local_conf_header:
   spdx: |
     INHERIT += "create-spdx"

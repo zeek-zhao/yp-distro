@@ -8,7 +8,7 @@
 #
 # 逐组合 build.sh → qemu.sh → report.sh（各自有超时与日志），结尾跑
 # deploy-guard 并汇总。不新增任何构建逻辑——本脚本只是 #85 回归 campaign
-# 的正式沉淀，点版本跟进流程见 docs/point-releases.md。
+# 的正式沉淀，点版本跟进流程见 docs/05-release/point-releases.md。
 #
 # 默认范围刻意只含两个受支持的 LTS（wrynose/scarthgap）；kirkstone/dunfell
 # 已 EOL（D12 冻结口径），显式传参仍可跑。
