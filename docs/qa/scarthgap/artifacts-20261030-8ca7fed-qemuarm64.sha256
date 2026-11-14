@@ -1,5 +1,0 @@
-# Source: release=scarthgap variant=general commit=8ca7fed
-9b0dac12048b7cf6a3d911792307d49905499d8778ebd9d5a1c183cd86510023  work/kas-scarthgap-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs-20261029161424.ext4
-58d0456f99daf146762f332ec750c00206644980b8759bda1a37f6413b7e5048  work/kas-scarthgap-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs-20261029161424.tar.bz2
-9b0dac12048b7cf6a3d911792307d49905499d8778ebd9d5a1c183cd86510023  work/kas-scarthgap-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs.ext4
-58d0456f99daf146762f332ec750c00206644980b8759bda1a37f6413b7e5048  work/kas-scarthgap-general-qemuarm64/build/tmp/deploy/images/qemuarm64/core-image-minimal-qemuarm64.rootfs.tar.bz2

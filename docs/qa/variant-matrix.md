@@ -12,12 +12,12 @@
 
 | release | variant | distro | 主产物 | 字节 | SHA-256（前 12） | 任务数 | 构建 | 串口 | 报告（commit） |
 |---|---|---|---|---|---:|---:|---:|---:|---|
-| dunfell | general | poky | `core-image-minimal-qemux86-64.ext4` | 12428288 | `06a323e77d56` | 3432 | 1325s | 28298 | `dunfell/20261029-c30429d.md` |
-| dunfell | custom | **yp** | `yp-image-qemux86-64.ext4` | 164833280 | `6d3807dcf7f1` | 4482 | 728s | 37192 | `dunfell/20261029-17cc392-custom.md` |
-| kirkstone | general | poky | `core-image-minimal-qemux86-64.ext4` | 28163072 | `d283300ae306` | 3919 | 2192s | 32901 | `kirkstone/20261029-8d801a9.md` |
-| kirkstone | custom | **yp** | `yp-image-qemux86-64.ext4` | 166920192 | `2314b8efaf97` | 4164 | 726s | 45388 | `kirkstone/20261029-17cc392-custom.md` |
-| scarthgap | general | poky | `core-image-minimal-qemux86-64.rootfs.ext4` | 39925760 | `d6969a793639` | 4551 | 1445s | 33338 | `scarthgap/20261029-31d0ef1.md` |
-| scarthgap | custom | **yp** | `yp-image-qemux86-64.rootfs-*.ext4` | 187240448 | `38bcf2443f0d` | 5603 | 732s | 45981 | `scarthgap/20261029-17cc392-custom.md` |
+| dunfell | general | poky | `core-image-minimal-qemux86-64.ext4` | 12428288 | `06a323e77d56` | 3432 | 1325s | 28298 | （归档已移出，git 历史可查） |
+| dunfell | custom | **yp** | `yp-image-qemux86-64.ext4` | 164833280 | `6d3807dcf7f1` | 4482 | 728s | 37192 | （归档已移出，git 历史可查） |
+| kirkstone | general | poky | `core-image-minimal-qemux86-64.ext4` | 28163072 | `d283300ae306` | 3919 | 2192s | 32901 | （归档已移出，git 历史可查） |
+| kirkstone | custom | **yp** | `yp-image-qemux86-64.ext4` | 166920192 | `2314b8efaf97` | 4164 | 726s | 45388 | （归档已移出，git 历史可查） |
+| scarthgap | general | poky | `core-image-minimal-qemux86-64.rootfs.ext4` | 39925760 | `d6969a793639` | 4551 | 1445s | 33338 | （归档已移出，git 历史可查） |
+| scarthgap | custom | **yp** | `yp-image-qemux86-64.rootfs-*.ext4` | 187240448 | `38bcf2443f0d` | 5603 | 732s | 45981 | （归档已移出，git 历史可查） |
 | wrynose | general | poky | `core-image-minimal-qemux86-64.rootfs.ext4.zst` | 20274535 | `65a5fc7be566` | — | — | 35088 | `wrynose/20261029-879e011.md` |
 | wrynose | custom | **yp** | `yp-image-qemux86-64.rootfs-*.ext4.zst` | 60871153 | `972d6a705d2f` | 5825 | 1557s | 50340 | `wrynose/20261029-17cc392-custom.md` |
 
@@ -56,6 +56,7 @@ grep -a -o -m1 'ID=yp' work/kas-dunfell-custom/build/tmp/deploy/images/qemux86-6
 
 | release | general SHA-256（前 12） | custom SHA-256（前 12） |
 |---|---|---|
+> 注：dunfell / kirkstone / scarthgap 的历史归档已于 2026-11-14 随工程清理移出仓库（git 历史 v1.0.2 前可查）；本表数据保留作历史对照。
 | dunfell | `06a323e77d56` | `6d3807dcf7f1` |
 | kirkstone | `d283300ae306` | `2314b8efaf97` |
 | scarthgap | `d6969a793639` | `38bcf2443f0d` |
@@ -117,7 +118,7 @@ ls work/kas-scarthgap-general/build/tmp/sysroots-components/x86_64/qemu-system-n
 
 | release | machine | 主产物 | 字节 | SHA-256（前 12） | 任务数 | 构建 | 串口 | 报告（commit） |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| scarthgap | qemuarm64 | `core-image-minimal-qemuarm64.rootfs-*.ext4` | 23115776 | `9b0dac12048b` | 4532 | 801s | 20421 | `scarthgap/20261030-8ca7fed-qemuarm64.md` |
+| scarthgap | qemuarm64 | `core-image-minimal-qemuarm64.rootfs-*.ext4` | 23115776 | `9b0dac12048b` | 4532 | 801s | 20421 | （归档已移出，git 历史可查） |
 | wrynose | qemuarm64 | `core-image-minimal-qemuarm64.rootfs-*.ext4.zst` | 6119795 | `7a352b4c7481` | 4611 | 973s | 21934 | `wrynose/20261030-8ca7fed-qemuarm64.md` |
 
 两份报告都是 **124 例全过**（0 失败 0 跳过），串口都到 `qemuarm64 login:`，
