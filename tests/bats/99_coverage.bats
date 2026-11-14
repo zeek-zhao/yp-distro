@@ -240,3 +240,114 @@ _trim() {
         return 1
     }
 }
+
+# Test 7: 表头列数与数据行列数必须一致（#131 表头补第 6 列「证据级别」后收口：
+# 此前表头 5 列、数据 6 列，靠 Test 4 放宽到 5 或 6 字段硬扛）。
+@test "features file header and data rows have the same column count" {
+    local line line_number=0 header_pipes=""
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        ((line_number += 1))
+        [[ "${line}" =~ ^[[:space:]]*$ || "${line}" =~ ^[[:space:]]*# ]] && continue
+        local pipes
+        pipes="${line//[^|]/}"
+        if [[ -z "${header_pipes}" ]]; then
+            header_pipes="${pipes}"
+        elif [[ "${#pipes}" -ne "${#header_pipes}" ]]; then
+            printf 'features.txt line %s: 表头 %s 列，此行 %s 列\n' \
+                "${line_number}" "$(( ${#header_pipes} + 1 ))" "$(( ${#pipes} + 1 ))" >&2
+            return 1
+        fi
+    done <"${FEATURES_FILE}"
+    [[ -n "${header_pipes}" ]] || {
+        printf 'features.txt 没有可解析的表头行\n' >&2
+        return 1
+    }
+}
+
+# Test 8: features.txt 第 6 列证据级别必须与 verification-flow §6.1 矩阵「档位」一致
+# （文档单点失守的解药：矩阵漂移直接判红，不再靠人眼对 26 行）。
+@test "features evidence levels match verification-flow section 6.1 matrix" {
+    local matrix_file="${ROOT_DIR}/docs/01-requirements/verification-flow.md"
+    local -A matrix_level=()
+    local line feature release bats_file tag status evidence line_number=0
+    local in_matrix=0
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        if [[ "${line}" == "### 6.1 矩阵" ]]; then
+            in_matrix=1
+            continue
+        fi
+        [[ "${in_matrix}" == 1 ]] || continue
+        [[ "${line}" == '### '* ]] && break
+        if [[ "${line}" =~ ^\|[[:space:]]*[0-9]+[[:space:]]*\|[[:space:]]*\`([^\`]+)\`[[:space:]]*\|[[:space:]]*([a-z]+)[[:space:]]*\| ]]; then
+            matrix_level["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
+        fi
+    done <"${matrix_file}"
+    ((${#matrix_level[@]} > 0)) || {
+        printf '§6.1 矩阵解析为空，请检查 %s 的矩阵表格式\n' "${matrix_file}" >&2
+        return 1
+    }
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        ((line_number += 1))
+        [[ "${line}" =~ ^[[:space:]]*$ || "${line}" =~ ^[[:space:]]*# ]] && continue
+        IFS='|' read -r feature release bats_file tag status evidence rest <<<"${line}"
+        feature="$(_trim "${feature}")"
+        evidence="$(_trim "${evidence:-}")"
+        if [[ -z "${evidence}" ]]; then
+            printf 'features.txt line %s: %s 缺第 6 列证据级别\n' "${line_number}" "${feature}" >&2
+            return 1
+        fi
+        if [[ -z "${matrix_level[${feature}]:-}" ]]; then
+            printf 'features.txt line %s: %s 不在 §6.1 矩阵中\n' "${line_number}" "${feature}" >&2
+            return 1
+        fi
+        if [[ "${matrix_level[${feature}]}" != "${evidence}" ]]; then
+            printf 'features.txt line %s: %s 档位 %s ≠ §6.1 矩阵 %s\n' \
+                "${line_number}" "${feature}" "${evidence}" "${matrix_level[${feature}]}" >&2
+            return 1
+        fi
+    done <"${FEATURES_FILE}"
+}
+
+# Test 9: evidence=runtime 的 feature 必须在 smoke 动作集（scripts/smoke.sh）里有
+# 对应动作——verification-flow.md:145 声称的绑定，此前只是头注口号，无人校验。
+@test "runtime features are covered by the smoke action set" {
+    local smoke_file="${ROOT_DIR}/scripts/smoke.sh"
+    local line feature release bats_file tag status evidence
+    local -a runtime_features=()
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        [[ "${line}" =~ ^[[:space:]]*$ || "${line}" =~ ^[[:space:]]*# ]] && continue
+        IFS='|' read -r feature release bats_file tag status evidence rest <<<"${line}"
+        [[ "$(_trim "${evidence:-}")" == "runtime" ]] && runtime_features+=("$(_trim "${feature}")")
+    done <"${FEATURES_FILE}"
+    ((${#runtime_features[@]} > 0)) || {
+        printf 'features.txt 没有 runtime 档位的 feature，动作集绑定无从校验\n' >&2
+        return 1
+    }
+    local f
+    for f in "${runtime_features[@]}"; do
+        case "${f}" in
+            yp-service)
+                grep -Fq 'for svc in yp-hello-svc yp-statusd yp-collectd' "${smoke_file}" || {
+                    printf 'yp-service：smoke 动作集缺自有服务 is-enabled/is-active 组\n' >&2
+                    return 1
+                }
+                ;;
+            demo-statusd)
+                grep -Fq 'SM|statusd-json|' "${smoke_file}" || {
+                    printf 'demo-statusd：smoke 动作集缺 statusd-json 动作\n' >&2
+                    return 1
+                }
+                ;;
+            demo-collectd)
+                grep -Fq 'SM|collectd-journal|' "${smoke_file}" || {
+                    printf 'demo-collectd：smoke 动作集缺 collectd-journal 动作\n' >&2
+                    return 1
+                }
+                ;;
+            *)
+                printf 'runtime feature %s 在 99_coverage.bats 的 smoke 映射里没有登记，请补 case 分支\n' "${f}" >&2
+                return 1
+                ;;
+        esac
+    done
+}

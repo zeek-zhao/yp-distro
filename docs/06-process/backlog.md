@@ -15,7 +15,7 @@
 
 | 事项 | 说明 | issue |
 |---|---|---|
-| [x] `DISTRO_VERSION` → 1.0.0 + 断言改动态校验 | 现在 `04_layer.bats:52` 硬断言 `0.3.0`，**改对了反而判红**——门禁在保护 bug | #130 |
+| [x] `DISTRO_VERSION` → 1.0.0 + 断言改动态校验 | 修复前 `04_layer.bats:52` 硬断言 `0.3.0`，改对了反而判红——门禁在保护 bug；#138 已改为 `git describe` 动态校验，现状自洽 | #130 |
 | [x] `supported-releases.txt` 单一事实源 | 「哪些版本受保障」现在散在五处，收缩要改五个地方 | #127 |
 | [x] CI 收缩到 6.0 | 删 `bats-release-matrix`、显式 `BATS_TEST_RELEASE`、拉单镜像 | #128 |
 | [x] 合规只保 SPDX + CVE | `compliance.sh` 三件一体，要拆 scancode 分支 | #129 |

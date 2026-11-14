@@ -34,11 +34,11 @@ feat/72-kernel-trim ──PR──> main ──tag──> v0.5.0
 
 | workflow | push | PR | 定时 | 手动 | 说明 |
 |---|---|---|---|---|---|
-| `ci.yml` | `main` | 全部 | — | ✅ | L1 静态 + BATS（含 4 版本矩阵）+ 密文扫描 + 身份门禁 + skip 门禁 |
+| `ci.yml` | `main` | 全部 | — | ✅ | L1 静态 + BATS（单镜像，`report.sh all`）+ 密文扫描 + 身份门禁 + skip 门禁 |
 | `images.yml` | 仅 `main` | — | — | ✅ | L2：4 镜像矩阵 → push GHCR |
 | `pull-check.yml` | `main` | — | 每周一 06:00 | ✅ | 匿名拉取 + 非 root/工具链/UTF-8 断言 |
 
-`ci.yml` 的 job 一览：`lint` / `bats` / `bats-release-matrix` / `secret-scan` /
+`ci.yml` 的 job 一览：`lint` / `bats` / `secret-scan` /
 `identity-guard` / `plan-sync` / `branch-guard`（备份）。
 
 ## 4. 门禁与约定
@@ -55,11 +55,11 @@ feat/72-kernel-trim ──PR──> main ──tag──> v0.5.0
 | `pull_request` | 变更必须经 PR；`required_approving_review_count: 0`，但 `required_review_thread_resolution: true`（未解决的 review 讨论会挡合并） |
 | `required_status_checks` | 必须通过的检查见下 |
 
-必需状态检查共 9 项（名字就是 job 名，矩阵 job 带展开后缀）：
+必需状态检查共 5 项（名字就是 job 名；`bats-release-matrix` 已随 CI 收缩删除，
+2026-11-14 按 ruleset 实况核对）：
 
 ```
 lint  bats  secret-scan  identity-guard  plan-sync
-bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
 ```
 
 `strict_required_status_checks_policy: false`——不要求分支先 rebase 到最新
@@ -113,3 +113,4 @@ bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
 | 2026-10-28 | 记录 Free 私有仓库 rulesets 不可用，改用 pre-push 钩子 + CI 守卫 | 实测 403 |
 | 2026-11-01 | 删除 34 条历史分支；历史重写统一身份 | 开源合规 |
 | 2026-11-01 | 取消 `dev`，回到单长期分支；改用 ruleset 强制门禁 | 转公开 + `delete_branch_on_merge` 生效 |
+| 2026-11-14 | 必需状态检查按 ruleset 实况修正为 5 项；CI 触发矩阵去掉已删的 4 版本矩阵；清理 `dev` 残留文案 | 工程审查核对 ruleset |

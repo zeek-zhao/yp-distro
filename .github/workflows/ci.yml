@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 concurrency:
@@ -76,10 +76,6 @@ jobs:
             docs/qa/
           name: bats-report
           retention-days: 14
-
-  # 上面那个 job 只跑一遍 BATS（report.sh all 的语义），真正吃 release 配置的
-  # 用例（features.txt 的 release 维度、99_coverage 的降级清单比对）此前从未
-  # 按四个发行版分别验证过。这里补矩阵，成本只是在同一批用例上多跑三次。
 
   secret-scan:
     runs-on: ubuntu-24.04
