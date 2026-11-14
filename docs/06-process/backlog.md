@@ -4,24 +4,24 @@
 > [`plan/milestones.md`](plan/milestones.md)，开放 issue 的实时清单在
 > [`issues.md`](../issues.md)（脚本生成）。**
 >
-> 最后更新：2026-11-12
+> 最后更新：2026-11-14
 
 ## 当前只有一个容器：`v1.0.1 · 6.0 全面收口`
 
 关闭条件两条并列（详见 [`plan/milestones.md`](plan/milestones.md)）：
 **26 条功能各达证据档位** + **DoD 五条**。两条同时满足才允许回移 5.0。
 
-### 批次 A · 修正（→ `v1.0.1`，零功能）
+### 批次 A · 修正（`v1.0.1` ✅ 已发布 2026-11-14，零功能）
 
 | 事项 | 说明 | issue |
 |---|---|---|
-| [x] `DISTRO_VERSION` → 1.0.0 + 断言改动态校验 | 现在 `04_layer.bats:52` 硬断言 `0.3.0`，**改对了反而判红**——门禁在保护 bug | #130 |
+| [x] `DISTRO_VERSION` → 1.0.0 + 断言改动态校验 | 修复前 `04_layer.bats:52` 硬断言 `0.3.0`，改对了反而判红——门禁在保护 bug；#138 已改为 `git describe` 动态校验，现状自洽 | #130 |
 | [x] `supported-releases.txt` 单一事实源 | 「哪些版本受保障」现在散在五处，收缩要改五个地方 | #127 |
 | [x] CI 收缩到 6.0 | 删 `bats-release-matrix`、显式 `BATS_TEST_RELEASE`、拉单镜像 | #128 |
 | [x] 合规只保 SPDX + CVE | `compliance.sh` 三件一体，要拆 scancode 分支 | #129 |
 | [ ] 全工程文档同步 | 三分类 20 份 + `features.md` 升级 + `verification-flow.md` 升级 | #135 |
 
-### 批次 B · 验证（→ `v1.0.2`，测试能力）
+### 批次 B · 验证（`v1.0.2` ✅ 已发布 2026-11-14，测试能力）
 
 | 事项 | 说明 | issue |
 |---|---|---|
@@ -43,10 +43,10 @@
 
 ## 例行义务（与里程碑并行）
 
-| 事项 | 说明 | 时间窗 |
-|---|---|---|
-| [ ] wrynose 点版本跟进 | 流程见 [`point-releases.md`](../05-release/point-releases.md)：bump TAG → `release-check.sh` → 归档提交。**5.0 已退出保障，不再跟** | 2026-12-07 上游点版本后 |
-| [ ] CVE 扫描例行化 | `scripts/cve-db.sh` 目前手工触发；点版本流程跑的时候顺带跑并归档结论 | 与上一条合并 |
+| 事项 | 说明 | 负责人 | 完成定义 | 时间窗 |
+|---|---|---|---|---|
+| [ ] wrynose 点版本跟进 | 流程见 [`point-releases.md`](../05-release/point-releases.md)：bump TAG → `release-check.sh` → 归档提交。**5.0 已退出保障，不再跟** | 维护者 | 新归档提交入库（`docs/qa/`）+ 本表勾选 | 2026-12-07 上游点版本后 |
+| [ ] CVE 扫描例行化 | `scripts/cve-db.sh` 目前手工触发；点版本流程跑的时候顺带跑并归档结论 | 维护者 | 扫描结论归档入库（`docs/qa/` 或 `docs/` 对应目录） | 与上一条合并 |
 
 ## 明确不做（含复活条件）
 

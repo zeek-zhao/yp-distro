@@ -34,11 +34,11 @@ feat/72-kernel-trim ──PR──> main ──tag──> v0.5.0
 
 | workflow | push | PR | 定时 | 手动 | 说明 |
 |---|---|---|---|---|---|
-| `ci.yml` | `main` | 全部 | — | ✅ | L1 静态 + BATS（含 4 版本矩阵）+ 密文扫描 + 身份门禁 + skip 门禁 |
+| `ci.yml` | `main` | 全部 | — | ✅ | L1 静态 + BATS（单镜像，`report.sh all`）+ 密文扫描 + 身份门禁 + skip 门禁 |
 | `images.yml` | 仅 `main` | — | — | ✅ | L2：4 镜像矩阵 → push GHCR |
 | `pull-check.yml` | `main` | — | 每周一 06:00 | ✅ | 匿名拉取 + 非 root/工具链/UTF-8 断言 |
 
-`ci.yml` 的 job 一览：`lint` / `bats` / `bats-release-matrix` / `secret-scan` /
+`ci.yml` 的 job 一览：`lint` / `bats` / `secret-scan` /
 `identity-guard` / `plan-sync` / `branch-guard`（备份）。
 
 ## 4. 门禁与约定
@@ -55,11 +55,11 @@ feat/72-kernel-trim ──PR──> main ──tag──> v0.5.0
 | `pull_request` | 变更必须经 PR；`required_approving_review_count: 0`，但 `required_review_thread_resolution: true`（未解决的 review 讨论会挡合并） |
 | `required_status_checks` | 必须通过的检查见下 |
 
-必需状态检查共 9 项（名字就是 job 名，矩阵 job 带展开后缀）：
+必需状态检查共 5 项（名字就是 job 名；`bats-release-matrix` 已随 CI 收缩删除，
+2026-11-14 按 ruleset 实况核对）：
 
 ```
 lint  bats  secret-scan  identity-guard  plan-sync
-bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
 ```
 
 `strict_required_status_checks_policy: false`——不要求分支先 rebase 到最新
@@ -96,12 +96,16 @@ bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
   `branch-guard` 因 SHA 全变失效——恢复方式是**用 API 合并一个 PR**，不是 force push。
 - **提交信息**：多行一律脚本文件 + `git commit -F <file>`（内联双引号会把 `\n` 变字面量，已踩过）。
 - **任务卡与分支一致**：`tasks/<ID>.md` 元信息里的「分支」字段必须与实际任务分支同名。
+- **发版同步**：打 batch tag 的 PR 必须同时反映该版本状态到五份计划文档
+  （README 状态表、`plan/milestones.md`、`roadmap.md`、`backlog.md`、`handover.md`）
+  并补记 `CHANGELOG.md`。计数只在 milestones 判定表维护，他处只引用不写数。
+  （防复发：「最后更新」三次失守的根因是日期与内容脱钩 + 数字复制漂移。）
 
 ## 5. 与 AI 派单的关系
 
 在构建机的仓库工作树里直接跑 AI CLI 时，**切分支是派单前置动作**：
 先 `git switch -c feat/<TASK-ID>-<slug> main`，再进入派单执行。
-（原 WF3 派单脚本 `scripts/wf3.sh` 已于 2026-11-14 随工程清理移出仓库，
+（原 WF3 派单脚本 scripts/wf3.sh 已于 2026-11-14 随工程清理移出仓库，
 本地备份在构建机 `~/backup-wf3/`；`scripts/copilot-wrap.sh` 保留，
 仍可作为 AI CLI 运行时的 PAT 安全包装使用。）
 
@@ -113,3 +117,6 @@ bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
 | 2026-10-28 | 记录 Free 私有仓库 rulesets 不可用，改用 pre-push 钩子 + CI 守卫 | 实测 403 |
 | 2026-11-01 | 删除 34 条历史分支；历史重写统一身份 | 开源合规 |
 | 2026-11-01 | 取消 `dev`，回到单长期分支；改用 ruleset 强制门禁 | 转公开 + `delete_branch_on_merge` 生效 |
+| 2026-11-14 | 必需状态检查按 ruleset 实况修正为 5 项；CI 触发矩阵去掉已删的 4 版本矩阵；清理 `dev` 残留文案 | 工程审查核对 ruleset |
+| 2026-11-09 | 范围收窄至 wrynose 6.0：3.1/4.0/5.0 冻结保留、退出构建与保障，6.0 达标后回移 | 单点资源下四版都保 = 四版都不深；详见 `engineering-overview.md` §2.2 |
+| 2026-11-14 | 文档树重组为七类编号目录 + INDEX 集中导航（PR #148） | 文档管理审查：路径语义化、死链可校验 |

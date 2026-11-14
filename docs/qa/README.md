@@ -20,7 +20,7 @@
   格式差异 / 降级清单。文件名以 `compliance-` 开头，同样不会被
   `99_coverage.bats` 当成「最新构建报告」。采集与渲染细节见 `docs/05-release/compliance.md`。
 - 2026-10-30 已产出 8 组合（4 release × 2 variant）全 PASS 的 SDK 归档；
-  实测数据与 dunfell 的 eSDK workaround 见 `docs/sdk.md` 第 6、7 节，
+  实测数据与 dunfell 的 eSDK workaround 见 `docs/03-build/sdk.md` 第 6、7 节，
   「做不做 SDK」的结论见第 8 节。
 - 2026-11-01 的 `f66f35b` 回归产出 **7 份**构建报告（wrynose / scarthgap / kirkstone
   各 2 个 variant，加 dunfell general），每份 `194 | 194 | 0 | 0`。缺的那份是

@@ -5,7 +5,7 @@
 > [`functional-flow.md`](../02-development/functional-flow.md)；想知道怎么证明它对看
 > [`verification-flow.md`](../01-requirements/verification-flow.md)。
 >
-> 最后更新：2026-11-09
+> 最后更新：2026-11-14
 
 ## 1. 一句话定位
 
@@ -68,28 +68,16 @@
 
 ### 条件 A：功能证据矩阵全绿
 
-`config/features.txt` 里 **25 条 feature**，每条达到自己应有的证据级别（`static` / `build` / `boot` / `runtime`），无一条低于应达档位。
-
-矩阵在 [`verification-flow.md`](../01-requirements/verification-flow.md) §6，逐条给出「用什么验、在哪验、现在到没到」。
-
-**当前（2026-11-09）**：25 条中 ✅ 17 条、⚠️ 6 条、⬜ 0 条。
-
-其中 6 条 ⚠️ 分两类，**性质完全不同**：
-
-| 类别 | 条目 | 是不是缺口 |
-|---|---|---|
-| 一次性取证，不可复现 | `yp-service` / `demo-statusd` / `demo-collectd` | **是**，`#132` 解决 |
-| 显式降级，有登记有理由 | `foss-scan` / `do-scancode` / `distro-backfill` | 否，是决策不是缺陷 |
+`config/features.txt`（单一事实源）里每条 feature 达到自己应有的证据级别
+（`static` / `build` / `boot` / `runtime`），无一条低于应达档位；显式降级必须登记在
+`config/degraded.txt`。**条数与当前达成情况只在
+[`plan/milestones.md`](plan/milestones.md) 条件 A 维护**（由 `99_coverage.bats`
+校验、以最新 `docs/qa/` 归档为准），本文件不重复写计数。
 
 ### 条件 B：五条关键路径门槛
 
-| # | 门槛 | 判定 | 当前 | 归属 |
-|---|---|---|---|---|
-| ① | 构建全绿 | 6.0 × 2 variant × 3 层镜像，`N tasks all succeeded`，无 error | ✅ `20261104-ad7c52d` 202/202/0/0 | 已达成 |
-| ② | 起机到 login | QEMU 串口出现 `login:`，无 panic | ✅ 各组合串口全命中 | 已达成 |
-| ③ | 内容能用 | runtime smoke 动作集全部 rc=0，`failed units` = 0 | ⬜ 规格已定（§6.3），未实现 | `#132` → v1.0.2 |
-| ④ | 只读根可用 | dm-verity 镜像下 `/var` 可写（`/var/lib` 不再只读），`journald` 能落盘 | ⬜ 只有 `ro`，靠 tmpfs 兜底 | `#133` → v1.1.0 |
-| ⑤ | 宣称与事实一致 | 镜像 banner 版本 = 最近 tag；README 能力清单 = 实测能力 | ⬜ banner 仍显示 0.3.0 | `#130` → v1.0.1 |
+五条门槛的定义与当前判定只在 [`plan/milestones.md`](plan/milestones.md) 条件 B 维护：
+①构建全绿 ②起机到 login ③runtime smoke 全绿 ④只读根 `/var` 可写 ⑤宣称与事实一致。
 
 ### 为什么是两条，不是一条
 
@@ -196,8 +184,8 @@ flowchart LR
 
 | 版本 | 主题 | 具体内容 | 性质 |
 |---|---|---|---|
-| **v1.0.1** | 可信度修正 | `DISTRO_VERSION` → 1.0.0；断言改为「与最近 tag 比对」；README / handover / roadmap / milestones / features 同步；范围收缩声明进 README；合成身份 9 条显式登记 | 零功能 |
-| **v1.0.2** | 可讲性 | runtime smoke 实现（规格见 `verification-flow.md` §6）；未保障清单进 README | 测试能力 |
+| **v1.0.1** | 可信度修正 ✅ 已发布（2026-11-14，`bf748c1`） | `DISTRO_VERSION` → 1.0.0；断言改为「与最近 tag 比对」；README / handover / roadmap / milestones / features 同步；范围收缩声明进 README；合成身份 9 条显式登记 | 零功能 |
+| **v1.0.2** | 可讲性 ✅ 已发布（2026-11-14，`2157a6c`） | runtime smoke 实现（规格见 `verification-flow.md` §6）；未保障清单进 README | 测试能力 |
 | **v1.1.0** | 功能补全 | 只读根 `/var` overlay；顺带 QEMU 上 arm64 抽测一次（只记录不承诺） | 功能 |
 
 **纪律：v1.0.1 里不许顺手做 `/var` overlay。** 功能混进补丁版会让版本号失去信息量，

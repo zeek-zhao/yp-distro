@@ -5,7 +5,7 @@
 
 | 编号 | 类别 | 文档 | 说明 |
 |---|---|---|---|
-| 00 | 入口 | [README](README.md) | 工程入口与上手路线 |
+| 00 | 入口 | [README](../README.md) | 工程入口与上手路线 |
 | 00 | 入口 | 本文件 | 文档树索引 |
 | 01 | 需求 | [01-requirements/README.md](01-requirements/README.md) | 需求包导览（生成器产物） |
 | 01 | 需求 | [01-requirements/srs.md](01-requirements/srs.md) | SRS（ISO 29148 轻量） |

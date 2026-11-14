@@ -95,7 +95,7 @@ kas 4.6 的以下行为已在目标镜像实测；L1 校验按这些行为实现
 7. `repos.<name>: null` 表示把当前配置文件所在仓库命名为该 repo 并作为 layer，
    不是删除继承来的 repo。
 8. include 优先相对仓库根解析，找不到时才相对当前文件目录回退；配置统一使用
-   `kas/...` 仓库根相对路径。
+   kas/ 开头的仓库根相对路径。
 9. 合并为深合并，后者覆盖前者；同名 mapping 递归合并。
 
 因此两处旧设计明确作废：**不使用 `poky: null` 删除 base 中的 poky**，
@@ -165,7 +165,7 @@ BBLAYERS ?= " \
 ### lockfile 的落点与格式
 
 `kas lock kas/targets/<r>-general.yml` 在 **target 同级**生成
-`kas/targets/<r>-general.lock.yml`（不是 `kas/locks/`），内容是：
+`kas/targets/<r>-general.lock.yml`（不是 kas/locks/，kas 不会自建目录），内容是：
 
 ```yaml
 header:
@@ -204,7 +204,7 @@ overrides:
 
 ### custom 的 lockfile 里没有 `yp`
 
-`kas lock` 的 `_filter_enabled`（`kas/plugins/lock.py`）会过滤掉
+`kas lock` 的 `_filter_enabled`（kas 上游 `plugins/lock.py`）会过滤掉
 `operations_disabled` 的仓库，注释是 "when locking, only consider repos managed by kas"。
 所以 `kas/targets/*-custom.lock.yml` 里只有上游仓库。
 

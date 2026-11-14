@@ -255,11 +255,30 @@ junit="${ROOT_DIR}/reports/smoke/smoke-${release}-${variant}-${image_layer}.xml"
                 fi
                 ;;
             svc-*)
-                if [[ "${value}" == */"active" ]]; then
+                # §6.3：自有服务通过条件 = is-enabled `enabled` + is-active `active`。
+                # 此前只判 `*/active`，is-enabled 为 disabled/masked 也判绿（QA 审查项）。
+                if [[ "${value}" == "enabled/active" ]]; then
                     echo "  <testcase name=\"${tag}\"/>"
                 else
                     parse_fail=1
-                    printf '  <testcase name="%s"><failure message="state=%s"/></testcase>\n' "${tag}" "${value}"
+                    printf '  <testcase name="%s"><failure message="is-enabled/is-active=%s（期望 enabled/active）"/></testcase>\n' "${tag}" "${value//\"/\'}"
+                fi
+                ;;
+            statusd-json)
+                # §6.3：/status 必须是含版本字段的合法 JSON，且版本与 DISTRO_VERSION 一致。
+                # 此前只判非空，version 停在旧值也判绿（QA 实测 0.3.0 判绿的根因）。
+                if [[ "${value}" =~ \"version\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; then
+                    reported="${BASH_REMATCH[1]}"
+                    expected="$(sed -n 's/^DISTRO_VERSION = "\([^"]*\)".*/\1/p' "${ROOT_DIR}/layers/meta-yp/conf/distro/include/yp-release.inc")"
+                    if [[ -n "${expected}" && "${reported}" == "${expected}" ]]; then
+                        echo "  <testcase name=\"statusd-json\"/>"
+                    else
+                        parse_fail=1
+                        printf '  <testcase name="statusd-json"><failure message="version=%s expected=%s"/></testcase>\n' "${reported:-<missing>}" "${expected:-<unset>}"
+                    fi
+                else
+                    parse_fail=1
+                    printf '  <testcase name="statusd-json"><failure message="not-json-or-no-version=%s"/></testcase>\n' "${value//\"/\'}"
                 fi
                 ;;
             *)
@@ -267,7 +286,7 @@ junit="${ROOT_DIR}/reports/smoke/smoke-${release}-${variant}-${image_layer}.xml"
                     echo "  <testcase name=\"${tag}\"/>"
                 else
                     parse_fail=1
-                    printf '  <testcase name="%s"><failure message="output=%s"/></testcase>\n' "${tag}" "${value}"
+                    printf '  <testcase name="%s"><failure message="output=%s"/></testcase>\n' "${tag}" "${value//\"/\'}"
                 fi
                 ;;
         esac
