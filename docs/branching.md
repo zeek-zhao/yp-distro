@@ -97,20 +97,13 @@ bats-release-matrix (dunfell)  (kirkstone)  (scarthgap)  (wrynose)
 - **提交信息**：多行一律脚本文件 + `git commit -F <file>`（内联双引号会把 `\n` 变字面量，已踩过）。
 - **任务卡与分支一致**：`tasks/<ID>.md` 元信息里的「分支」字段必须与实际任务分支同名。
 
-## 5. 与 WF3 的关系
+## 5. ? AI ?????
 
-WF3（`scripts/wf3.sh`）在构建机的仓库工作树里直接跑 AI CLI，因此**切分支是派单前置动作**：
-派单脚本先 `git switch -c feat/<TASK-ID>-<slug> main`，再 `wf3.sh start <TASK-ID>`。
-
-> ⚠️ **AI CLI 默认会给提交加 `Co-authored-by: <工具>`**，而 `commit-msg` 钩子与
-> `identity-guard` 都拒这类 trailer。派单收尾必须做两件事：
-> 1. 用 `git log --format='%H %s'` 复核产出提交的 author/committer 是维护者身份；
-> 2. 若消息里出现 AI 署名或生成声明，`git commit --amend` 删掉该行后再推。
->
-> 这不是形式主义：历史上正因漏了这一步，产生了 3 条 AI 协作者署名，最终只能靠
-> 一次全历史重写清掉。
-
-验收通过后由验收方（维护者）执行 PR 与合并，AI 不直接推 `main`。
+?????????????? AI CLI ??**??????????**?
+? `git switch -c feat/<TASK-ID>-<slug> main`?????????
+?? WF3 ???? `scripts/wf3.sh` ?? 2026-11-14 ??????????
+???????? `~/backup-wf3/`?`scripts/copilot-wrap.sh` ???
+???? AI CLI ???? PAT ????????
 
 ## 6. 变更记录
 
