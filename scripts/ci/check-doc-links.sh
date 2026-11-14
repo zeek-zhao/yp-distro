@@ -31,15 +31,15 @@ while IFS= read -r -d '' f; do
     # ](target) 形态；target 里允许 #anchor。空 target / 纯锚点由 case 跳过
     while IFS= read -r t; do
         case "${t}" in
-            ''|http://*|https://*|mailto:*|'#'*) continue ;;
+            '' | http://* | https://* | mailto:* | '#'*) continue ;;
         esac
         t="${t%%#*}"
         [ -n "${t}" ] || continue
         if [ ! -e "${dir}/${t}" ]; then
             note "[md-link] ${f}: 链接目标不存在 -> ${t}"
         fi
-    done < <(grep -oE '\]\([^)]*\)' "${f}" 2>/dev/null \
-             | sed -E 's/^\]\(//; s/\)$//' | sort -u)
+    done < <(grep -oE '\]\([^)]*\)' "${f}" 2>/dev/null |
+        sed -E 's/^\]\(//; s/\)$//' | sort -u)
 done < <(find . -path ./.git -prune -o -path ./docs/08-tasks/archive -prune -o -name '*.md' -print0)
 
 # ---- 2)+3) 反引号内的仓库路径 ----
@@ -60,8 +60,8 @@ while IFS= read -r -d '' f; do
             esac
             note "${tag} ${f}: 引用路径不存在 -> ${t}"
         fi
-    done < <(grep -hoE '`(docs|config|scripts|layers|kas|tests|docker)/[A-Za-z0-9_./-]+`' "${f}" 2>/dev/null \
-             | sort -u)
+    done < <(grep -hoE '`(docs|config|scripts|layers|kas|tests|docker)/[A-Za-z0-9_./-]+`' "${f}" 2>/dev/null |
+        sort -u)
 done < <(find . -path ./.git -prune -o -path ./docs/08-tasks/archive -prune -o \( -name '*.md' -o -name '*.sh' -o -name '*.yml' \) -print0)
 
 if [ "${fail}" -ne 0 ]; then
