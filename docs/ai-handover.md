@@ -27,7 +27,7 @@
    `Co-authored-by: Copilot/Claude/…`、`Generated with …`、`🤖`——
    本地钩子 + CI `identity-guard` + GitHub ruleset 三层都会拒。
 2. **不手改生成文件**：`docs/issues.md`（`scripts/plan-sync.sh` 生成，改了 CI
-   plan-sync 会红）、`docs/tokens.html` 与 `metrics/token-usage.tsv`（`wf3 tokens`
+   plan-sync 会红）、
    副产物，提交前 `git checkout --` 还原）。
 3. **不手工 `docker run` 跑 bitbake**：必须经 `scripts/container.sh`——它挂
    `/etc/passwd` **和** `/etc/group`，漏一个就是 `sstatesig` KeyError 被伪装成

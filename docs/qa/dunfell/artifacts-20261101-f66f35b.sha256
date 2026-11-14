@@ -1,3 +1,0 @@
-# Source: release=dunfell variant=general commit=f66f35b
-06a323e77d561f6c16ae74badb77a40899a571688851b10c5ab6be7cb255a004  work/kas-dunfell-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.ext4
-09513bdbf48ef24ae704d1ff3e80d67635a64b2829362a6b511a327b7ccc66e1  work/kas-dunfell-general/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.tar.bz2
