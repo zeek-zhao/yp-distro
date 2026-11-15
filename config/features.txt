@@ -1,4 +1,4 @@
-# feature_id | 适用 release | bats 文件 | bats tag | status
+# feature_id | 适用 release | bats 文件 | bats tag | status | 证据级别
 entry-unified | all | tests/bats/00_project.bats | entry | ok | static
 docker-images | all | tests/bats/01_dockerfile.bats | dockerfile | ok | static
 ci-workflows | all | tests/bats/02_workflows.bats | ci | ok | static

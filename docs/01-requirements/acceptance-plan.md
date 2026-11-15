@@ -6,7 +6,7 @@
 - 需求基线：`docs/01-requirements/srs.md` + `traceability.md`
 - 可执行事实：`tests/bats/`（205 个非 meta 用例 + 99_coverage 6 个元测试）
 - QA 归档证据：`docs/qa/<release>/`（report.sh 产物）
-- 降级登记：`docs/qa/degraded.txt`
+- 降级登记：`config/degraded.txt`
 
 ## 2. 验收方法与步骤
 

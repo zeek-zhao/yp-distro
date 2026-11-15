@@ -128,4 +128,19 @@ if ((${#failed[@]} > 0)); then
     printf 'FAILED: %s\n' "${failed[@]}"
     die "release-check：${#failed[@]} 项失败（${start} 起，共 ${#rel_arr[@]}×${#var_arr[@]} 组合）"
 fi
-echo "release-check：全部通过（${#rel_arr[@]}×${#var_arr[@]} 组合，${start} 起）"
+
+# 发布必刷新归档（审查纪律落地）：QA 归档必须锚定合并后的 main SHA。
+# 归档文件名由 report.sh 按 <date>-<sha> 生成——若 docs/qa/<release>/ 下
+# 找不到锚定当前 HEAD 的归档，说明本次运行的证据没有刷新，发布口径
+# 就会引用过期或孤儿 SHA（20261112-12c831f / 20261114-7dc6206 教训）。
+head_sha="$(git -C "${ROOT_DIR}" rev-parse --short HEAD)"
+missing=()
+for release in "${rel_arr[@]}"; do
+    ls "${ROOT_DIR}/docs/qa/${release}"/*-"${head_sha}"*.md >/dev/null 2>&1 ||
+        missing+=("${release}")
+done
+if ((${#missing[@]} > 0)); then
+    die "release-check：以下 release 在 docs/qa/ 缺少锚定 ${head_sha} 的归档（发布必刷新归档）：${missing[*]}"
+fi
+
+echo "release-check：全部通过（${#rel_arr[@]}×${#var_arr[@]} 组合，${start} 起）；归档已锚定 ${head_sha}"

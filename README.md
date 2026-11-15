@@ -18,7 +18,7 @@
 > 及其任何子项目无隶属或背书关系。文中出现的 release 名称（dunfell 等）仅指上游
 > Yocto 版本代号。
 
-## 当前状态（2026-11-12）
+## 当前状态（2026-11-14）
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
@@ -30,7 +30,11 @@
 | `v0.6.0` | 服务与 demo 扩展 + 服务数×耗时曲线 | ✅ **随 v1.0.0 累积发布** |
 | `v0.7.0` | 5.0（scarthgap）对齐与四版补齐 | ✅ **随 v1.0.0 累积发布** |
 | `v1.0.0` | 四版收口（回归 8/8 + 归档刷新 + 安全基线） | ✅ 已发布（2026-11-05，`1e1ff48`） |
-| `v1.0.1 · 6.0 全面收口` | 26 条功能各达证据档位 + DoD 五条 | 🚧 进行中——batch1 已合并（#138），余下 #135 文档同步与点版本（`v1.0.1`/`v1.0.2`/`v1.1.0` 三个批次） |
+| `v1.0.1` | A 修正：DISTRO_VERSION、断言动态化、CI 收缩、合规收缩、文档同步 | ✅ 已发布（2026-11-14，`bf748c1`） |
+| `v1.0.2` | B 验证：证据级别列 + runtime smoke 动作集 + `design.md` | ✅ 已发布（2026-11-14，`2157a6c`） |
+
+里程碑 `6.0 全面收口` 仍开放：余 #135 文档同步与 C 功能 `v1.1.0`（#133）。
+判定表见 [`docs/06-process/plan/milestones.md`](docs/06-process/plan/milestones.md)。
 
 > `v0.5.0` / `v0.6.0` / `v0.7.0` 三个里程碑**从未单独打 tag**——它们的全部内容挤在
 > `v1.0.0` 指向的一个 squash commit 里，在同一 commit 上补三个 tag 等于伪造发布点。
@@ -52,6 +56,7 @@
 | **知识库与工程规范**（KB-01~32，normative） | [`docs/06-process/knowledge-base.md`](docs/06-process/knowledge-base.md) |
 | **机器可读功能注册表**（含证据级别） | [`config/features.txt`](config/features.txt) |
 | **什么才算做完**（每个版本的出口条件） | [`docs/06-process/plan/milestones.md`](docs/06-process/plan/milestones.md) |
+| **各版本改了什么**（发布记录） | [`CHANGELOG.md`](CHANGELOG.md) |
 | **有哪些活**（开放 issue 清单，脚本生成） | [`docs/issues.md`](docs/issues.md) |
 | 阶段划分与约束 | [`docs/06-process/roadmap.md`](docs/06-process/roadmap.md) |
 | 在线看板 | [issues](https://github.com/zeek-zhao/yp-distro/issues) · [Projects #4](https://github.com/users/zeek-zhao/projects/4) |

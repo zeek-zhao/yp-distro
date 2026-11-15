@@ -13,8 +13,8 @@ Run BEFORE every commit:
 - Commit message style: Conventional Commits, e.g. `feat(demo): cmake build-system template (#65)`.
 
 ## 2. Branch & PR
-- Branch from `dev`. Name: `feat/<issue>-<slug>` (e.g. `feat/65-cmake`).
-- Open PR against `dev` (never `main`). PR body MUST contain `Closes #<N>`.
+- Branch from `main`. Name: `feat/<issue>-<slug>` (e.g. `feat/65-cmake`).
+- Open PR against `main` (the single long-lived branch; `dev` was retired on 2026-11-01 — see docs/06-process/branching.md). PR body MUST contain `Closes #<N>`.
 
 ## 3. Build-system demo recipe layout (v0.4.0)
 - Directory: `layers/meta-yp/recipes-demo/yp-demo-<sys>/`, `<sys>` in {make,cmake,autotools,meson,python,rust,go}.

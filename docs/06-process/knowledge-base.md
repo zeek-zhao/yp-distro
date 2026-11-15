@@ -27,7 +27,7 @@
   1. 4.0+ 一律冒号；3.1 的变量级补丁只能经 `python __anonymous` 按
      `LAYERSERIES_CORENAMES` 动态 `setVar` 下划线版。
   2. 顶层的冒号版在 3.1 会被**静默丢弃**——「不报错 ≠ 不生效」，写完必须验证副作用。
-- **参考**：`docs/02-development/syntax-matrix.md` A 组；issue #21；`layers/meta-yp/conf/distro/yp-common.inc`
+- **参考**：`docs/02-development/syntax-matrix.md` A 组；issue #21；`layers/meta-yp/conf/distro/include/yp-common.inc`
 
 ### KB-02 · 任务级 append 冒号四版通用
 - **现象**：曾以为「3.1 不认冒号」推广到函数，给每个 `do_install:append` 再补一份
