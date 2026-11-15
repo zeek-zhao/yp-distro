@@ -46,9 +46,10 @@ done < <(find . -path ./.git -prune -o -path ./docs/08-tasks/archive -prune -o -
 # 只取路径字符集，遇到通配符/模板字符整条跳过（见文件头说明）
 while IFS= read -r -d '' f; do
     while IFS= read -r t; do
-        t="${t#\`}"; t="${t%\`}"
+        t="${t#\`}"
+        t="${t%\`}"
         case "${t}" in
-            *[\*\?\{\}\<\>]*|*\$\(*) continue ;;
+            *[\*\?\{\}\<\>]* | *\$\(*) continue ;;
             # 可选允许清单：允许不存在（secret-scan.sh:24 自带 -f 判断）
             scripts/ci/secret-scan.allow) continue ;;
         esac
