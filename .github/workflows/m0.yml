@@ -1,0 +1,61 @@
+# M0 publish workflow（方案 A / ADR-002）
+# 用 Actions 内置 GITHUB_TOKEN（packages: write）发布镜像到 GHCR，
+# 不依赖用户 PAT，不入库任何密钥（iso-mapping 第 7 节）。
+name: M0 publish (dispatch)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: zeek-zhao
+
+jobs:
+  publish-builder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push yp-builder
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker
+          file: ./docker/Dockerfile
+          push: true
+          build-args: |
+            JENKINS_UID=1000
+            JENKINS_GID=1000
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/yp-builder:wrynose-m0
+
+  publish-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push yp-cache (downloads + sstate data image)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker
+          file: ./docker/cache.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/yp-cache:wrynose-m0
