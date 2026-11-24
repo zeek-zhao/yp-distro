@@ -6,3 +6,4 @@
 |---|---|---|---|
 | 1 | 开工前用 `command -v` 探测验收命令的运行时依赖，缺失即开 ISS 单并用静态断言过渡，不伪造「通过」结论 | YP-M0-ISS-001 | 2026-11-24 |
 | 2 | 写 Dockerfile 创建固定 UID/GID 用户前，先用 `getent passwd/group` 检查官方基础镜像的占用，并做幂等删除或 `-o` 回退 | YP-M0-ISS-003 | 2026-11-24 |
+| 3 | 发布镜像到 GHCR 前先用 `gh api /user/packages?package_type=container` 与 GHCR token scope 探测权限，区分 git push 与 package push 两套 scope | YP-M0-ISS-004 | 2026-11-24 |
