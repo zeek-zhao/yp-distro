@@ -40,7 +40,7 @@ kas build kas/yp.yml:edition/prod.yml:machine/qemux86-64.yml
 | S5 | 首次构建 | 待开始 |
 | S6 | 缓存打包与切分（阈值 80%） | 完成 |
 | S7 | 预热镜像发布到容器仓库 | 完成（公共 GHCR 匿名拉取验证通过） |
-| S8 | CI 门禁 | 待开始 |
+| S8 | PR 门禁 | 待开始 |
 | S9 | 验收与文档 | 待开始 |
 
 执行规则见 [`docs/ai/m0-prompt.md`](docs/ai/m0-prompt.md)。
