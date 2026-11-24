@@ -20,6 +20,7 @@ scripts/ai-entry.sh --next   # 打印可直接粘贴给 AI 的单步提示词
 | 4 | `docs/m0/plan.md` | 当前进度与下一步（唯一事实源） |
 | 5 | `docs/m0/iso-mapping.md` | 记录怎么写、放哪里、对应哪条规范 |
 | 6 | 当前 Step 对应的 `docs/m0/design/*.md` | 本步的设计与接口 |
+| 7 | `docs/ai/m0-resume-prompt.md` | 续做提示词（按 RV-010 审计排的 A→F 阶段），接手时必读 |
 
 ## 3. 十条硬约束（摘要，全文见 m0-prompt）
 
