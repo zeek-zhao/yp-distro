@@ -18,8 +18,8 @@
 | 4 | 缓存目录独立可清 | `yp-cache` 将 `/work/downloads` 与 `/work/sstate` 声明为独立 VOLUME（`stat 1000:1000`），可单独挂载/清除而不影响 builder 镜像；DES-006 | 通过 |
 | 5 | 无缓存服务器依赖 | S1 静态检查：`meta-yp-distro/` 无远程缓存地址（DES-001 约束）；全仓终检待 S9 | UNVERIFIED |
 | 6 | 分层锁定可复现 | S1 证据：`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值锁定、无多版本兼容层（DES-001/ADR-001/ISS-001 静态断言全过）；两次 `kas dump` 一致性待 S2（kas 入口 + repos commit 锁定）实跑 | UNVERIFIED |
-| 7 | 超限切分可用 | | |
-| 8 | 手改配置可发现 | | |
+| 7 | 超限切分可用 | 本地实跑：`split.sh` 20 MiB→4 片、`merge.sh` 合并 sha256 与源一致、移走一片后拒绝恢复（exit 1）；发布链路未接入（RV-010 F-07） | UNVERIFIED |
+| 8 | 手改配置可发现 | 待补：grep 手改点的检出脚本与样例 | UNVERIFIED |
 
 结论只填三种：`通过` / `未通过` / `UNVERIFIED`。填 `通过` 必须附命令或产物路径。
 
