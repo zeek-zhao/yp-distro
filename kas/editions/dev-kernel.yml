@@ -1,0 +1,9 @@
+header:
+  version: 14
+
+# 内核/驱动开发：独立内核 recipe 覆盖点、menuconfig 片段挂点（占位，无 BSP）
+local_conf_header:
+  dev-kernel: |
+    DISTRO_FEATURES:append = " debug-tweaks"
+    # 内核配置片段挂点：后续里程碑放入具体 fragment，此处仅声明变量
+    KERNEL_CONFIG_FRAGMENTS ??= ""

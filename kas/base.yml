@@ -1,0 +1,44 @@
+header:
+  version: 14
+
+distro: yp-wrynose
+target: core-image-minimal
+
+# repos 全部 commit pin（DES-002 §2.1 / ADR-004）；值为 git ls-remote ^{} 解引用后的真实 commit。
+# 禁止裸 branch：meta-openembedded 用 branch+commit，commit 优先定版。
+repos:
+  meta-yp-distro:
+    path: .
+    layers:
+      meta-yp-distro:
+  openembedded-core:
+    url: https://git.openembedded.org/openembedded-core
+    commit: 0f03c732a0a2d0506b41b1abe60b3f368b2300dc
+    layers:
+      meta:
+  bitbake:
+    url: https://git.openembedded.org/bitbake
+    commit: 51fd94a67fa17650a9ff623492005972bbc7d26f
+  meta-yocto:
+    url: https://git.yoctoproject.org/meta-yocto
+    commit: 7c25b11156553145fa6b241a2d4f65d94438f804
+    layers:
+      meta-poky:
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    commit: c0fcd7cca3760ef24e087ac4a31b8f357cb204da
+    layers:
+      meta-oe:
+
+# 变量归口：可覆盖变量只在此定义默认值，edition 仅写差异（ADR-004）。
+local_conf_header:
+  base: |
+    CONF_VERSION = "2"
+    # 本地 hashserv，禁止远程缓存服务器（B-07）
+    BB_HASHSERVE = "auto"
+    # 缓存目录指向 S4 挂载点（DES-002 §3.3）
+    DL_DIR = "/work/downloads"
+    SSTATE_DIR = "/work/sstate"
+    PACKAGE_CLASSES ??= "package_rpm"
+    DISTRO_FEATURES ??= ""
+    INIT_MANAGER ??= "systemd"

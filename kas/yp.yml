@@ -1,0 +1,8 @@
+header:
+  version: 14
+  includes:
+    - base.yml
+    - machines/qemux86-64.yml
+
+# 顶层入口：默认 machine 已在 includes；editions 通过命令行叠加：
+#   kas dump kas/yp.yml:editions/prod.yml

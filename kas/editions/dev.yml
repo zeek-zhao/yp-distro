@@ -1,0 +1,9 @@
+header:
+  version: 14
+
+# 开发：可调试、保留符号、不裁体积
+local_conf_header:
+  dev: |
+    DISTRO_FEATURES:append = " debug-tweaks"
+    INHERIT:remove = " rm_work"
+    DEBUG_FLAGS = "-g"

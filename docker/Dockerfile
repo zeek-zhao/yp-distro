@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 2) kas（官方推荐 pipx 安装，隔离依赖）；放入全局 PATH
+# 锁定 5.5：依赖基线冻结，避免重建时版本漂移破坏两次 kas dump 一致性（CHG-001 / DES-002）
 ENV PIPX_HOME=/opt/pipx \
     PIPX_BIN_DIR=/usr/local/bin
-RUN pipx install kas
+RUN pipx install kas==5.5
 
 # 3) 固定非 root 构建用户，UID/GID 可配（约束 7 / B-04）
 ARG JENKINS_UID=1000

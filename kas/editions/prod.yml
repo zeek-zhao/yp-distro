@@ -1,0 +1,8 @@
+header:
+  version: 14
+
+# 生产：image 精简、只读根准备（实际只读在后续里程碑）
+local_conf_header:
+  prod: |
+    IMAGE_FSTYPES = "ext4"
+    INHERIT += "rm_work"
