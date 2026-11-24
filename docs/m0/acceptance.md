@@ -12,8 +12,8 @@
 
 | # | 判据 | 证据（命令 / 产物 / 日志） | 结论 |
 |---|---|---|---|
-| 1 | 容器内一条命令出 prod 镜像 | | |
-| 2 | 构建身份为 jenkins | | |
+| 1 | 容器内一条命令出 prod 镜像 | S3 提供镜像基础 `yp-builder:wrynose-m0`（Ubuntu 24.04 + kas）；prod 镜像实跑属 S5，未验证 | UNVERIFIED |
+| 2 | 构建身份为 jenkins | S3 实证：`docker run --rm yp-builder:wrynose-m0 whoami`→`jenkins`，`id -u`→`1000`（默认）/2000（build-arg），root 覆盖被 entrypoint 拒绝（exit 1）；镜像 `ba1a5b8b7ecf`；DES-003/RV-003/ISS-003 | 通过 |
 | 3 | 下载目录跨容器留存 | | |
 | 4 | 缓存目录独立可清 | | |
 | 5 | 无缓存服务器依赖 | S1 静态检查：`meta-yp-distro/` 无远程缓存地址（DES-001 约束）；全仓终检待 S9 | UNVERIFIED |

@@ -35,12 +35,12 @@ kas build kas/yp.yml:edition/prod.yml:machine/qemux86-64.yml
 | S0 | 空分支与实施提示词 | 已完成 |
 | S1 | 发行版层骨架 | 待开始 |
 | S2 | kas 入口与层锁定 | 待开始 |
-| S3 | Ubuntu 容器镜像（jenkins 用户） | 待开始 |
+| S3 | Ubuntu 容器镜像（jenkins 用户） | 已完成 |
 | S4 | 下载与缓存分卷挂载 | 待开始 |
 | S5 | 首次构建 | 待开始 |
 | S6 | 缓存打包与切分（阈值 80%） | 待开始 |
 | S7 | 预热镜像发布到容器仓库 | 待开始 |
-| S8 | PR 门禁 | 待开始 |
+| S8 | CI 门禁 | 待开始 |
 | S9 | 验收与文档 | 待开始 |
 
 执行规则见 [`docs/ai/m0-prompt.md`](docs/ai/m0-prompt.md)。

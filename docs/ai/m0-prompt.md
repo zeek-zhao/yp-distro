@@ -24,7 +24,7 @@
 
 | # | 约束 |
 |---|---|
-| 1 | 只在 `feat-m0-*` 分支工作；`main` 变更走 PR；禁止直接 push `main` |
+| 1 | 只在 `feat-m0-*` 分支工作；孤立分支不向 `main` 开 PR（方案 A，见 ADR-002）；禁止直接 push `main` |
 | 2 | 提交身份 `zeek-zhao <GitHub noreply 邮箱>`；禁止 AI 署名、Co-authored-by、Generated with |
 | 3 | 每条「构建成功／测试通过」必须来自实际命令输出；未执行写 `UNVERIFIED` |
 | 4 | 主分支只作写法参考：可借鉴 kas 结构、Docker 分层、Actions 组织；禁止复制四版兼容层、BATS 全量、CVE 离线库 |
@@ -65,7 +65,7 @@ Doc: docs/m0/design/S<N>-xxx.md
 Refs: YP-M0-ISS-0NN      # 若为修复
 ```
 
-**PR 必填**：本 PR 新增或更新的文档编号列表；没有文档编号的代码 PR（错别字、格式除外）直接打回。
+**提交/评审必填**：本次提交新增或更新的文档编号列表；没有文档编号的代码提交（错别字、格式除外）评审时直接打回（方案 A 不开 PR，以 commit diff + RV 记录评审）。
 
 ---
 
@@ -85,7 +85,7 @@ Refs: YP-M0-ISS-0NN      # 若为修复
 
 **文档头六项**：编号、版本、状态、责任人、生效日期、关联。状态只走 `Draft → In Review → Approved → Obsolete`；每份文档尾部有只追加的变更记录表。
 
-**追溯链五段**：需求编号 → 设计编号 → 提交 → 验证证据 → 验收行。`docs/m0/traceability.md` 维护矩阵，PR 中不一致打回。
+**追溯链五段**：需求编号 → 设计编号 → 提交 → 验证证据 → 验收行。`docs/m0/traceability.md` 维护矩阵，评审中不一致打回。
 
 ---
 
@@ -130,14 +130,16 @@ New → Analyzed → Fixing → Verifying → Closed
 
 ---
 
-## 六、GitHub 工作流
+## 六、GitHub 工作流（方案 A · 孤立分支，见 YP-M0-ADR-002）
 
-1. 起点：本分支是孤立分支，与 `main` 无共享历史
+> 2026-11-24 人类批准方案 A（ISS-002 / ADR-002）：本分支与 `main` 无共享历史，**不向 main 开 PR，也不考虑 main 分支**。原「S0 后开 draft PR、S9 squash merge」一条作废。
+
+1. 起点：本分支是孤立分支，与 `main` 无共享历史；`main` 仅作写法参考，不作为 PR 基线
 2. 命名：`feat-m0-kas-bootstrap`；并行任务 `feat-m0-<子主题>`
-3. 提交：一 Step 一提交，`<type>(m0): <动作>`，带 `Refs:` 与 `Doc:`
-4. PR：S0 后开 draft PR（`M0: kas bootstrap + containerized cache`），每次推送自动更新；S9 转 ready 后 squash merge
-5. CI：PR 触发 `.github/workflows/m0.yml`；未触发用 dispatch 指定分支
-6. 红灯：先修 CI，不得注释检查绕过；确需临时跳过，PR 写明原因与恢复计划
+3. 提交：一 Step 一提交，`<type>(m0): <动作>`，带 `Refs:` 与 `Doc:`；推送到远端同名分支即同步
+4. 评审：**不开 PR**；以 commit diff + `docs/m0/reviews/RV-*.md` 四问记录作为评审依据，推送后停下等待评审意见
+5. CI：`.github/workflows/m0.yml` 由 `workflow_dispatch` 指定分支触发（S8 落地）；PR 触发方式已废弃
+6. 红灯：先修 CI，不得注释检查绕过；确需临时跳过，在 `docs/m0/deviations.md` 写明原因与恢复计划（不再写 PR 说明）
 
 ---
 
@@ -189,7 +191,7 @@ scripts/
 | **S5** | 首次构建与命中 | DES-005 + RV-005 | 产出镜像；二次构建命中 sstate；记录两次耗时与命中率 |
 | **S6** | 缓存打包与切分 | DES-006 + RV-006 | 超阈值自动切片；`merge` 后 sha256 一致；缺片拒绝恢复 |
 | **S7** | 预热镜像发布 | DES-007 + RV-007 | 手动 dispatch 发布多分片镜像；再拉取可恢复；无密钥入库 |
-| **S8** | PR 门禁 | DES-008 + RV-008 | 故意改坏三处（kas dump、Dockerfile lint、预检）观察变红再修好 |
+| **S8** | CI 门禁 | DES-008 + RV-008 | 故意改坏三处（kas dump、Dockerfile lint、预检）观察 workflow_dispatch 变红再修好 |
 | **S9** | 验收与索引 | DES-009 + RV-009 | 新容器按 README 三步跑通；判据逐条有证据或 `UNVERIFIED` |
 
 **顺序不可压缩**：S1/S2 未稳定不做 S3；S3/S4 未稳定不做 S5。
@@ -252,14 +254,14 @@ scripts/
 
 - [ ] `scripts/ai-entry.sh` 可运行，进度与 `plan.md` 一致
 - [ ] 每个完成的 Step 都有 `DES-` 与 `RV-`，且提交带 `Doc:` 引用
-- [ ] 空分支可 push，draft PR 已开
+- [ ] 空分支可 push，评审按方案 A 走 commit diff + RV 记录（不开 PR）
 - [ ] `kas dump` 两次一致，层全部锁定
 - [ ] 容器内 `whoami` 为 jenkins，产物属主正确
 - [ ] 下载与缓存分卷挂载，可独立清理
 - [ ] 空缓存可构建；预热后命中率有记录
 - [ ] 超阈值缓存可切片、可恢复、缺片即停
 - [ ] 预热镜像可从容器仓库拉取，公开仓库无密钥
-- [ ] PR 门禁覆盖 kas 解析、镜像构建、挂载预检
+- [ ] CI 门禁（workflow_dispatch）覆盖 kas 解析、镜像构建、挂载预检
 - [ ] `acceptance.md` 每条判据有证据或 `UNVERIFIED`
 - [ ] `variable-index.md` 覆盖 M0 全部变量
 - [ ] `issues/` 内每张单均已关闭或有明确后续项

@@ -23,7 +23,7 @@ scripts/ai-entry.sh --next   # 打印可直接粘贴给 AI 的单步提示词
 
 ## 3. 十条硬约束（摘要，全文见 m0-prompt）
 
-1. 只在本分支工作，`main` 变更走 PR
+1. 只在本分支工作；本分支为孤立分支，不向 `main` 开 PR（方案 A，见 YP-M0-ADR-002）
 2. 提交身份 `zeek-zhao`，禁止 AI 署名 trailer
 3. 未实际执行不得声称成功，未验证写 `UNVERIFIED`
 4. 主分支只作写法参考，禁止复制多版本兼容层
