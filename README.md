@@ -6,6 +6,15 @@
 
 只装 Docker 的机器，拉取预置镜像后一条命令产出 prod 镜像；下载目录与缓存目录以挂载复用；缓存可打包、可切分、可恢复；无缓存服务器、无 root 构建。
 
+## AI 与人类协作者的入口
+
+```bash
+scripts/ai-entry.sh          # 当前 Step + 必读清单 + 下一步
+scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
+```
+
+**文档先行**：每个 Step 先写设计（`docs/m0/design/`）并过四问评审（`docs/m0/reviews/`），再写代码；遇到的问题先开 `docs/m0/issues/` 单，再修；阈值与契约变更先开 `docs/m0/changes/` 单。记录规范见 [`docs/m0/iso-mapping.md`](docs/m0/iso-mapping.md)。进度以 [`docs/m0/plan.md`](docs/m0/plan.md) 为唯一事实源。
+
 ## 三步上手（S9 后可用）
 
 ```bash
