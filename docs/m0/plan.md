@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-PLAN-001 |
-| 版本 | v1.6 |
+| 版本 | v1.7 |
 | 状态 | Approved（阶段计划） |
 | 责任人 | zeek-zhao |
 | 生效日期 | 2026-11-24 |
@@ -41,3 +41,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v1.4 | 2026-11-24 | S3 容器镜像设计完成（DES-003/RV-003/ADR-003），记录 Ubuntu 24.04 依据 | zeek.zhao |
 | v1.5 | 2026-11-24 | S3 完成并验证（镜像构建 + jenkins 身份 + entrypoint 校验）；新增 ISS-003 用户冲突修复 | zeek.zhao |
 | v1.6 | 2026-11-24 | 镜像分发验证：GHCR push 因 token 缺 packages 权限被拒（ISS-004），用 save/load 闭环验证可移植性 | zeek.zhao |
+| v1.7 | 2026-11-24 | 独立 TOKEN 成功推送 builder/cache 镜像到 GHCR；workflow 孤立分支不可 dispatch、包默认 private 不可匿名拉取（ISS-005，待决策） | zeek.zhao |
