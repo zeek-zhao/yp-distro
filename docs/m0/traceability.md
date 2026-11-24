@@ -9,8 +9,8 @@
 | B-02 层版本锁定 | DES-001（层系列锁定）+ DES-002（repos commit 锁定） | 待提交 `Refs: YP-M0-DES-002` | `grep -c commit: kas/base.yml`→4（四个远程 repo 全 pin 真实 commit；meta-yp-distro 走本地 path 免 pin）；`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值；kas 固定 5.5（CHG-001） | 判据 6 | 已验证 |
 | B-03 Ubuntu 容器环境 | DES-003（ADR-003：ubuntu:24.04） | 待提交 `Refs: YP-M0-DES-003` | 官方支持矩阵（DES-003 第 2 节）；`docker build` 成功（`ba1a5b8b7ecf`，589MB），容器内 `PRETTY_NAME="Ubuntu 24.04.5 LTS"` | 判据 1 | 已验证 |
 | B-04 普通用户构建 | DES-003 | 待提交 `Refs: YP-M0-DES-003` | `docker run ... whoami`→jenkins、`id -u`→1000（默认）/2000（build-arg）；root 覆盖→exit 1、错属主→exit 1、正确属主→exit 0（ISS-003） | 判据 2 | 已验证 |
-| B-05 下载目录挂载 | DES-004（待写） | — | 待补 | — | 未开始 |
-| B-06 缓存目录挂载 | DES-004（待写） | — | 待补 | — | 未开始 |
+| B-05 下载目录挂载 | DES-004（`design/S4-mounts.md`）+ CHG-002 | 待提交 `Refs: YP-M0-DES-004` | 容器内 `WRITE_OK` → 宿主 `cat .probe` = `probe` → `docker rm -f` 后全新容器 `probe` + `PERSIST_OK`；三次 bootstrap `KEEP`/`OWNER_OK`、`PREFLIGHT=0`（RV-004 §验收输出 1/2） | 判据 3 | 已验证 |
+| B-06 缓存目录挂载 | DES-004 + CHG-002 | 待提交 `Refs: YP-M0-DES-004` | 两卷分别 `-v` 挂载、各有 `.yp-volume`（`type=downloads`/`type=sstate`）；清空 sstate 载荷后 `CLEARED_PREFLIGHT=0` 且 `DOWNLOADS_INTACT`；`BAD_OWNER_EXIT=2`、`LOW_SPACE_EXIT=3`、`BAD_VOLUME_EXIT=1`，preflight 后属主仍 `0:0`（只读）（RV-004 §验收输出 3/4） | 判据 4 | 已验证 |
 | B-07 不依赖缓存服务器 | DES-002 | 待提交 `Refs: YP-M0-DES-002` | 容器内 `grep -rn "SSTATE_MIRRORS\|BB_HASHSERVE" kas/ meta-yp-distro/` → 仅 `BB_HASHSERVE = "auto"` 本地模式，无远程地址（DES-002 §3.4） | 判据 5 | 已验证 |
 | B-08 预热镜像分发 | DES-007 | `43b14d3` `Refs: YP-M0-DES-007` | 网页改 public 后匿名 pull 成功（builder sha256:ef28c044、cache 修复版 sha256:1eaf38f5）；`docker run whoami=jenkins/kas 5.5`、entrypoint 拒绝 root、正确挂载放行；ISS-006 修复卷属主后端到端 `--volumes-from` 组合通过 | 判据 5 | 已验证 |
 | B-09 超限切分 | DES-006（`design/S6-cache-pack-split.md`；未接入发布流程，见 RV-010 F-07） | `43b14d3` | 待补：分片镜像 tag 与清单上传 | 判据 7 | 进行中 |
