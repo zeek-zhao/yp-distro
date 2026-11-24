@@ -16,8 +16,8 @@
 | 2 | 构建身份为 jenkins | | |
 | 3 | 下载目录跨容器留存 | | |
 | 4 | 缓存目录独立可清 | | |
-| 5 | 无缓存服务器依赖 | | |
-| 6 | 分层锁定可复现 | | |
+| 5 | 无缓存服务器依赖 | S1 静态检查：`meta-yp-distro/` 无远程缓存地址（DES-001 约束）；全仓终检待 S9 | UNVERIFIED |
+| 6 | 分层锁定可复现 | S1 证据：`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值锁定、无多版本兼容层（DES-001/ADR-001/ISS-001 静态断言全过）；两次 `kas dump` 一致性待 S2（kas 入口 + repos commit 锁定）实跑 | UNVERIFIED |
 | 7 | 超限切分可用 | | |
 | 8 | 手改配置可发现 | | |
 
