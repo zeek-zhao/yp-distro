@@ -1,0 +1,13 @@
+# build artifacts
+downloads/
+sstate/
+build/
+tmp/
+
+# cache slices
+*.slice*
+cache-manifest.json
+
+# secrets
+.env
+*.token

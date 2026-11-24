@@ -1,0 +1,37 @@
+# yp-distro · M0（kas bootstrap）
+
+本分支为 **M0 里程碑专用孤立分支**，与 `main` 不共享历史。`main` 仅作写法参考：kas 文件结构、Docker 分层、GitHub Actions 组织；本分支不复制其四版兼容层与全量测试套件。
+
+## 目标
+
+只装 Docker 的机器，拉取预置镜像后一条命令产出 prod 镜像；下载目录与缓存目录以挂载复用；缓存可打包、可切分、可恢复；无缓存服务器、无 root 构建。
+
+## 三步上手（S9 后可用）
+
+```bash
+# 1. 拉镜像
+docker pull ghcr.io/<owner>/yp-builder:wrynose-m0
+
+# 2. 建挂载目录
+scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
+
+# 3. 构建
+kas build kas/yp.yml:edition/prod.yml:machine/qemux86-64.yml
+```
+
+## 现状
+
+| Step | 内容 | 状态 |
+|---|---|---|
+| S0 | 空分支与实施提示词 | 已完成 |
+| S1 | 发行版层骨架 | 待开始 |
+| S2 | kas 入口与层锁定 | 待开始 |
+| S3 | Ubuntu 容器镜像（jenkins 用户） | 待开始 |
+| S4 | 下载与缓存分卷挂载 | 待开始 |
+| S5 | 首次构建 | 待开始 |
+| S6 | 缓存打包与切分（阈值 80%） | 待开始 |
+| S7 | 预热镜像发布到容器仓库 | 待开始 |
+| S8 | PR 门禁 | 待开始 |
+| S9 | 验收与文档 | 待开始 |
+
+执行规则见 [`docs/ai/m0-prompt.md`](docs/ai/m0-prompt.md)。
