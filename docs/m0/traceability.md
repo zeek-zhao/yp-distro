@@ -12,7 +12,7 @@
 | B-05 下载目录挂载 | DES-004（待写） | — | 待补 | — | 未开始 |
 | B-06 缓存目录挂载 | DES-004（待写） | — | 待补 | — | 未开始 |
 | B-07 不依赖缓存服务器 | DES-002（待写） | — | 待补 | — | 未开始 |
-| B-08 预热镜像分发 | DES-007 | 待提交 `Refs: YP-M0-DES-007` | 独立 TOKEN push 成功（builder digest sha256:ef28c044、cache digest sha256:0deba617）；匿名拉取 unauthorized（包 private，ISS-005 待决策） | 判据 5 | 进行中 |
+| B-08 预热镜像分发 | DES-007 | `43b14d3` `Refs: YP-M0-DES-007` | 网页改 public 后匿名 pull 成功（builder sha256:ef28c044、cache 修复版 sha256:1eaf38f5）；`docker run whoami=jenkins/kas 5.5`、entrypoint 拒绝 root、正确挂载放行；ISS-006 修复卷属主后端到端 `--volumes-from` 组合通过 | 判据 5 | 已验证 |
 | B-09 超限切分 | DES-006（待写） | — | 待补 | — | 未开始 |
 | B-10 分片完整性校验 | DES-006（待写） | — | 待补 | — | 未开始 |
 | B-12 缓存指标 | DES-005（待写） | — | 待补 | — | 未开始 |

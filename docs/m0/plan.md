@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-PLAN-001 |
-| 版本 | v1.7 |
+| 版本 | v1.8 |
 | 状态 | Approved（阶段计划） |
 | 责任人 | zeek-zhao |
 | 生效日期 | 2026-11-24 |
@@ -19,8 +19,8 @@
 | S3 | Ubuntu 容器镜像（jenkins 用户） | 完成 | YP-M0-DES-003 | YP-M0-ISS-003 | 见提交 `Refs: YP-M0-DES-003` |
 | S4 | 下载与缓存分卷挂载 | 待开始 | YP-M0-DES-004 | — | — |
 | S5 | 首次构建与缓存命中 | 待开始 | YP-M0-DES-005 | — | — |
-| S6 | 缓存打包与切分（80% 阈值） | 待开始 | YP-M0-DES-006 | — | — |
-| S7 | 预热镜像发布到容器仓库 | 待开始 | YP-M0-DES-007 | — | — |
+| S6 | 缓存打包与切分（80% 阈值） | 完成 | YP-M0-DES-006 | YP-M0-ISS-006 | 见提交 `43b14d3` `Refs: YP-M0-DES-006` |
+| S7 | 预热镜像发布到容器仓库 | 完成 | YP-M0-DES-007 | YP-M0-ISS-005 | 公共 GHCR 匿名拉取验证通过（方案 B 网页改 public）；见提交 `43b14d3` |
 | S8 | CI 门禁（workflow_dispatch） | 待开始 | YP-M0-DES-008 | — | — |
 | S9 | 验收与变量索引 | 待开始 | YP-M0-DES-009 | — | — |
 
@@ -42,3 +42,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v1.5 | 2026-11-24 | S3 完成并验证（镜像构建 + jenkins 身份 + entrypoint 校验）；新增 ISS-003 用户冲突修复 | zeek.zhao |
 | v1.6 | 2026-11-24 | 镜像分发验证：GHCR push 因 token 缺 packages 权限被拒（ISS-004），用 save/load 闭环验证可移植性 | zeek.zhao |
 | v1.7 | 2026-11-24 | 独立 TOKEN 成功推送 builder/cache 镜像到 GHCR；workflow 孤立分支不可 dispatch、包默认 private 不可匿名拉取（ISS-005，待决策） | zeek.zhao |
+| v1.8 | 2026-11-24 | 网页改 public 后匿名拉取双镜像并验证功能（B-08 已验证）；ISS-006 修复 cache 卷属主与 builder jenkins UID 对齐，端到端组合通过 | zeek.zhao |

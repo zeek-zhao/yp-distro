@@ -4,7 +4,12 @@
 #       公共 Actions 可独立构建（不依赖入库二进制），数据内容可用 pack 产物覆盖。
 FROM alpine:3.20
 
-RUN mkdir -p /work/downloads /work/sstate /work/cache
+# 卷属主须与 builder 镜像的 jenkins UID/GID 一致，否则 --volumes-from 挂载时被 entrypoint 拒绝（ISS-006）
+ARG CACHE_UID=1000
+ARG CACHE_GID=1000
+
+RUN mkdir -p /work/downloads /work/sstate /work/cache \
+    && chown -R "${CACHE_UID}:${CACHE_GID}" /work/downloads /work/sstate
 
 # 基线元数据：记录缓存格式与来源，sha256 由 pack.sh 对真实数据生成
 COPY cache-meta.json /work/cache/cache-meta.json
