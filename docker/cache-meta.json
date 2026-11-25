@@ -2,7 +2,10 @@
   "image": "yp-cache",
   "tag": "wrynose-m0",
   "format": "yp-cache-v1",
-  "sources": ["DL_DIR", "SSTATE_DIR"],
+  "sources": [
+    "DL_DIR",
+    "SSTATE_DIR"
+  ],
   "layout": {
     "downloads": "/work/downloads",
     "sstate": "/work/sstate"
@@ -10,8 +13,8 @@
   "split": {
     "slice_max_bytes": 8589934592,
     "upload_timeout_sec": 480,
-    "note": "= 80% of repository limits (DES-006)"
+    "note": "= 80% of repository limits (DES-006 / CHG-006)"
   },
   "server": "none",
-  "note": "Baseline layout image. Real cache payload is produced by scripts/cache/pack.sh and layered by S5."
+  "note": "Baseline layout only; real cache payload is produced by S5 and packed by pack.sh (ADR-005 / RV-010 F-02)."
 }

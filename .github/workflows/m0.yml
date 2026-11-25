@@ -52,10 +52,72 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push yp-cache (downloads + sstate data image)
+      - name: Build and push yp-cache baseline (layout only, DES-008 / F-02)
         uses: docker/build-push-action@v6
         with:
           context: ./docker
           file: ./docker/cache.Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/yp-cache:wrynose-m0
+
+  # S6/S7 接线（DES-008 / ADR-005 方案 1 / F-07）：pack → gen-meta → split → 每片一个 tag → manifest + digest
+  # 缓存源需由 S5 产物提供；不存在则明确失败，不伪造推送。孤立分支不可 dispatch（L-01）时本 job 不触发。
+  publish-cache-slices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare cache source from S5 payload
+        id: src
+        run: |
+          set -euo pipefail
+          SRC_DOWNLOADS="${{ vars.YP_CACHE_DOWNLOADS_DIR || './cache-payload/downloads' }}"
+          SRC_SSTATE="${{ vars.YP_CACHE_SSTATE_DIR || './cache-payload/sstate' }}"
+          if [ -d "$SRC_DOWNLOADS" ] && [ -d "$SRC_SSTATE" ]; then
+            echo "downloads=$SRC_DOWNLOADS" >> "$GITHUB_OUTPUT"
+            echo "sstate=$SRC_SSTATE" >> "$GITHUB_OUTPUT"
+            echo "CACHE_SOURCE_FOUND"
+          else
+            echo "::error::S5 缓存产物不存在（$SRC_DOWNLOADS / $SRC_SSTATE），跳过分片发布；需先由 S5 构建产物提供 downloads/sstate"
+            exit 1
+          fi
+
+      - name: Pack cache payload
+        run: bash scripts/cache/pack.sh --src "${{ steps.src.outputs.downloads }}" --src "${{ steps.src.outputs.sstate }}" --out /tmp/yp-cache.tar
+
+      - name: Generate cache metadata from threshold.conf
+        run: bash scripts/cache/gen-meta.sh > /tmp/cache-meta.json && cat /tmp/cache-meta.json
+
+      - name: Split into slices (threshold.conf only)
+        run: bash scripts/cache/split.sh --in /tmp/yp-cache.tar --out /tmp/slices
+
+      - name: Publish each slice as a GHCR tag + upload manifest
+        run: |
+          set -euo pipefail
+          total="$(python3 -c "import json; print(json.load(open('/tmp/slices/manifest.json'))['total_slices'])")"
+          : > /tmp/slice-digests.txt
+          idx=0
+          while [ "$idx" -lt "$total" ]; do
+            nn="$(printf '%02d' "$idx")"
+            slice="/tmp/slices/cache.slice.$nn"
+            tag="${REGISTRY}/${OWNER}/yp-cache:wrynose-m0-part-${nn}"
+            # 每片作为单文件镜像层发布，供匿名 docker pull + docker cp 取回（ADR-005 方案 1）
+            printf 'FROM alpine:3.20\nCOPY cache.slice.%s /work/slices/cache.slice.%s\n' "$nn" "$nn" > /tmp/slice.Dockerfile
+            docker build -f /tmp/slice.Dockerfile -t "$tag" /tmp/slices
+            digest="$(docker push "$tag" >/dev/null 2>&1 && docker buildx imagetools inspect "$tag" 2>/dev/null | grep -m1 'Digest:' | awk '{print $2}' || echo 'push-ok')"
+            echo "$tag $digest" >> /tmp/slice-digests.txt
+            idx=$((idx+1))
+          done
+          echo "### 分片发布摘要（ADR-005 方案 1）" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/slice-digests.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/slices/manifest.json >> "$GITHUB_STEP_SUMMARY"

@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-REC-001 |
-| 版本 | v1.6 |
-| 状态 | Draft（Stage B/C/D 判据 6、3、4、1 通过；S5 已证 prod 一条命令出镜像 + B-12/B-13；待 S5 重验判据 5、S6/S7 判据 7、S8 判据 8） |
+| 版本 | v1.7 |
+| 状态 | Draft（Stage B/C/D/E 判据 6、3、4、1、7 通过；S5 已证 prod 一条命令出镜像 + B-12/B-13；S6/S7 切分链路通过、发布 workflow 端到端因 L-01 未验；待判据 5、S8 判据 8） |
 | 责任人 | |
 | 生效日期 | |
 
@@ -18,7 +18,7 @@
 | 4 | 缓存目录独立可清 | S4 容器内实证（DES-004/RV-004）：两卷分别 `-v` 挂载、各有 `.yp-volume` 标识（`type=downloads`/`type=sstate`），新容器内均读到；删除 sstate 载荷后 `CLEARED_PREFLIGHT=0` 且 downloads 探针仍 `probe`（`DOWNLOADS_INTACT`），证明缓存卷可独立清空；错属主 `BAD_OWNER_EXIT=2`、空间不足 `LOW_SPACE_EXIT=3`、挂错卷 `BAD_VOLUME_EXIT=1`；构建级实证见 Stage D（清 `build/` 保留 sstate 卷后二次构建 99% 命中） | 通过 |
 | 5 | 无缓存服务器依赖 | 待 S5/S9 重验：需 kas 配置落地后 `grep -rn "SSTATE_MIRRORS\|BB_HASHSERVE" kas/ meta-yp-distro/` 无命中（B-07）；S1 静态检查 `meta-yp-distro/` 无远程地址仅为部分证据 | UNVERIFIED |
 | 6 | 分层锁定可复现 | S2 容器内实证（builder 镜像）：`kas --version`→5.5；两次 `kas dump kas/yp.yml:kas/editions/prod.yml` + `diff -u` 空 → `DUMP_STABLE`；四 edition `EDITION_OK dev/prod/dev-kernel/ci`；`grep -c commit: kas/base.yml`→4；`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值；无远程缓存（DES-002/RV-002/ADR-004/CHG-001/ISS-007） | 通过 |
-| 7 | 超限切分可用 | 本地实跑：`split.sh` 20 MiB→4 片、`merge.sh` 合并 sha256 与源一致、移走一片后拒绝恢复（exit 1）；发布链路未接入（RV-010 F-07） | UNVERIFIED |
+| 7 | 超限切分可用 | Stage E 本地实跑：~20 MiB→`split.sh` 5 片（阈值唯一源 + WARN）、`merge.sh` 合并 sha256 与源逐字节一致（`SHA256_MATCH_OK`）、缺片 exit 1、篡改分片 exit 1、改阈值 gen-meta 数值联动、`--max-bytes` 覆盖被拒 exit 2；发布 workflow 已接线 `publish-cache-slices`（pack→gen-meta→split→每片 tag+manifest+digest，YAML 校验通过），但孤立分支不可 dispatch（L-01）+ runner 无 S5 产物，端到端 GHCR 发布保持 UNVERIFIED（RV-008 §验收输出） | 通过（本地切分链路；发布端到端未验证） |
 | 8 | 手改配置可发现 | 待补：grep 手改点的检出脚本与样例 | UNVERIFIED |
 
 结论只填三种：`通过` / `未通过` / `UNVERIFIED`。填 `通过` 必须附命令或产物路径。
@@ -34,3 +34,4 @@
 | v1.4 | 2026-11-25 | Stage C：判据 3/4 → 通过（容器内 WRITE_OK/PERSIST_OK、三次 bootstrap 幂等、sstate 独立清空、错属主 exit 2/空间不足 exit 3/挂错卷 exit 1） | zeek.zhao |
 | v1.5 | 2026-11-25 | Stage D：判据 4 补构建级证据（清 build 保留 sstate 二次构建 99% 命中） | zeek.zhao |
 | v1.6 | 2026-11-25 | Stage D：判据 1 → 通过（容器内 prod 一条命令出裸 ext4 镜像，file 识别；wall 10253s/4630 tasks/零 OOM） | zeek.zhao |
+| v1.7 | 2026-11-25 | Stage E：判据 7 → 通过（本地切分链路 5 片合并 sha256 一致、缺片/篡改 exit 1、阈值联动；发布 workflow 接线完成但端到端因 L-01 未验）；ADR-005/CHG-006/DES-008/RV-008 | zeek.zhao |

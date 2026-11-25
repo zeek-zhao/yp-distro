@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 校验 manifest/SHA256SUMS 后按序合并分片；缺片或 sha256 不符直接拒绝（DES-006）
+# 校验 manifest 后按序合并分片；缺片/sha256 不符/源 sha256 不符直接拒绝（DES-006 / CHG-006）
+# SHA256SUMS.slice 已由 CHG-006 移除；若目录中存在旧产物则忽略（不再强制校验）
 set -euo pipefail
 
 IN_DIR=""; OUT=""
@@ -31,10 +32,8 @@ while [ "$idx" -lt "$total_slices" ]; do
   idx=$((idx+1))
 done
 
-# 3) SHA256SUMS.slice 校验（若存在）
-if [ -f "$IN_DIR/SHA256SUMS.slice" ]; then
-  ( cd "$IN_DIR" && sha256sum -c SHA256SUMS.slice ) >/dev/null || { echo "ERROR: SHA256SUMS.slice 校验失败" >&2; exit 1; }
-fi
+# 3) 读取 manifest 中的源文件 sha256（CHG-006 新增；旧 manifest 无此字段时跳过比对）
+source_sha="$(python3 -c "import json; d=json.load(open('$IN_DIR/manifest.json')); print(d.get('source_sha256',''))")"
 
 # 4) 按序合并
 : > "$OUT"
@@ -44,4 +43,11 @@ while [ "$idx" -lt "$total_slices" ]; do
   idx=$((idx+1))
 done
 
-echo "MERGE_OK out=$OUT bytes=$(stat -c %s "$OUT") sha256=$(sha256sum "$OUT" | cut -d' ' -f1)"
+merged_sha="$(sha256sum "$OUT" | cut -d' ' -f1)"
+# 5) 合并结果与源 sha256 比对
+if [ -n "$source_sha" ] && [ "$merged_sha" != "$source_sha" ]; then
+  echo "ERROR: 合并结果 sha256 ($merged_sha) 与源 sha256 ($source_sha) 不符，拒绝恢复" >&2
+  exit 1
+fi
+
+echo "MERGE_OK out=$OUT bytes=$(stat -c %s "$OUT") sha256=$merged_sha source_sha256=${source_sha:-N/A}"
