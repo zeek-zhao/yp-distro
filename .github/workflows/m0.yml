@@ -50,6 +50,15 @@ jobs:
               exit 1
             fi
           done
+          # ISS-018：upload-artifact@v4 拒绝文件名中的冒号（Yocto sstate 对象天然含冒号）。
+          # 只改制品传输用的文件名，不改文件内容。
+          find /tmp/s5-payload -type f -name '*:*' | while IFS= read -r f; do
+            mv "$f" "${f//:/_}"
+          done
+          if find /tmp/s5-payload -type f -name '*:*' | grep -q .; then
+            echo "::error::制品文件名仍含冒号，拒绝上传"
+            exit 1
+          fi
           echo "S5_PAYLOAD_SAMPLE_OK files=$(find /tmp/s5-payload -type f | wc -l)"
 
       - name: Upload cache-payload artifact
