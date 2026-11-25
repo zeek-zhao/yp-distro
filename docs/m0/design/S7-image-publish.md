@@ -48,7 +48,7 @@
 
 ### 3.2 发布与拉取流程
 
-1. 本分支由受限 `push`（改动 `docker/**`、`scripts/cache/**`、`kas/**`）触发；并入 main 后可 `gh workflow run m0.yml --ref main` 触发（孤立分支上 dispatch 返回 404，ISS-005）；
+1. 本分支由受限 `push`（改动 `docker/**`、`scripts/cache/**`、`kas/**`）触发；`workflow_dispatch` 用具备 `repo`/`workflow` 范围的 PAT 可在孤立分支触发（CHG-010 v1.1，run `45606593806`/`45607197090` 实证），匿名或低权限 token 下返回不可用（ISS-005）；并入 main 后可用默认 token 触发；
 2. Actions 用 `docker/login-action` + `secrets.GHCR_PAT`（用户名 `${{ env.OWNER }}`）登录 `ghcr.io`（CHG-010）；
 3. `docker/build-push-action` 构建两个镜像并 push：
    - `ghcr.io/zeek-zhao/yp-builder:wrynose-m0`
