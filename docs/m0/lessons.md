@@ -14,3 +14,4 @@
 | 8 | 进入构建环境先读 `/sys/fs/cgroup/memory.max` 与 `cpu.max` 取真实配额，`free`/`nproc` 只作参考；按「限额GB ≈ 线程数 × 单任务峰值」设 `BB_NUMBER_THREADS`/`PARALLEL_MAKE`，OOM 看 `memory.events.oom_kill` 而非猜「偶发失败」 | YP-M0-ISS-011 | 2026-11-25 |
 | 9 | `kas dump` 通过不等于 `kas build` 能跑：新 repo 先确认是否真 layer（工具仓库如 bitbake 须显式 `layers` 排除），`LAYERDEPENDS` 必须按上游 `layer.conf` 的 `BBFILE_COLLECTIONS` 实际值写（目录名 ≠ collection 名），并在 S2 做最小构建冒烟 | YP-M0-ISS-008 / ISS-009 | 2026-11-25 |
 | 10 | 容器内 cgroup 显示 `max`/32 核可能是 user namespace 假象：判断真实上限要看 `--privileged --cgroupns=host -v /sys/fs/cgroup:/host:ro` 的宿主根 `cpu.max`/`memory.max`；若容器 uid 映射到非宿主 0（看 `/proc/self/uid_map` 与 `/proc/1/ns/user` owner），则无真 `cap_sys_admin`，`nsenter -t 1 -U/-C/-a`、`--cpus`/`--memory` 配额都会被父级硬顶吸收，提配无解时按真实配额调参而非反复重试 | YP-M0-ISS-011（补充调查） | 2026-11-25 |
+| 11 | 门禁用 grep 扫源码查「阈值唯一」时必须排除门禁脚本自身与注释行（否则模式字符串/注释自指误报）；解析 markdown 表格不能用 `awk -F'|'`（单元格内含 `\|` 与反引号 `|` 会错位），应按语义正则提取 token 再断言 | YP-M0-ISS-012 | 2026-11-25 |

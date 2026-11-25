@@ -17,5 +17,6 @@
 | B-10 分片完整性校验 | DES-006 / DES-008 / CHG-006 | `43b14d3` + Stage E 提交 | 本地实跑：合并 sha256 与源逐字节一致（`SHA256_MATCH_OK`）、缺片 exit 1、篡改分片 exit 1、manifest `source_sha256` 比对、改阈值 gen-meta 数值联动、`--max-bytes` 覆盖 exit 2（RV-008 §验收输出） | 判据 7 | 已验证 |
 | B-12 缓存指标 | DES-005 | RV-005、measure.sh | 两次 `Sstate summary` 原始行 + `Tasks Summary`：首次 0% match/4083 全跑；二次 99% match（2049/2054）、3829 免重跑；wall 7096s→214s | 容器实跑 2026-11-25 | 已验证 |
 | B-13 离线构建 | DES-005 | RV-005、measure.sh | 第二次 `=== STATS second === fetching_lines=0`，无网络重新拉取 | 容器实跑 2026-11-25 | 已验证 |
+| S8 门禁 / S9 变量索引（判据 8） | DES-009 / RV-009 / ISS-012 | Stage F 提交 | `bash scripts/gate.sh`→GATE_PASS（五项全绿）；`bash scripts/check-vars.sh`→VARS_OK；故意改 `BB_NUMBER_THREADS` 4→8→`DRIFT`+exit 1→还原→VARS_OK（RV-009 §验收输出） | 判据 8 | 已验证 |
 
 状态取值：`未开始` / `进行中` / `已验证` / `UNVERIFIED` / `阻塞（ISS-0NN）`。

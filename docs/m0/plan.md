@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-PLAN-001 |
-| 版本 | v2.3 |
-| 状态 | Approved（阶段计划） |
+| 版本 | v2.4 |
+| 状态 | Approved（阶段计划；判据 1-8 全部收口） |
 
 > **编号说明（Stage E）**：`m0-resume-prompt.md` §9.1 要求新建 `ADR-004.md` 裁决分片发布契约，但 ADR-004 已在 Stage B 用于 kas 结构决策（Approved、已发布）。为不覆盖历史决策，分片发布契约顺延为 **YP-M0-ADR-005**（见 `docs/m0/adr/ADR-005.md`）。
 | 责任人 | zeek-zhao |
@@ -34,8 +34,8 @@
 | S5 | 首次构建与缓存命中 | 完成 | YP-M0-DES-005 | YP-M0-RV-005 | CHG-003/004/005、ISS-008/009/010/011 |
 | S6 | 缓存打包与切分（80% 阈值） | 完成（Stage E 接线 + 契约收紧） | YP-M0-DES-006 / DES-008 | YP-M0-ISS-006 | 见提交 `43b14d3`；Stage E：gen-meta.sh、split 阈值唯一源、manifest source_sha256、sha256 一致 |
 | S7 | 缓存分片发布到容器仓库 | 完成（接线）/ 端到端待验 | YP-M0-DES-007 / DES-008 / ADR-005 | YP-M0-ISS-005 | 基线镜像匿名拉取已验（F-02 降级：载荷待 S5）；分片 workflow 接线完成，孤立分支不可 dispatch（L-01）端到端未验 |
-| S8 | PR 门禁 | 待开始 | YP-M0-DES-008 | — | — |
-| S9 | 验收与变量索引 | 待开始 | YP-M0-DES-009 | — | — |
+| S8 | PR 门禁 | 完成 | YP-M0-DES-009 | YP-M0-ISS-012 | `scripts/gate.sh` 五项 GATE_PASS；`m0-gate.yml` 接线（dispatch + push）；不跑 bitbake |
+| S9 | 验收与变量索引 | 完成 | YP-M0-DES-009 | — | `variable-index.md` 28 变量；`check-vars.sh` 故意手改 DRIFT+exit 1；判据 8 → 通过 |
 
 状态取值仅四种：`待开始` / `进行中` / `完成` / `阻塞`。置为 `阻塞` 必须同时存在一张未关闭的 `ISS-` 单。
 
@@ -61,3 +61,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.1 | 2026-11-25 | Stage C：S4 挂载完成（DES-004/RV-004/CHG-002），容器内 WRITE_OK/PERSIST_OK、三次 bootstrap 幂等、sstate 独立清空、错属主 exit 2/空间不足 exit 3/挂错卷 exit 1；判据 3/4 → 通过 | zeek.zhao |
 | v2.2 | 2026-11-25 | Stage D：S5 首次构建与缓存命中完成（DES-005/RV-005/CHG-003/004/005、ISS-008/009/010/011）；容器内两次构建 rc=0，wall 7096s→214s、二次 sstate 99% 命中、`fetching_lines=0`；prod 补跑一条命令出裸 ext4（wall 10253s、file 识别）；判据 1/ B-12/B-13 → 通过 | zeek.zhao |
 | v2.3 | 2026-11-25 | Stage E：S6/S7 接线完成（DES-008/RV-008/ADR-005/CHG-006）；gen-meta 从 threshold.conf 生成、split 去 --max-bytes + 清理 SHA256SUMS.slice + manifest source_sha256、merge 源比对、workflow 新增 publish-cache-slices、空壳镜像结论降级；本地切分链路 5 片合并 sha256 一致、缺片/篡改 exit 1、阈值联动；判据 7 → 通过（本地链路；发布端到端因 L-01 未验）；ADR 顺延编号记录 | zeek.zhao |
+| v2.4 | 2026-11-25 | Stage F：S8/S9 完成（DES-009/RV-009/ISS-012）；`gate.sh` 五项门禁 GATE_PASS、`m0-gate.yml` 接线、`variable-index.md` 28 变量、`check-vars.sh` 手改检出（DRIFT+exit 1）；判据 8 → 通过，判据 1-8 全部收口；S8 恢复「PR 门禁」名称 | zeek.zhao |
