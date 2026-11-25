@@ -68,3 +68,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.8 | 2026-11-25 | T4：判据 5 按静态判据收口——配置层 grep 仅 `BB_HASHSERVE = "auto"`、无 `SSTATE_MIRRORS` 远程地址，结论改「通过」并注明非端到端；traceability B-07 同步 | zeek.zhao |
 | v2.9 | 2026-11-25 | T5：判据 7 拆两条结论——本地切分链路通过（4 片 merge sha256 一致、缺片/篡改 exit 1），发布端到端 UNVERIFIED（无命中 paths 的 push run、S5 载荷未上传为制品） | zeek.zhao |
 | v2.10 | 2026-11-25 | T6：CHG-009/ISS-015 统一 kas 规范性写法（根级 `editions` 链接）并实测 DUMP_STABLE + 四 edition；traceability 待提交 Refs 全换真实提交号；G2/check-vars 去阈值字面量与自我豁免；CI gate run 45600235881 success | zeek.zhao |
+| v2.11 | 2026-11-25 | T7：`kas shell` + `bitbake -e` 确认 `BB_HASHSERVE_DB_DIR` 为真实变量（`/work/sstate`），不删不改；归档 push run 45601074345 三 job 失败（缺 S5 制品 + GHCR 权限，ISS-016），判据 7 发布端到端保持 UNVERIFIED | zeek.zhao |

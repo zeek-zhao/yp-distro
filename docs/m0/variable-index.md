@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-VAR-001 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-009） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对） |
 | 目的 | 记录关键变量的默认值、唯一定义处、可覆盖层与手改检测命令，使「手改配置可发现」（判据 8）闭环 |
 | 检测脚本 | `scripts/check-vars.sh`（统一断言，本表所有变量的期望值来源） |
 
@@ -25,7 +25,7 @@
 | 5 | `SSTATE_DIR` | `/work/sstate` | `kas/base.yml` | 只读（S4 挂载契约） | `grep -q 'SSTATE_DIR = "/work/sstate"' kas/base.yml` |
 | 6 | `SSTATE_MIRRORS` | 未设置（禁止远程） | 全局禁令（AGENTS §3.6） | 只读 | `! grep -rq 'SSTATE_MIRRORS[[:space:]]*=' kas/ meta-yp-distro/ scripts/` |
 | 7 | `BB_HASHSERVE` | `auto`（本地） | `kas/base.yml` | 只读 | `grep -q 'BB_HASHSERVE = "auto"' kas/base.yml` |
-| 8 | `BB_HASHSERVE_DB_DIR` | `${SSTATE_DIR}` | `kas/base.yml` | 只读 | `grep -q 'BB_HASHSERVE_DB_DIR = "\${SSTATE_DIR}"' kas/base.yml` |
+| 8 | `BB_HASHSERVE_DB_DIR` | `${SSTATE_DIR}` | `kas/base.yml` | 只读 | `grep -q 'BB_HASHSERVE_DB_DIR = "\${SSTATE_DIR}"' kas/base.yml`；T7 变量空间核对：`kas shell -c 'bitbake -e' kas/yp.yml:editions/ci.yml` → `BB_HASHSERVE_DB_DIR="/work/sstate"`、`BB_HASHSERVE="unix:///.../build/hashserve.sock"`（本地 socket）、`BB_SERVER_TIMEOUT="300"`，确认是真实 bitbake 变量，不改行 |
 | 9 | `BB_SERVER_TIMEOUT` | `300` | `kas/base.yml` | 只读 | `grep -q 'BB_SERVER_TIMEOUT = "300"' kas/base.yml` |
 | 10 | `BB_NUMBER_THREADS` | `4` | `kas/base.yml` | 只读（8GB 配额，ISS-011） | `grep -q 'BB_NUMBER_THREADS = "4"' kas/base.yml` |
 | 11 | `PARALLEL_MAKE` | `-j 2` | `kas/base.yml` | 只读（8GB 配额，ISS-011） | `grep -q 'PARALLEL_MAKE = "-j 2"' kas/base.yml` |
@@ -52,3 +52,4 @@
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：28 个关键变量四要素索引（判据 8） | zeek.zhao |
+| v1.1 | 2026-11-25 | T7：用 `kas shell` + `bitbake -e` 确认 `BB_HASHSERVE_DB_DIR` 是真实变量（值 `/work/sstate`），不删不改；记录命令与输出 | zeek.zhao |

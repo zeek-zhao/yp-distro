@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-REC-001 |
-| 版本 | v1.14 |
+| 版本 | v1.15 |
 | 状态 | Draft（判据 1/2/3/4/5/6/7/8 均有结论；判据 5 按「配置层无远程地址」静态收口；判据 7 拆为本地链路通过 + 发布端到端 UNVERIFIED，待真实 push run） |
 | 责任人 | |
 | 生效日期 | |
@@ -18,7 +18,7 @@
 | 4 | 缓存目录独立可清 | S4 容器内实证（DES-004/RV-004）：两卷分别 `-v` 挂载、各有 `.yp-volume` 标识（`type=downloads`/`type=sstate`），新容器内均读到；删除 sstate 载荷后 `CLEARED_PREFLIGHT=0` 且 downloads 探针仍 `probe`（`DOWNLOADS_INTACT`），证明缓存卷可独立清空；错属主 `BAD_OWNER_EXIT=2`、空间不足 `LOW_SPACE_EXIT=3`、挂错卷 `BAD_VOLUME_EXIT=1`；构建级实证见 Stage D（清 `build/` 保留 sstate 卷后二次构建 99% 命中） | 通过 |
 | 5 | 无缓存服务器依赖 | 静态判定（非端到端）：实跑 `grep -rnE 'SSTATE_MIRRORS[[:space:]]*=\|BB_HASHSERVE[[:space:]]*=' kas/ meta-yp-distro/ \| grep -v '^.*#'` → 仅 `kas/base.yml:41:    BB_HASHSERVE = "auto"`（本地 hashserv，无远程地址），`SSTATE_MIRRORS` 零命中。判定依据是**配置层无远程地址**，不是「端到端空缓存构建已验」；后者由 S5 两次构建与 99% 命中证据覆盖（判据 1、B-12），本判据不要求也不声称远程服务器实跑 | 通过 |
 | 6 | 分层锁定可复现 | S2 容器内实证（builder 镜像）：`kas --version`→5.5；规范性写法（CHG-009/ISS-015）两次 `kas dump kas/yp.yml:editions/prod.yml` + `diff -u` 空 → `DUMP_STABLE`；四 edition `EDITION_OK dev/prod/dev-kernel/ci`；`grep -c commit: kas/base.yml`→4；`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值；无远程缓存（DES-002/RV-002/ADR-004/CHG-001/ISS-007） | 通过 |
-| 7 | 超限切分可用 | **结论 A · 本地切分链路：通过**。T5 实跑（20 MiB 载荷，`YP_SPLIT_MAX_BYTES=6291456` 仅测试用并打印 WARN）：`PACK_OK ... sha256=61e45b2d404591c2d735a3ea6583e6f36b53793fdb58f226fecae2a875354d04`；`SPLIT_OK slices=4 total_bytes=21002240 source_sha256=61e45b2d... max=6291456`；`MERGE_OK ... sha256=61e45b2d... source_sha256=61e45b2d...`；`sha256sum src.tar merged.tar` 两行完全一致；移走片 → `ERROR: 缺片 cache.slice.01，拒绝恢复`、`MISSING_EXIT=1`；篡改片 → `ERROR: 分片 cache.slice.02 sha256 不符，拒绝恢复`、`TAMPER_EXIT=1`。Stage E 另验改阈值 gen-meta 数值联动、`--max-bytes` 覆盖 exit 2。**结论 B · 发布端到端：UNVERIFIED**。T2 已加受限 push（CHG-007），T3 已修载荷与假绿（CHG-008/ISS-014，本地静态契约与 push/inspect 失败模拟通过），但截至本提交尚无命中 `docker/**`/`scripts/cache/**`/`kas/**` 的 push run，且 S5 载荷未作为 `cache-payload` 制品上传，故无可填的 run URL 与 digest；待真实 push run 后回填，失败则归档失败原因 | 本地切分链路：通过；发布端到端：UNVERIFIED（无 push run / 无 S5 制品） |
+| 7 | 超限切分可用 | **结论 A · 本地切分链路：通过**。T5 实跑（20 MiB 载荷，`YP_SPLIT_MAX_BYTES=6291456` 仅测试用并打印 WARN）：`PACK_OK ... sha256=61e45b2d404591c2d735a3ea6583e6f36b53793fdb58f226fecae2a875354d04`；`SPLIT_OK slices=4 total_bytes=21002240 source_sha256=61e45b2d... max=6291456`；`MERGE_OK ... sha256=61e45b2d... source_sha256=61e45b2d...`；`sha256sum src.tar merged.tar` 两行完全一致；移走片 → `ERROR: 缺片 cache.slice.01，拒绝恢复`、`MISSING_EXIT=1`；篡改片 → `ERROR: 分片 cache.slice.02 sha256 不符，拒绝恢复`、`TAMPER_EXIT=1`。Stage E 另验改阈值 gen-meta 数值联动、`--max-bytes` 覆盖 exit 2。**结论 B · 发布端到端：UNVERIFIED**。T2 已加受限 push（CHG-007），T3 已修载荷与假绿（CHG-008/ISS-014，本地静态契约与 push/inspect 失败模拟通过），真实 push run 已产生：`45601074345`（https://github.com/zeek-zhao/yp-distro/actions/runs/45601074345，`event=push`、`head_sha=316b9fa`），三个 job 全 `failure`：`publish-cache-slices` 因 S5 `cache-payload` 制品未上传而 `::error` + exit 1（预期失败路径）；`publish-builder`/`publish-cache` 因 `GITHUB_TOKEN` `denied: permission_denied: write_package`。故**无真实 digest 可填**，原因归档于 ISS-016；两项外部前提（S5 制品上传、包写权限）不在本分支自行补齐 | 本地切分链路：通过；发布端到端：UNVERIFIED（run 45601074345 失败：缺 S5 制品 + GHCR 权限，ISS-016） |
 | 8 | 手改配置可发现 | Stage F 实跑：`scripts/check-vars.sh` 对 `variable-index.md` 28 个变量断言归口值 → `VARS_OK`（drift=0）；故意改 `BB_NUMBER_THREADS` 4→8 → `DRIFT` 检出 + exit 1 → 还原 → `VARS_OK`；门禁 `scripts/gate.sh` 五项全绿 `GATE_PASS`（RV-009 §验收输出）。**事实修正**：CI run `45594520683`（push，HEAD `b072417`）曾 `checked=28 drift=2`、`MACHINE_measure`/`EDITION_measure` 因 `scripts/build/measure.sh` 未入库而 DRIFT（ISS-013）；T1 将 `.gitignore` 的 `build/` 改为根锚定 `/build/` 并按 DES-005 §3.5 入库该脚本，干净检出复跑 → `VARS_OK drift=0`、`GATE_PASS`；CHG-009：G2 数值改由 threshold.conf 变量提供，`gate.sh`/`check-vars.sh` 不再含阈值字面量与自我豁免，`grep -rnE '8589934592|480' scripts/ .github/ | grep -v threshold.conf` 无输出；修复后 push run 45600235881 → `success` | 通过 |
 
 结论只填三种：`通过` / `未通过` / `UNVERIFIED`。填 `通过` 必须附命令或产物路径。
@@ -42,3 +42,4 @@
 | v1.12 | 2026-11-25 | T4：判据 5 由 UNVERIFIED → 通过，依据为配置层静态 grep 仅 `BB_HASHSERVE = "auto"`、无远程地址；明确写「非端到端」 | zeek.zhao |
 | v1.13 | 2026-11-25 | T5：判据 7 拆两条结论——本地切分链路通过（贴 split/merge/缺片/篡改真实输出）、发布端到端 UNVERIFIED（无命中 paths 的 push run、S5 载荷未上传制品） | zeek.zhao |
 | v1.14 | 2026-11-25 | T6：判据 6/8 补 CHG-009 事实——规范性 kas 简写实测 DUMP_STABLE、G2 去自我豁免、阈值字面量仅 threshold.conf；判据 8 补 CI run 45600235881 success | zeek.zhao |
+| v1.15 | 2026-11-25 | T7：判据 7 结论 B 填真实 push run 45601074345 及失败原因（缺 cache-payload 制品 + GHCR permission_denied），保持 UNVERIFIED；ISS-016 归档 | zeek.zhao |

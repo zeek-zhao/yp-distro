@@ -15,3 +15,6 @@
 | 9 | `kas dump` 通过不等于 `kas build` 能跑：新 repo 先确认是否真 layer（工具仓库如 bitbake 须显式 `layers` 排除），`LAYERDEPENDS` 必须按上游 `layer.conf` 的 `BBFILE_COLLECTIONS` 实际值写（目录名 ≠ collection 名），并在 S2 做最小构建冒烟 | YP-M0-ISS-008 / ISS-009 | 2026-11-25 |
 | 10 | 容器内 cgroup 显示 `max`/32 核可能是 user namespace 假象：判断真实上限要看 `--privileged --cgroupns=host -v /sys/fs/cgroup:/host:ro` 的宿主根 `cpu.max`/`memory.max`；若容器 uid 映射到非宿主 0（看 `/proc/self/uid_map` 与 `/proc/1/ns/user` owner），则无真 `cap_sys_admin`，`nsenter -t 1 -U/-C/-a`、`--cpus`/`--memory` 配额都会被父级硬顶吸收，提配无解时按真实配额调参而非反复重试 | YP-M0-ISS-011（补充调查） | 2026-11-25 |
 | 11 | 门禁用 grep 扫源码查「阈值唯一」时必须排除门禁脚本自身与注释行（否则模式字符串/注释自指误报）；解析 markdown 表格不能用 `awk -F'|'`（单元格内含 `\|` 与反引号 `|` 会错位），应按语义正则提取 token 再断言 | YP-M0-ISS-012 | 2026-11-25 |
+| 12 | 忽略构建产物要用根锚定 `/build/`；任何「本地已验证」结论都要在 `git archive HEAD` 或 `git checkout-index` 的干净检出里复跑一次，避免工作区未入库文件造成假绿 | YP-M0-ISS-013 | 2026-11-25 |
+| 13 | CI 中不得用 `|| echo 'push-ok'` 一类兜底值代替真实输出；制品来源必须写明名称与目录结构，缺失即 `::error` + exit 1；摘要里的 digest 只能取自 inspect 的真实输出 | YP-M0-ISS-014 | 2026-11-25 |
+| 14 | 统一命令写法前先在干净检出实跑：kas `:` 后路径按 cwd 解析，目录别名必须是仓库内可见的符号链接或真实目录，不能只改文档字符串 | YP-M0-ISS-015 | 2026-11-25 |
