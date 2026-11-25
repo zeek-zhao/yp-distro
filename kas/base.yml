@@ -19,6 +19,9 @@ repos:
   bitbake:
     url: https://git.openembedded.org/bitbake
     commit: 51fd94a67fa17650a9ff623492005972bbc7d26f
+    # bitbake 是工具仓库，不是 layer：禁用仓库自身 layer，避免进入 BBLAYERS（ISS-008）
+    layers:
+      .: disabled
   meta-yocto:
     url: https://git.yoctoproject.org/meta-yocto
     commit: 7c25b11156553145fa6b241a2d4f65d94438f804
@@ -36,6 +39,15 @@ local_conf_header:
     CONF_VERSION = "2"
     # 本地 hashserv，禁止远程缓存服务器（B-07）
     BB_HASHSERVE = "auto"
+    # hashserv 数据库落到共享 sstate 卷，清 build 后仍可跨构建复用（ISS-010 / CHG-003）
+    BB_HASHSERVE_DB_DIR = "${SSTATE_DIR}"
+    # 长构建中 server 偶发通信超时，放宽等待窗口（ISS-010 / CHG-003）
+    BB_SERVER_TIMEOUT = "300"
+    # 构建沙箱 cgroup memory.max = 8GB（ISS-011），free 显示的 123Gi 不可信。
+    # OOM killer 曾杀死 xz|tar 管道与 cc1plus（oom_kill 11），并发按
+    # 限额GB ≈ 线程数 × 单任务峰值 预算后保守取值（CHG-005）
+    BB_NUMBER_THREADS = "4"
+    PARALLEL_MAKE = "-j 2"
     # 缓存目录指向 S4 挂载点（DES-002 §3.3）
     DL_DIR = "/work/downloads"
     SSTATE_DIR = "/work/sstate"

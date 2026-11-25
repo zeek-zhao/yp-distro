@@ -15,7 +15,7 @@
 | B-08 预热镜像分发 | DES-007 | `43b14d3` `Refs: YP-M0-DES-007` | 网页改 public 后匿名 pull 成功（builder sha256:ef28c044、cache 修复版 sha256:1eaf38f5）；`docker run whoami=jenkins/kas 5.5`、entrypoint 拒绝 root、正确挂载放行；ISS-006 修复卷属主后端到端 `--volumes-from` 组合通过 | 判据 5 | 已验证 |
 | B-09 超限切分 | DES-006（`design/S6-cache-pack-split.md`；未接入发布流程，见 RV-010 F-07） | `43b14d3` | 待补：分片镜像 tag 与清单上传 | 判据 7 | 进行中 |
 | B-10 分片完整性校验 | DES-006（同上；脚本级已通过，发布链路未验） | `43b14d3` | 本地实跑：20 MiB→4 片合并 sha256 一致、缺片 exit 1（RV-010 第 3 节） | 判据 7 | 进行中 |
-| B-12 缓存指标 | DES-005（待写） | — | 待补 | — | 未开始 |
-| B-13 离线构建 | DES-005（待写） | — | 待补 | — | 未开始 |
+| B-12 缓存指标 | DES-005 | RV-005、measure.sh | 两次 `Sstate summary` 原始行 + `Tasks Summary`：首次 0% match/4083 全跑；二次 99% match（2049/2054）、3829 免重跑；wall 7096s→214s | 容器实跑 2026-11-25 | 已验证 |
+| B-13 离线构建 | DES-005 | RV-005、measure.sh | 第二次 `=== STATS second === fetching_lines=0`，无网络重新拉取 | 容器实跑 2026-11-25 | 已验证 |
 
 状态取值：`未开始` / `进行中` / `已验证` / `UNVERIFIED` / `阻塞（ISS-0NN）`。

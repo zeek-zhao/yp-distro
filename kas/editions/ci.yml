@@ -7,3 +7,6 @@ local_conf_header:
     INHERIT += "rm_work"
     # 缓存命中优先：DL_DIR/SSTATE_DIR 沿用 base 的 /work 路径，不设清理
     BB_NO_NETWORK ??= "0"
+    # 最小构建：继承 poky 基线时默认带入图形特性，会把 mesa→llvm→clang
+    # 拉进 core-image-minimal 依赖树（llvm 源码包 167M），此处裁剪（CHG-004）
+    DISTRO_FEATURES:remove = "opengl x11 wayland vulkan"

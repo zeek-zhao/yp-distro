@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-PLAN-001 |
-| 版本 | v2.1 |
+| 版本 | v2.2 |
 | 状态 | Approved（阶段计划） |
 | 责任人 | zeek-zhao |
 | 生效日期 | 2026-11-24 |
@@ -29,7 +29,7 @@
 | S2 | kas 入口与层锁定 | 完成 | YP-M0-DES-002 | YP-M0-ISS-007 | 见提交 `Refs: YP-M0-DES-002`（容器验收 DUMP_STABLE + 4 EDITION_OK） |
 | S3 | Ubuntu 容器镜像（jenkins 用户） | 完成 | YP-M0-DES-003 | YP-M0-ISS-003 | 见提交 `Refs: YP-M0-DES-003` |
 | S4 | 下载与缓存分卷挂载 | 完成 | YP-M0-DES-004（+ CHG-002） | — | 见提交 `Refs: YP-M0-DES-004`（容器验收 WRITE_OK/PERSIST_OK + 幂等 + 错属主 exit 2） |
-| S5 | 首次构建与缓存命中 | 待开始 | YP-M0-DES-005 | — | — |
+| S5 | 首次构建与缓存命中 | 完成 | YP-M0-DES-005 | YP-M0-RV-005 | CHG-003/004/005、ISS-008/009/010/011 |
 | S6 | 缓存打包与切分（80% 阈值） | 完成 | YP-M0-DES-006 | YP-M0-ISS-006 | 见提交 `43b14d3` `Refs: YP-M0-DES-006` |
 | S7 | 预热镜像发布到容器仓库 | 完成 | YP-M0-DES-007 | YP-M0-ISS-005 | 公共 GHCR 匿名拉取验证通过（方案 B 网页改 public）；见提交 `43b14d3` |
 | S8 | PR 门禁 | 待开始 | YP-M0-DES-008 | — | — |
@@ -57,3 +57,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v1.9 | 2026-11-25 | Stage A 记录一致性修正：补记录补链（F-09）、S8 名称恢复为「PR 门禁」（F-08）；判据 3/4 回退 UNVERIFIED、lessons 补齐（F-03/F-10） | zeek.zhao |
 | v2.0 | 2026-11-25 | Stage B：S2 kas 入口完成（DES-002/RV-002/ADR-004/CHG-001/ISS-007），容器内 DUMP_STABLE + 4 edition + commit pin 4；判据 6 → 通过 | zeek.zhao |
 | v2.1 | 2026-11-25 | Stage C：S4 挂载完成（DES-004/RV-004/CHG-002），容器内 WRITE_OK/PERSIST_OK、三次 bootstrap 幂等、sstate 独立清空、错属主 exit 2/空间不足 exit 3/挂错卷 exit 1；判据 3/4 → 通过 | zeek.zhao |
+| v2.2 | 2026-11-25 | Stage D：S5 首次构建与缓存命中完成（DES-005/RV-005/CHG-003/004/005、ISS-008/009/010/011）；容器内两次构建 rc=0，wall 7096s→214s、二次 sstate 99% 命中、`fetching_lines=0`；prod 补跑一条命令出裸 ext4（wall 10253s、file 识别）；判据 1/ B-12/B-13 → 通过 | zeek.zhao |

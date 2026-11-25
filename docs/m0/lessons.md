@@ -11,3 +11,5 @@
 | 5 | GHCR 包可见性无 REST/GraphQL API 可改，PAT 推送默认 private；要匿名拉取须用 Actions GITHUB_TOKEN（包自动链接仓库继承可见性）或网页手动改 public | YP-M0-ISS-005 | 2026-11-24 |
 | 6 | 数据卷镜像的目录属主必须与消费者镜像的运行 UID 对齐，并在 `--volumes-from` 组合场景验收，不能只测各自单独使用 | YP-M0-ISS-006 | 2026-11-24 |
 | 7 | 镜像的「完成」结论必须检查实际载荷：只含目录布局的空壳镜像不得标为「预热缓存完成」；发布后用 `docker run ... find/ls` 确认数据文件存在再下结论 | RV-010 F-02 | 2026-11-25 |
+| 8 | 进入构建环境先读 `/sys/fs/cgroup/memory.max` 与 `cpu.max` 取真实配额，`free`/`nproc` 只作参考；按「限额GB ≈ 线程数 × 单任务峰值」设 `BB_NUMBER_THREADS`/`PARALLEL_MAKE`，OOM 看 `memory.events.oom_kill` 而非猜「偶发失败」 | YP-M0-ISS-011 | 2026-11-25 |
+| 9 | `kas dump` 通过不等于 `kas build` 能跑：新 repo 先确认是否真 layer（工具仓库如 bitbake 须显式 `layers` 排除），`LAYERDEPENDS` 必须按上游 `layer.conf` 的 `BBFILE_COLLECTIONS` 实际值写（目录名 ≠ collection 名），并在 S2 做最小构建冒烟 | YP-M0-ISS-008 / ISS-009 | 2026-11-25 |
