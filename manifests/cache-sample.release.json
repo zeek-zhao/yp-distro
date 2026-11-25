@@ -1,0 +1,15 @@
+{
+  "schema": "yp-cache-release-manifest-v1",
+  "release_tag": "m0-s5-payload-sample",
+  "layout": "direct",
+  "archive_name": "cache-payload-sample.tar.gz",
+  "expected_sha256": "ca3063ab1d164b4c7556896507912a5a23bd4ccab341b924d57615704028cf1d",
+  "expected_bytes": 18476612,
+  "assets": [
+    {
+      "name": "cache-payload-sample.tar.gz",
+      "bytes": 18476612,
+      "sha256": "ca3063ab1d164b4c7556896507912a5a23bd4ccab341b924d57615704028cf1d"
+    }
+  ]
+}

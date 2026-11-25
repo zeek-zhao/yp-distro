@@ -42,7 +42,7 @@
 | release 重组校验 | `cache-full.sha256` 内容：`1c8126d4b1c57d5dc5a4f772617cd74dacbeab475d79e8ce2ee49bbcea1be624  cache-full.tar` |
 | 全量切片（GHCR） | 源 tar `11,153,397,760 B`、`sha256=a8870b50f2b262d90978a17c6bcdf28794659e1dfd7f500f24ddf097dad4febc`；2 片：`8,589,934,592 B` + `2,563,463,168 B` |
 | 全量分片 tag / digest | `ghcr.io/zeek-zhao/yp-cache:wrynose-m0-full-part-00` → `sha256:f1404012d98fb7956619aa4c89b293a435a322b67fcc57227b1c15baef974390`；`-part-01` → `sha256:899af6fa46c9223223d978fa110dabb5215f161e1d1a4b6d8352e6d1e2271d36`；均匿名可拉 |
-| 切片 manifest | 由 `split.sh` 产出 `manifest.json`（序号、字节数、sha256、`source_sha256`），消费端必须用它调 `merge.sh` |
+| 切片 manifest | 由 `split.sh` 产出 `manifest.json`（序号、字节数、sha256、`source_sha256`），消费端必须用它调 `merge.sh`；持久副本提交在 `manifests/cache-full.slices.json`，release 资产清单在 `manifests/cache-full.release.json` |
 
 > **两个 tar 不是同一个对象**：release 8 分片重组的 tar 以 `1c8126d4…` 为 sha256（分片合计 `11,153,387,520 B`）；GHCR 全量切片所用的源 tar 以 `a8870b50…` 为 sha256（`11,153,397,760 B`，见 ISS-019）。两者相差 10,240 B，不可混用哈希或大小校验。release 走 §3 步骤 5；GHCR 分片走 `--mode ghcr`，两者都解包出同构的两个卷。
 

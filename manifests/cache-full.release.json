@@ -1,0 +1,54 @@
+{
+  "schema": "yp-cache-release-manifest-v1",
+  "release_tag": "m0-s5-payload-full",
+  "layout": "two-stage",
+  "archive_name": "cache-full.tar",
+  "checksum_asset": "cache-full.sha256",
+  "checksum_asset_sha256": "66ea490f3cc74b9be6376558d502d7e53ef61e25c4c6a0083d136f33e97c0ec1",
+  "expected_sha256": "1c8126d4b1c57d5dc5a4f772617cd74dacbeab475d79e8ce2ee49bbcea1be624",
+  "expected_bytes": 11153387520,
+  "note": "expected_bytes is the sum of release parts; reassembled tar sha256 is authoritative (RV-013)",
+  "assets": [
+    {
+      "name": "cache-full.part-00",
+      "bytes": 1572864000,
+      "sha256": "430317a0c82facaabc141340a635fab225c0242cc374e4f72a8dc15ae94fc360"
+    },
+    {
+      "name": "cache-full.part-01",
+      "bytes": 1572864000,
+      "sha256": "49788f14a82fd66406b5fe367dbbc6e7b1ce3e2911bf237138de47d2573bb135"
+    },
+    {
+      "name": "cache-full.part-02",
+      "bytes": 1572864000,
+      "sha256": "4c32ca7c05d2faecc065ad233f8e7eb1982727d4d44443e8351fc55e75eac35b"
+    },
+    {
+      "name": "cache-full.part-03",
+      "bytes": 1572864000,
+      "sha256": "61427fcd3ad9181ac6522b0ed0d40b4409632c53f409ca910eb471f8d3b3554a"
+    },
+    {
+      "name": "cache-full.part-04",
+      "bytes": 1572864000,
+      "sha256": "5e575844011f352c2a27325f3a82dcc750f1d1a2d2e68599df4c003d964c807c"
+    },
+    {
+      "name": "cache-full.part-05",
+      "bytes": 1572864000,
+      "sha256": "ab779d819b55d461b686b571a4c584f678416381f31d9849d415004519b37881"
+    },
+    {
+      "name": "cache-full.part-06",
+      "bytes": 1572864000,
+      "sha256": "ea2ca29b0a17e65716cdcf1a8dffe85f603aed267608140b2ceb35624b6e21e1"
+    },
+    {
+      "name": "cache-full.part-07",
+      "bytes": 143339520,
+      "sha256": "a334ac3738ce5b407c11d330a356d42ff99de41afb8f6233b403403330f53ab9"
+    }
+  ],
+  "checksum_asset_bytes": 81
+}
