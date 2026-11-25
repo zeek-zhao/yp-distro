@@ -206,19 +206,21 @@ tar -xf "$DEST_PARENT/sstate.tar"    -C "$DEST_PARENT"
 
 ### 5.2 UID 不一致（新机用户 UID≠1000）
 
-- **判定**：`verify-env.sh` 打印 `WARN UID` → 退出码 `2`；`bootstrap.sh` 报目标 UID 与当前 UID 不一致；容器内 `entrypoint.sh` 报 `属主 UID=… 与 jenkins UID=1000 不一致` 并退出。
+- **判定**：`verify-env.sh` 打印 `WARN UID` → 退出码 `2`；`bootstrap.sh` / `preflight.sh` 打印 `ERROR[2] UID_MISMATCH` → 退出码 `2`；容器内 `entrypoint.sh` 报 `属主 UID=… 与 jenkins UID=1000 不一致` 并退出。
 - **根因**：无条件 `chown` 到 1000 需要 sudo，chown 完当前用户反而不可写，流程自锁。
+- **脚本契约（T4）**：`bootstrap.sh` 与 `preflight.sh` 均支持 `--uid <n>`、`--gid <n>`，**默认取当前用户** `id -u`/`id -g`；`JENKINS_UID/JENKINS_GID`（1000）保留为镜像默认与文档默认。当前用户为 1000 时行为与 M0 验收命令完全一致；目标 UID/GID 与当前非 root 用户不一致时脚本 exit 2，明确给出下面两条路径，禁止静默 chown；以 root（sudo）执行时视为 sudo 路径，允许显式 `--uid/--gid`，因为 root 仍可写。
 - **两条路径（二选一）**：
-  1. 用 sudo 执行，接受卷属主 1000：
+  1. 用 sudo 执行，卷属主保持镜像默认 1000：
      ```bash
-     sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
+     sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
      ```
   2. 按当前用户重建镜像，保持卷可写：
      ```bash
      docker build --build-arg JENKINS_UID=$(id -u) --build-arg JENKINS_GID=$(id -g) -t yp-builder:local docker/
      export YP_BUILDER_IMAGE=yp-builder:local
+     bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
      ```
-- **注意**：禁止静默 chown 到不可写状态；`preflight.sh` 会检查「目录属主 == 目标 UID 且当前用户可写」，不一致时给出具体修复命令并退出 `2`。
+- **preflight 附加检查**：目录属主 == 目标 UID 且当前用户可写；任一不符即 exit 2 并给出具体 `sudo chown -R` 或重建镜像命令。验证过的三种情形：非 root 目标不一致 → exit 2 且打印两条路径；root + `--uid 1000` → `WARN SUDO_PATH` 后 chown 成功（属主 1000、root 仍可写）；当前用户 1000 且不带参数 → `OWNER_OK` 与 M0 一致。
 
 ### 5.3 GHCR 拉取 401
 
