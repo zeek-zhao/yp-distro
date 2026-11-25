@@ -1,10 +1,19 @@
 # M0 publish workflow（方案 A / ADR-002）
 # 用 Actions 内置 GITHUB_TOKEN（packages: write）发布镜像到 GHCR，
 # 不依赖用户 PAT，不入库任何密钥（iso-mapping 第 7 节）。
-name: M0 publish (dispatch)
+name: M0 publish (dispatch + restricted push)
 
+# CHG-007：dispatch API 在孤立分支不可用（ISS-005），但 push 事件可用（run 45594520683）。
+# 受限 push 只负责触发；并入 main 后 workflow_dispatch 继续可用。
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat-m0-kas-bootstrap
+    paths:
+      - 'docker/**'
+      - 'scripts/cache/**'
+      - 'kas/**'
 
 permissions:
   contents: read
@@ -60,8 +69,8 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/yp-cache:wrynose-m0
 
-  # S6/S7 接线（DES-008 / ADR-005 方案 1 / F-07）：pack → gen-meta → split → 每片一个 tag → manifest + digest
-  # 缓存源需由 S5 产物提供；不存在则明确失败，不伪造推送。孤立分支不可 dispatch（L-01）时本 job 不触发。
+  # S6/S7 接线（DES-008 / ADR-005 方案 1 / F-07 / CHG-007 / T3）：pack → gen-meta → split → 每片一个 tag → manifest + digest
+  # 缓存源必须由 S5 产物提供；取不到则明确失败，不伪造推送。触发：受限 push（本分支）或并入 main 后的 dispatch。
   publish-cache-slices:
     runs-on: ubuntu-latest
     steps:

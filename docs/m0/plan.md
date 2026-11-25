@@ -33,7 +33,7 @@
 | S4 | 下载与缓存分卷挂载 | 完成 | YP-M0-DES-004（+ CHG-002） | — | 见提交 `Refs: YP-M0-DES-004`（容器验收 WRITE_OK/PERSIST_OK + 幂等 + 错属主 exit 2） |
 | S5 | 首次构建与缓存命中 | 完成 | YP-M0-DES-005 | YP-M0-RV-005 | CHG-003/004/005、ISS-008/009/010/011/013；measure.sh 已入库（T1） |
 | S6 | 缓存打包与切分（80% 阈值） | 完成（Stage E 接线 + 契约收紧） | YP-M0-DES-006 / DES-008 | YP-M0-ISS-006 | 见提交 `43b14d3`；Stage E：gen-meta.sh、split 阈值唯一源、manifest source_sha256、sha256 一致 |
-| S7 | 缓存分片发布到容器仓库 | 完成（接线）/ 端到端待验 | YP-M0-DES-007 / DES-008 / ADR-005 | YP-M0-ISS-005 | 基线镜像匿名拉取已验（F-02 降级：载荷待 S5）；分片 workflow 接线完成，孤立分支不可 dispatch（L-01）端到端未验 |
+| S7 | 缓存分片发布到容器仓库 | 完成（接线）/ 端到端待验 | YP-M0-DES-007 / DES-008 / ADR-005 / CHG-007 | YP-M0-ISS-005 | 基线镜像匿名拉取已验（F-02 降级：载荷待 S5）；CHG-007 区分 dispatch 不可用与 CI 阻断——push 可用（run `45594520683`）；`m0.yml` 已加受限 push；端到端由真实 push run + S5 载荷决定 |
 | S8 | PR 门禁 | 完成 | YP-M0-DES-009 | YP-M0-ISS-012 | `scripts/gate.sh` 五项 GATE_PASS；`m0-gate.yml` 接线（dispatch + push）；不跑 bitbake |
 | S9 | 验收与变量索引 | 完成 | YP-M0-DES-009 | — | `variable-index.md` 28 变量；`check-vars.sh` 故意手改 DRIFT+exit 1；判据 8 → 通过 |
 
@@ -63,3 +63,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.3 | 2026-11-25 | Stage E：S6/S7 接线完成（DES-008/RV-008/ADR-005/CHG-006）；gen-meta 从 threshold.conf 生成、split 去 --max-bytes + 清理 SHA256SUMS.slice + manifest source_sha256、merge 源比对、workflow 新增 publish-cache-slices、空壳镜像结论降级；本地切分链路 5 片合并 sha256 一致、缺片/篡改 exit 1、阈值联动；判据 7 → 通过（本地链路；发布端到端因 L-01 未验）；ADR 顺延编号记录 | zeek.zhao |
 | v2.4 | 2026-11-25 | Stage F：S8/S9 完成（DES-009/RV-009/ISS-012）；`gate.sh` 五项门禁 GATE_PASS、`m0-gate.yml` 接线、`variable-index.md` 28 变量、`check-vars.sh` 手改检出（DRIFT+exit 1）；判据 8 → 通过，判据 1-8 全部收口；S8 恢复「PR 门禁」名称 | zeek.zhao |
 | v2.5 | 2026-11-25 | T1：CI run 45594520683 判据 8 红灯定位为 `scripts/build/measure.sh` 未入库（`.gitignore` 的 `build/` 误匹配 `scripts/build/`），开 ISS-013 并按 DES-005 §3.5 正式入库；`.gitignore` 改根锚定 `/build/`；干净检出 `VARS_OK drift=0`、`GATE_PASS`；判据 8 结论保持「通过」，事实证据修正 | zeek.zhao |
+| v2.6 | 2026-11-25 | T2：CHG-007 修正 CI 触发口径——`workflow_dispatch` 在孤立分支不可用，但 push 可用（run 45594520683）；`m0.yml` 增加受限 push（分支 + paths）；同步 DES-007/ISS-005 §6/plan S7/判据 7，不再称「CI 全部阻断」 | zeek.zhao |

@@ -3,13 +3,13 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-007 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-007） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-007、YP-M0-CHG-007） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-24 |
 | 覆盖需求 | B-08（预热镜像分发） |
 | 关联问题 | YP-M0-ISS-004（PAT 缺 write:packages，改用 Actions GITHUB_TOKEN） |
-| 关联决策 | YP-M0-ADR-002（方案 A：CI 用 workflow_dispatch） |
+| 关联决策 | YP-M0-ADR-002（方案 A：不带 PR 的孤立分支）；YP-M0-CHG-007（触发契约：dispatch + 受限 push） |
 
 ## 1. 目的与边界
 
@@ -17,7 +17,7 @@
 - **不做的事**：
   - 不做实际 bitbake 构建产物（S5）；不在 workflow 内跑完整构建；
   - 不入库任何密钥/token（iso-mapping 第 7 节）；只用 Actions 内置 `secrets.GITHUB_TOKEN`；
-  - 不向 main 开 PR（方案 A）；workflow 由 `workflow_dispatch` 手动触发。
+  - 不向 main 开 PR（方案 A）；触发采用 CHG-007 的双通道：`workflow_dispatch`（并入 main 后可用）+ 本分支受限 `push`（CHG-007 实证可用）。孤立分支上 dispatch API 不可用 ≠ CI 完全阻断。
 
 ## 2. 输入
 
@@ -26,7 +26,7 @@
 | Dockerfile | `docker/Dockerfile`（S3，DES-003） |
 | 缓存数据镜像 | `docker/cache.Dockerfile`（DES-006 产出，本步一并发布） |
 | 发布权限 | Actions `GITHUB_TOKEN` + `permissions: packages: write`（**不依赖用户 PAT**） |
-| 触发方式 | `workflow_dispatch`（方案 A / ADR-002） |
+| 触发方式 | `workflow_dispatch` + 受限 `push`（CHG-007；`feat-m0-kas-bootstrap`，paths = `docker/**`、`scripts/cache/**`、`kas/**`） |
 | 仓库可见性 | public，GHCR 包继承为可匿名拉取（实测验证） |
 
 ## 3. 设计
@@ -35,7 +35,11 @@
 
 ```text
 .github/workflows/m0.yml
-  on: workflow_dispatch
+  on:
+    workflow_dispatch:            # 并入 main 后可用
+    push:                         # CHG-007：本分支实测可用
+      branches: [feat-m0-kas-bootstrap]
+      paths: [docker/**, scripts/cache/**, kas/**]
   permissions: contents: read, packages: write
   jobs:
     publish-builder:   # 构建 yp-builder:wrynose-m0 并 push GHCR
@@ -44,7 +48,7 @@
 
 ### 3.2 发布与拉取流程
 
-1. `gh workflow run m0.yml --ref feat-m0-kas-bootstrap` 触发；
+1. 本分支由受限 `push`（改动 `docker/**`、`scripts/cache/**`、`kas/**`）触发；并入 main 后可 `gh workflow run m0.yml --ref main` 触发（孤立分支上 dispatch 返回 404，ISS-005）；
 2. Actions 用 `docker/login-action` + `secrets.GITHUB_TOKEN` 登录 `ghcr.io`；
 3. `docker/build-push-action` 构建两个镜像并 push：
    - `ghcr.io/zeek-zhao/yp-builder:wrynose-m0`
@@ -68,7 +72,7 @@
 | 失败 | 现象 | 检测方式 | 处理 |
 |---|---|---|---|
 | packages 写权限不足 | push 报 `denied` | workflow 日志 | 确认 `permissions: packages: write` 已声明 |
-| workflow 未触发 | `gh run list` 无记录 | 列运行记录 | 确认 --ref 指向本分支、文件已 push |
+| workflow 未触发 | `gh run list` 无记录 | 列运行记录 | 区分两种入口：dispatch 404（ISS-005）只能用 push；push 无 run 则检查分支名与 paths 是否命中（CHG-007） |
 | 构建失败 | job 红 | 日志 | 按 Dockerfile 报错修，不注释检查 |
 | 包私有不可匿名拉 | 匿名 pull 报 denied | 匿名 docker pull | 检查仓库/包可见性设置 |
 | 标签冲突/覆盖 | 旧 tag 未更新 | digest 对比 | push 显式 tag，保证 latest 语义 |
@@ -76,9 +80,10 @@
 ## 5. 验收命令
 
 ```bash
-# 触发自动发布
-gh workflow run m0.yml --ref feat-m0-kas-bootstrap
-gh run watch --exit-status            # 期望：两个 job 成功
+# 触发自动发布（本分支用 push；dispatch 在孤立分支不可用，ISS-005/CHG-007）
+git push origin feat-m0-kas-bootstrap   # 提交需命中 docker/**、scripts/cache/** 或 kas/**
+# 并入 main 后： gh workflow run m0.yml --ref main
+gh run watch --exit-status            # 期望：job 成功；缺 S5 载荷时按 T3 明示 ::error 失败
 
 # 匿名拉取（公共仓库，不登录）
 docker logout ghcr.io
@@ -100,3 +105,4 @@ docker run --rm ghcr.io/zeek-zhao/yp-builder:wrynose-m0 whoami   # jenkins
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-24 | 初稿：GITHUB_TOKEN 自动发布 + 匿名拉取 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-007：触发契约改为 dispatch + 受限 push；区分 dispatch 不可用与 CI 全部阻断；补 T3 载荷失败口径 | zeek.zhao |
