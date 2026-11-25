@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-REC-001 |
-| 版本 | v1.12 |
-| 状态 | Draft（判据 1/2/3/4/5/6/7/8 均有结论；判据 5 按「配置层无远程地址」静态判据收口为通过，非端到端；S6/S7 发布端到端待真实 push run） |
+| 版本 | v1.13 |
+| 状态 | Draft（判据 1/2/3/4/5/6/7/8 均有结论；判据 5 按「配置层无远程地址」静态收口；判据 7 拆为本地链路通过 + 发布端到端 UNVERIFIED，待真实 push run） |
 | 责任人 | |
 | 生效日期 | |
 
@@ -18,7 +18,7 @@
 | 4 | 缓存目录独立可清 | S4 容器内实证（DES-004/RV-004）：两卷分别 `-v` 挂载、各有 `.yp-volume` 标识（`type=downloads`/`type=sstate`），新容器内均读到；删除 sstate 载荷后 `CLEARED_PREFLIGHT=0` 且 downloads 探针仍 `probe`（`DOWNLOADS_INTACT`），证明缓存卷可独立清空；错属主 `BAD_OWNER_EXIT=2`、空间不足 `LOW_SPACE_EXIT=3`、挂错卷 `BAD_VOLUME_EXIT=1`；构建级实证见 Stage D（清 `build/` 保留 sstate 卷后二次构建 99% 命中） | 通过 |
 | 5 | 无缓存服务器依赖 | 静态判定（非端到端）：实跑 `grep -rnE 'SSTATE_MIRRORS[[:space:]]*=\|BB_HASHSERVE[[:space:]]*=' kas/ meta-yp-distro/ \| grep -v '^.*#'` → 仅 `kas/base.yml:41:    BB_HASHSERVE = "auto"`（本地 hashserv，无远程地址），`SSTATE_MIRRORS` 零命中。判定依据是**配置层无远程地址**，不是「端到端空缓存构建已验」；后者由 S5 两次构建与 99% 命中证据覆盖（判据 1、B-12），本判据不要求也不声称远程服务器实跑 | 通过 |
 | 6 | 分层锁定可复现 | S2 容器内实证（builder 镜像）：`kas --version`→5.5；两次 `kas dump kas/yp.yml:kas/editions/prod.yml` + `diff -u` 空 → `DUMP_STABLE`；四 edition `EDITION_OK dev/prod/dev-kernel/ci`；`grep -c commit: kas/base.yml`→4；`LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"` 单值；无远程缓存（DES-002/RV-002/ADR-004/CHG-001/ISS-007） | 通过 |
-| 7 | 超限切分可用 | Stage E 本地实跑：~20 MiB→`split.sh` 5 片（阈值唯一源 + WARN）、`merge.sh` 合并 sha256 与源逐字节一致（`SHA256_MATCH_OK`）、缺片 exit 1、篡改分片 exit 1、改阈值 gen-meta 数值联动、`--max-bytes` 覆盖被拒 exit 2；发布 workflow 已接线 `publish-cache-slices`（pack→gen-meta→split→每片 tag+manifest+digest，YAML 校验通过）。**口径修正（CHG-007）**：孤立分支仅 `workflow_dispatch` API 不可用（ISS-005），push 事件可用——`m0-gate.yml` 由 push 触发产生 run `45594520683`；`m0.yml` 已增加受限 push（分支 `feat-m0-kas-bootstrap`、paths `docker/**`/`scripts/cache/**`/`kas/**`），保留 dispatch 供并入 main 后使用。CHG-008/ISS-014 进一步修复载荷与假绿：S5 载荷改为具名制品 `cache-payload`（缺失即 `::error` + exit 1），删除 `push-ok` 兜底，digest 仅来自 imagetools inspect，manifest 以 `yp-cache-slices-manifest` 上传；本地静态契约与失败分支模拟通过。发布端到端由真实 push run 决定，不以「CI 全部阻断」作结（T5 拆两条结论） | 通过（本地切分链路；发布端到端待 push run） |
+| 7 | 超限切分可用 | **结论 A · 本地切分链路：通过**。T5 实跑（20 MiB 载荷，`YP_SPLIT_MAX_BYTES=6291456` 仅测试用并打印 WARN）：`PACK_OK ... sha256=61e45b2d404591c2d735a3ea6583e6f36b53793fdb58f226fecae2a875354d04`；`SPLIT_OK slices=4 total_bytes=21002240 source_sha256=61e45b2d... max=6291456`；`MERGE_OK ... sha256=61e45b2d... source_sha256=61e45b2d...`；`sha256sum src.tar merged.tar` 两行完全一致；移走片 → `ERROR: 缺片 cache.slice.01，拒绝恢复`、`MISSING_EXIT=1`；篡改片 → `ERROR: 分片 cache.slice.02 sha256 不符，拒绝恢复`、`TAMPER_EXIT=1`。Stage E 另验改阈值 gen-meta 数值联动、`--max-bytes` 覆盖 exit 2。**结论 B · 发布端到端：UNVERIFIED**。T2 已加受限 push（CHG-007），T3 已修载荷与假绿（CHG-008/ISS-014，本地静态契约与 push/inspect 失败模拟通过），但截至本提交尚无命中 `docker/**`/`scripts/cache/**`/`kas/**` 的 push run，且 S5 载荷未作为 `cache-payload` 制品上传，故无可填的 run URL 与 digest；待真实 push run 后回填，失败则归档失败原因 | 本地切分链路：通过；发布端到端：UNVERIFIED（无 push run / 无 S5 制品） |
 | 8 | 手改配置可发现 | Stage F 实跑：`scripts/check-vars.sh` 对 `variable-index.md` 28 个变量断言归口值 → `VARS_OK`（drift=0）；故意改 `BB_NUMBER_THREADS` 4→8 → `DRIFT` 检出 + exit 1 → 还原 → `VARS_OK`；门禁 `scripts/gate.sh` 五项全绿 `GATE_PASS`（RV-009 §验收输出）。**事实修正**：CI run `45594520683`（push，HEAD `b072417`）曾 `checked=28 drift=2`、`MACHINE_measure`/`EDITION_measure` 因 `scripts/build/measure.sh` 未入库而 DRIFT（ISS-013）；T1 将 `.gitignore` 的 `build/` 改为根锚定 `/build/` 并按 DES-005 §3.5 入库该脚本，干净检出复跑 → `VARS_OK drift=0`、`GATE_PASS`；修复后 push run 为最终 CI 证据 | 通过 |
 
 结论只填三种：`通过` / `未通过` / `UNVERIFIED`。填 `通过` 必须附命令或产物路径。
@@ -40,3 +40,4 @@
 | v1.10 | 2026-11-25 | T2：判据 7 口径修正——dispatch 不可用 ≠ CI 阻断；CHG-007 增加受限 push；发布端到端改由真实 push run 决定 | zeek.zhao |
 | v1.11 | 2026-11-25 | T3：判据 7 补 CHG-008/ISS-014 载荷与失败即停事实；本地静态与分支模拟通过，端到端仍待 push run | zeek.zhao |
 | v1.12 | 2026-11-25 | T4：判据 5 由 UNVERIFIED → 通过，依据为配置层静态 grep 仅 `BB_HASHSERVE = "auto"`、无远程地址；明确写「非端到端」 | zeek.zhao |
+| v1.13 | 2026-11-25 | T5：判据 7 拆两条结论——本地切分链路通过（贴 split/merge/缺片/篡改真实输出）、发布端到端 UNVERIFIED（无命中 paths 的 push run、S5 载荷未上传制品） | zeek.zhao |

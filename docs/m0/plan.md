@@ -66,3 +66,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.6 | 2026-11-25 | T2：CHG-007 修正 CI 触发口径——`workflow_dispatch` 在孤立分支不可用，但 push 可用（run 45594520683）；`m0.yml` 增加受限 push（分支 + paths）；同步 DES-007/ISS-005 §6/plan S7/判据 7，不再称「CI 全部阻断」 | zeek.zhao |
 | v2.7 | 2026-11-25 | T3：CHG-008/ISS-014 修发布链路两处硬缺陷——S5 载荷改由 `cache-payload` 制品提供且缺载荷即 fail；删除 `push-ok` 兜底，digest 仅取 inspect；manifest 以 `yp-cache-slices-manifest` 上传；本地静态+分支模拟通过，GH 端到端待 push run | zeek.zhao |
 | v2.8 | 2026-11-25 | T4：判据 5 按静态判据收口——配置层 grep 仅 `BB_HASHSERVE = "auto"`、无 `SSTATE_MIRRORS` 远程地址，结论改「通过」并注明非端到端；traceability B-07 同步 | zeek.zhao |
+| v2.9 | 2026-11-25 | T5：判据 7 拆两条结论——本地切分链路通过（4 片 merge sha256 一致、缺片/篡改 exit 1），发布端到端 UNVERIFIED（无命中 paths 的 push run、S5 载荷未上传为制品） | zeek.zhao |
