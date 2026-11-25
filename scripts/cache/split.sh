@@ -38,8 +38,19 @@ while [ "$idx" -lt "$slices" ]; do
   # ISS-019：不能用 dd bs=$MAX + skip=<片号>——GNU dd 对 >2GiB 的 bs 会按约 2GiB 分块，
   # 使 skip=1 只跳过 ~2GiB 而非第二个 MAX 块，导致大文件切片丢失尾部数据。
   # 用 iflag=skip_bytes,count_bytes 让 skip/count 按字节解释，bs 只影响 I/O 缓冲。
-  dd if="$IN" of="$OUT_DIR/cache.slice.$(printf '%02d' "$idx")" \
+  slice_name="cache.slice.$(printf '%02d' "$idx")"
+  dd if="$IN" of="$OUT_DIR/$slice_name" \
      bs=1M iflag=skip_bytes,count_bytes skip=$((idx * MAX)) count="$MAX" status=none
+  # T6：每片 dd 后立即断言字节数，ISS-019 这类丢尾问题不再等到 merge 阶段才暴露
+  expected="$MAX"
+  remaining=$((total - idx * MAX))
+  if [ "$remaining" -lt "$expected" ]; then expected="$remaining"; fi
+  actual="$(stat -c %s "$OUT_DIR/$slice_name")"
+  if [ "$actual" -ne "$expected" ]; then
+    echo "ERROR: 分片 $slice_name 字节数不符: actual=$actual expected=$expected total=$total max=$MAX" >&2
+    exit 1
+  fi
+  echo "SLICE_OK index=$idx name=$slice_name bytes=$actual expected=$expected"
   idx=$((idx+1))
 done
 
