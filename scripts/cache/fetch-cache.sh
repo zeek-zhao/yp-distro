@@ -27,7 +27,7 @@ release 模式选项:
   --parts <n>           只取前 n 个分片（默认全部）
 
 ghcr 模式:
-  --manifest 必填，指向 manifests/cache-full.slices.json（merge.sh 兼容格式）
+  --manifest 必填，指向 manifests/full-slices-manifest.json（merge.sh 兼容格式）
 
 unpack-only 模式（本地自测）:
   --unpack-only <tar>   跳过下载，只做布局识别 + 校验后解包（验证两层/直接两种布局）

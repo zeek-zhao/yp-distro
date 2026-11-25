@@ -1,0 +1,24 @@
+{
+  "schema": "yp-cache-slice-manifest-v1",
+  "source": "cache-full.tar",
+  "source_sha256": "a8870b50f2b262d90978a17c6bcdf28794659e1dfd7f500f24ddf097dad4febc",
+  "total_bytes": 11153397760,
+  "slice_max_bytes": 8589934592,
+  "total_slices": 2,
+  "slices": [
+    {
+      "index": 0,
+      "bytes": 8589934592,
+      "sha256": "292d3d69b8dbe882d09784af067187da14c7b2711019a0e1f938cc311b347573",
+      "image": "ghcr.io/zeek-zhao/yp-cache:wrynose-m0-full-part-00",
+      "digest": "sha256:f1404012d98fb7956619aa4c89b293a435a322b67fcc57227b1c15baef974390"
+    },
+    {
+      "index": 1,
+      "bytes": 2563463168,
+      "sha256": "fbe9e3567a87cc427a5e016b5e5b54c797ff8b2e4b4e6ebcbbe92bb47666d54",
+      "image": "ghcr.io/zeek-zhao/yp-cache:wrynose-m0-full-part-01",
+      "digest": "sha256:899af6fa46c9223223d978fa110dabb5215f161e1d1a4b6d8352e6d1e2271d36"
+    }
+  ]
+}
