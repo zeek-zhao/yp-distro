@@ -65,3 +65,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.5 | 2026-11-25 | T1：CI run 45594520683 判据 8 红灯定位为 `scripts/build/measure.sh` 未入库（`.gitignore` 的 `build/` 误匹配 `scripts/build/`），开 ISS-013 并按 DES-005 §3.5 正式入库；`.gitignore` 改根锚定 `/build/`；干净检出 `VARS_OK drift=0`、`GATE_PASS`；判据 8 结论保持「通过」，事实证据修正 | zeek.zhao |
 | v2.6 | 2026-11-25 | T2：CHG-007 修正 CI 触发口径——`workflow_dispatch` 在孤立分支不可用，但 push 可用（run 45594520683）；`m0.yml` 增加受限 push（分支 + paths）；同步 DES-007/ISS-005 §6/plan S7/判据 7，不再称「CI 全部阻断」 | zeek.zhao |
 | v2.7 | 2026-11-25 | T3：CHG-008/ISS-014 修发布链路两处硬缺陷——S5 载荷改由 `cache-payload` 制品提供且缺载荷即 fail；删除 `push-ok` 兜底，digest 仅取 inspect；manifest 以 `yp-cache-slices-manifest` 上传；本地静态+分支模拟通过，GH 端到端待 push run | zeek.zhao |
+| v2.8 | 2026-11-25 | T4：判据 5 按静态判据收口——配置层 grep 仅 `BB_HASHSERVE = "auto"`、无 `SSTATE_MIRRORS` 远程地址，结论改「通过」并注明非端到端；traceability B-07 同步 | zeek.zhao |
