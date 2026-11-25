@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           asset_url="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${S5_PAYLOAD_TAG}" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(a["url"] for a in d["assets"] if a["name"] == "{{ env.S5_PAYLOAD_ASSET }}"))')"
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(a["url"] for a in d["assets"] if a["name"] == "${{ env.S5_PAYLOAD_ASSET }}"))')"
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/octet-stream' \
             "$asset_url" -o /tmp/cache-payload-sample.tar.gz
           mkdir -p /tmp/s5-payload
