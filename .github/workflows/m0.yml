@@ -84,20 +84,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare cache source from S5 payload
+      # CHG-008 / ISS-014：载荷只来自 S5 上传的具名制品，取不到即失败，不用仓库内路径冒充
+      - name: Fetch S5 cache payload artifact
+        id: payload
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: cache-payload
+          path: ${{ runner.temp }}/s5-payload
+
+      - name: Verify S5 payload
         id: src
+        env:
+          PAYLOAD_DIR: ${{ runner.temp }}/s5-payload
+          PAYLOAD_OUTCOME: ${{ steps.payload.outcome }}
         run: |
           set -euo pipefail
-          SRC_DOWNLOADS="${{ vars.YP_CACHE_DOWNLOADS_DIR || './cache-payload/downloads' }}"
-          SRC_SSTATE="${{ vars.YP_CACHE_SSTATE_DIR || './cache-payload/sstate' }}"
-          if [ -d "$SRC_DOWNLOADS" ] && [ -d "$SRC_SSTATE" ]; then
-            echo "downloads=$SRC_DOWNLOADS" >> "$GITHUB_OUTPUT"
-            echo "sstate=$SRC_SSTATE" >> "$GITHUB_OUTPUT"
-            echo "CACHE_SOURCE_FOUND"
-          else
-            echo "::error::S5 缓存产物不存在（$SRC_DOWNLOADS / $SRC_SSTATE），跳过分片发布；需先由 S5 构建产物提供 downloads/sstate"
+          if [ "$PAYLOAD_OUTCOME" != "success" ]; then
+            echo "::error::S5 cache-payload 制品下载失败（outcome=$PAYLOAD_OUTCOME）；请先由 S5 上传名为 cache-payload 的制品（含 downloads/ 与 sstate/）"
             exit 1
           fi
+          for d in downloads sstate; do
+            if [ ! -d "$PAYLOAD_DIR/$d" ] || ! find "$PAYLOAD_DIR/$d" -type f -print -quit | grep -q .; then
+              echo "::error::S5 cache-payload 缺少非空 $d/ 目录（$PAYLOAD_DIR/$d）；禁止用仓库内不存在的 ./cache-payload 冒充"
+              exit 1
+            fi
+          done
+          echo "downloads=$PAYLOAD_DIR/downloads" >> "$GITHUB_OUTPUT"
+          echo "sstate=$PAYLOAD_DIR/sstate" >> "$GITHUB_OUTPUT"
+          echo "CACHE_SOURCE_FOUND"
 
       - name: Pack cache payload
         run: bash scripts/cache/pack.sh --src "${{ steps.src.outputs.downloads }}" --src "${{ steps.src.outputs.sstate }}" --out /tmp/yp-cache.tar
@@ -108,7 +123,7 @@ jobs:
       - name: Split into slices (threshold.conf only)
         run: bash scripts/cache/split.sh --in /tmp/yp-cache.tar --out /tmp/slices
 
-      - name: Publish each slice as a GHCR tag + upload manifest
+      - name: Publish each slice as a GHCR tag
         run: |
           set -euo pipefail
           total="$(python3 -c "import json; print(json.load(open('/tmp/slices/manifest.json'))['total_slices'])")"
@@ -121,11 +136,28 @@ jobs:
             # 每片作为单文件镜像层发布，供匿名 docker pull + docker cp 取回（ADR-005 方案 1）
             printf 'FROM alpine:3.20\nCOPY cache.slice.%s /work/slices/cache.slice.%s\n' "$nn" "$nn" > /tmp/slice.Dockerfile
             docker build -f /tmp/slice.Dockerfile -t "$tag" /tmp/slices
-            digest="$(docker push "$tag" >/dev/null 2>&1 && docker buildx imagetools inspect "$tag" 2>/dev/null | grep -m1 'Digest:' | awk '{print $2}' || echo 'push-ok')"
+            # 失败即停：push / inspect / 空 digest 都不允许写成成功（ISS-014 / CHG-008）
+            docker push "$tag"
+            digest="$(docker buildx imagetools inspect "$tag" | grep -m1 'Digest:' | awk '{print $2}')"
+            if [ -z "$digest" ]; then
+              echo "::error::分片 $tag 的 imagetools inspect 未给出 Digest，拒绝记为发布成功"
+              exit 1
+            fi
             echo "$tag $digest" >> /tmp/slice-digests.txt
             idx=$((idx+1))
           done
-          echo "### 分片发布摘要（ADR-005 方案 1）" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yp-cache-slices-manifest
+          path: /tmp/slices/manifest.json
+          if-no-files-found: error
+
+      - name: Summarize published slices
+        run: |
+          echo "### 分片发布摘要（ADR-005 方案 1 / CHG-008）" >> "$GITHUB_STEP_SUMMARY"
+          echo "manifest artifact: yp-cache-slices-manifest" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/slice-digests.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

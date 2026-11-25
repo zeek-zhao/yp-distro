@@ -3,20 +3,20 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-008 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-008） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-008、YP-M0-CHG-008） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-25 |
 | 覆盖需求 | B-09、B-10、判据 7 |
 | 关联决策 | YP-M0-ADR-005（分片发布，方案 1：每片 tag） |
-| 关联变更 | YP-M0-CHG-006 |
+| 关联变更 | YP-M0-CHG-006（阈值唯一源）、YP-M0-CHG-007（受限 push 触发）、YP-M0-CHG-008（S5 载荷/manifest 制品契约） |
 | 关联审计项 | RV-010 F-02/F-05/F-07/F-11 |
 
 ## 1. 目的与边界
 
 - **目的**：把 S6 已产出的缓存切分能力接入 S7 发布链路，收口判据 7；修正三处审计缺陷（写死字节数、阈值可绕过、空壳镜像结论虚高）。
 - **不做的事**：
-  - 不做实际远程推送验证（孤立分支不可 dispatch，L-01；本阶段只做本地脚本链路 + workflow 接线）；
+  - 不做本地伪造载荷或假绿兜底：S5 载荷必须由具名制品提供（CHG-008），push/inspect 失败即 fail；发布端到端结论由真实 push run 决定（CHG-007）；
   - 不引入缓存服务器（约束 6）；
   - 不把空壳镜像结论升级为「预热完成」（F-02 红线）。
 
@@ -49,16 +49,19 @@
 
 ### 3.4 发布 workflow 串联（F-07）
 
-在 `.github/workflows/m0.yml` 新增 `publish-cache-slices` job（沿用 `workflow_dispatch` + GITHUB_TOKEN）：
+在 `.github/workflows/m0.yml` 新增 `publish-cache-slices` job（CHG-007：本分支受限 push 或并入 main 后 dispatch；GITHUB_TOKEN）：
 
 ```text
-checkout → 准备缓存源（downloads/sstate）→ pack.sh → gen-meta.sh
-→ split.sh → docker build+push 每片为 yp-cache:wrynose-m0-part-NN
-→ 上传 manifest.json 为 release 附件 → 记录每片 digest 到 job summary
+checkout → actions/download-artifact(name=cache-payload) → 校验 downloads/ 与 sstate/ 非空
+→ pack.sh → gen-meta.sh → split.sh
+→ docker build + docker push 每片为 yp-cache:wrynose-m0-part-NN
+→ imagetools inspect 取真实 Digest: → actions/upload-artifact(name=yp-cache-slices-manifest)
+→ step summary 打印制品名与逐片 <tag> <digest>
 ```
 
-- 缓存源来自 checkout 后的缓存目录；若不存在则 job 明确失败并说明「需 S5 产物」，不伪造推送。
-- 受 L-01 约束，孤立分支 workflow 不可 dispatch，本次只完成接线交付，端到端触发标 UNVERIFIED。
+- 缓存源契约（CHG-008）：S5 上传制品 `cache-payload`，内含顶层 `downloads/`、`sstate/` 且各至少有一个文件；下载失败、目录缺失或为空 → `::error` + exit 1；**删除**仓库内 `./cache-payload` 回退路径。
+- push 或 imagetools inspect 失败即 job 红；digest 只取 inspect 输出，删除 `|| echo 'push-ok'`（ISS-014）。
+- 触发问题由 CHG-007 解决，载荷问题由 CHG-008 解决；发布端到端不再以 L-01 作唯一阻断理由。
 
 ### 3.5 空壳镜像结论降级（F-02）
 
@@ -75,6 +78,9 @@ checkout → 准备缓存源（downloads/sstate）→ pack.sh → gen-meta.sh
 | 缺片仍可合并 | merge 输出成功 | 移走一片跑 merge | exit 1（已实现，回归验证） |
 | 合并 sha256 不符 | 合并结果≠源 | manifest source_sha256 比对 | exit 1 |
 | 空壳镜像被称预热完成 | 文档写「预热完成」 | grep README/traceability | 降级为「基线已验证」 |
+| 载荷缺失仍继续发布 | 用仓库内 `./cache-payload` 冒充 | artifact 下载 outcome + 目录/文件校验 | `::error` + exit 1（CHG-008） |
+| push 失败被写成成功 | summary 出现 `push-ok` | `git grep "echo 'push-ok'"` | 无命中；push/inspect 失败即 job 红 |
+| digest 非真实值 | 空串或占位符 | `[ -n "$digest" ]` 断言 | exit 1 |
 
 ## 5. 验收命令
 
@@ -93,6 +99,18 @@ sha256sum /tmp/yp-cache.tar /tmp/merged.tar   # 两者一致
 mv /tmp/slices/cache.slice.01 /tmp/ ; bash scripts/cache/merge.sh --in /tmp/slices --out /tmp/x.tar; echo "MISSING_EXIT=$?"
 
 # 阈值变化时 gen-meta 数值随之变化（临时改阈值→生成→比对→还原）
+
+# 发布 workflow 静态契约（CHG-008 / ISS-014）
+grep -n "echo 'push-ok'" .github/workflows/m0.yml && echo BAD || echo PUSH_OK_FALLBACK_REMOVED
+grep -n "'./cache-payload" .github/workflows/m0.yml && echo BAD || echo LOCAL_PAYLOAD_FALLBACK_REMOVED
+python3 - <<'PY'
+import yaml
+w = yaml.safe_load(open('.github/workflows/m0.yml'))
+s = w['jobs']['publish-cache-slices']['steps']
+assert any('download-artifact' in str(x.get('uses','')) for x in s)
+assert any(x.get('with',{}).get('name') == 'yp-cache-slices-manifest' for x in s)
+print('WORKFLOW_STEPS_OK')
+PY
 ```
 
 期望：两 sha256 相同；`MISSING_EXIT=1`；cache-meta 数值来自 threshold.conf；改阈值后数值变化。
@@ -107,3 +125,4 @@ mv /tmp/slices/cache.slice.01 /tmp/ ; bash scripts/cache/merge.sh --in /tmp/slic
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：S6/S7 接线、ADR-005 方案 1、F-02/F-05/F-07/F-11 修正 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-008/ISS-014：S5 载荷改为具名制品、删除本地冒充路径与 push-ok 兜底、manifest 作为制品上传、summary 给制品名与逐片 digest | zeek.zhao |
