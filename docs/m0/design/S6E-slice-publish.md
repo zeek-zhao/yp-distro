@@ -3,13 +3,13 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-008 |
-| 版本 | v1.1 |
-| 状态 | Approved（见 YP-M0-RV-008、YP-M0-CHG-008） |
+| 版本 | v1.2 |
+| 状态 | Approved（见 YP-M0-RV-008、YP-M0-CHG-008、YP-M0-CHG-011） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-25 |
 | 覆盖需求 | B-09、B-10、判据 7 |
 | 关联决策 | YP-M0-ADR-005（分片发布，方案 1：每片 tag） |
-| 关联变更 | YP-M0-CHG-006（阈值唯一源）、YP-M0-CHG-007（受限 push 触发）、YP-M0-CHG-008（S5 载荷/manifest 制品契约） |
+| 关联变更 | YP-M0-CHG-006（阈值唯一源）、YP-M0-CHG-007（受限 push 触发）、YP-M0-CHG-008（S5 载荷/manifest 制品契约）、YP-M0-CHG-010（发布凭据）、YP-M0-CHG-011（载荷生产者） |
 | 关联审计项 | RV-010 F-02/F-05/F-07/F-11 |
 
 ## 1. 目的与边界
@@ -49,19 +49,23 @@
 
 ### 3.4 发布 workflow 串联（F-07）
 
-在 `.github/workflows/m0.yml` 新增 `publish-cache-slices` job（CHG-007：本分支受限 push 或并入 main 后 dispatch；GITHUB_TOKEN）：
+在 `.github/workflows/m0.yml` 新增 `prepare-cache-payload` job 与 `publish-cache-slices` job（CHG-007：本分支受限 push 或并入 main 后 dispatch；CHG-010：`secrets.GHCR_PAT` 登录）：
 
 ```text
-checkout → actions/download-artifact(name=cache-payload) → 校验 downloads/ 与 sstate/ 非空
+[prepare-cache-payload] 从 release tag m0-s5-payload-sample 取 cache-payload-sample.tar.gz
+→ 解包校验 downloads/ 与 sstate/ → actions/upload-artifact(name=cache-payload)
+                ↓ needs
+[publish-cache-slices] checkout → actions/download-artifact(name=cache-payload) → 校验 downloads/ 与 sstate/ 非空
 → pack.sh → gen-meta.sh → split.sh
 → docker build + docker push 每片为 yp-cache:wrynose-m0-part-NN
 → imagetools inspect 取真实 Digest: → actions/upload-artifact(name=yp-cache-slices-manifest)
 → step summary 打印制品名与逐片 <tag> <digest>
 ```
 
-- 缓存源契约（CHG-008）：S5 上传制品 `cache-payload`，内含顶层 `downloads/`、`sstate/` 且各至少有一个文件；下载失败、目录缺失或为空 → `::error` + exit 1；**删除**仓库内 `./cache-payload` 回退路径。
+- 缓存源消费契约（CHG-008）：`cache-payload` 制品内含顶层 `downloads/`、`sstate/` 且各至少有一个文件；下载失败、目录缺失或为空 → `::error` + exit 1；**删除**仓库内 `./cache-payload` 回退路径。
+- 缓存源生产契约（CHG-011）：由 `prepare-cache-payload` 从 release 资产抽样真实 S5 构建缓存并上传同名制品；不在仓库内写入 token 或 asset id。
 - push 或 imagetools inspect 失败即 job 红；digest 只取 inspect 输出，删除 `|| echo 'push-ok'`（ISS-014）。
-- 触发问题由 CHG-007 解决，载荷问题由 CHG-008 解决；发布端到端不再以 L-01 作唯一阻断理由。
+- 触发问题由 CHG-007 解决，载荷问题由 CHG-008/011 解决，凭据问题由 CHG-010 解决；发布端到端不再以 L-01 作唯一阻断理由。
 
 ### 3.5 空壳镜像结论降级（F-02）
 
@@ -126,3 +130,4 @@ PY
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：S6/S7 接线、ADR-005 方案 1、F-02/F-05/F-07/F-11 修正 | zeek.zhao |
 | v1.1 | 2026-11-25 | CHG-008/ISS-014：S5 载荷改为具名制品、删除本地冒充路径与 push-ok 兜底、manifest 作为制品上传、summary 给制品名与逐片 digest | zeek.zhao |
+| v1.2 | 2026-11-25 | CHG-010/011/ISS-016：发布凭据改具名 PAT secret；新增 `prepare-cache-payload` 由真实 S5 缓存样本生产 `cache-payload` 制品 | zeek.zhao |

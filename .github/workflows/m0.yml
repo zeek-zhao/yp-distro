@@ -1,6 +1,6 @@
 # M0 publish workflow（方案 A / ADR-002）
-# 用 Actions 内置 GITHUB_TOKEN（packages: write）发布镜像到 GHCR，
-# 不依赖用户 PAT，不入库任何密钥（iso-mapping 第 7 节）。
+# 用加密 secret GHCR_PAT（write:packages，CHG-010）发布镜像到 GHCR；
+# token 不入库、只经 Actions secret 注入（iso-mapping 第 7 节 / ISS-016）。
 name: M0 publish (dispatch + restricted push)
 
 # CHG-007：dispatch API 在孤立分支不可用（ISS-005），但 push 事件可用（run 45594520683）。
@@ -22,8 +22,43 @@ permissions:
 env:
   REGISTRY: ghcr.io
   OWNER: zeek-zhao
+  # CHG-011：S5 载荷样本（抽样自真实 S5 构建缓存）的 release 位置
+  S5_PAYLOAD_TAG: m0-s5-payload-sample
+  S5_PAYLOAD_ASSET: cache-payload-sample.tar.gz
 
 jobs:
+  # CHG-011 / ISS-016：为 publish-cache-slices 生产 cache-payload 制品；
+  # 载荷是真实 S5 构建缓存的抽样，不是仓库内伪造目录。
+  prepare-cache-payload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch real S5 payload sample from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          asset_url="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${S5_PAYLOAD_TAG}" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(a["url"] for a in d["assets"] if a["name"] == "{{ env.S5_PAYLOAD_ASSET }}"))')"
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/octet-stream' \
+            "$asset_url" -o /tmp/cache-payload-sample.tar.gz
+          mkdir -p /tmp/s5-payload
+          tar -xzf /tmp/cache-payload-sample.tar.gz -C /tmp/s5-payload
+          for d in downloads sstate; do
+            if [ ! -d "/tmp/s5-payload/$d" ] || ! find "/tmp/s5-payload/$d" -type f -print -quit | grep -q .; then
+              echo "::error::S5 载荷样本缺少非空 $d/ 目录，停止发布"
+              exit 1
+            fi
+          done
+          echo "S5_PAYLOAD_SAMPLE_OK files=$(find /tmp/s5-payload -type f | wc -l)"
+
+      - name: Upload cache-payload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-payload
+          path: /tmp/s5-payload
+          if-no-files-found: error
+
   publish-builder:
     runs-on: ubuntu-latest
     steps:
@@ -34,8 +69,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.OWNER }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Build and push yp-builder
         uses: docker/build-push-action@v6
@@ -58,8 +93,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.OWNER }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Build and push yp-cache baseline (layout only, DES-008 / F-02)
         uses: docker/build-push-action@v6
@@ -72,6 +107,7 @@ jobs:
   # S6/S7 接线（DES-008 / ADR-005 方案 1 / F-07 / CHG-007 / T3）：pack → gen-meta → split → 每片一个 tag → manifest + digest
   # 缓存源必须由 S5 产物提供；取不到则明确失败，不伪造推送。触发：受限 push（本分支）或并入 main 后的 dispatch。
   publish-cache-slices:
+    needs: prepare-cache-payload
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,8 +117,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.OWNER }}
+          password: ${{ secrets.GHCR_PAT }}
 
       # CHG-008 / ISS-014：载荷只来自 S5 上传的具名制品，取不到即失败，不用仓库内路径冒充
       - name: Fetch S5 cache payload artifact
