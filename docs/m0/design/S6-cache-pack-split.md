@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-006 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-006） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-006、YP-M0-CHG-006、YP-M0-ISS-019） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-24 |
 | 覆盖需求 | B-09（超限切分）、B-10（分片完整性校验） |
@@ -51,7 +51,7 @@ UPLOAD_TIMEOUT_SEC=480        # 8 分钟 = 仓库上传超时 10 分钟的 80%
 ### 3.3 流程
 
 1. `pack.sh`：tar 打包 downloads/ 与 sstate/ → `cache.tar`；计算 sha256 写入 `SHA256SUMS`；
-2. `split.sh`：按 `SLICE_MAX_BYTES` 切分 `cache.tar` → `cache.slice.00`...；`manifest.json` 记录每片序号/字节数/sha256/总片数；
+2. `split.sh`：按 `SLICE_MAX_BYTES` 切分 `cache.tar` → `cache.slice.00`...；`manifest.json` 记录每片序号/字节数/sha256/总片数。切片用 `dd ... bs=1M iflag=skip_bytes,count_bytes skip=<片号×MAX> count=MAX`（ISS-019）：不能用 `bs=$MAX skip=<片号>`，GNU dd 对 >2 GiB 的 `bs` 会按 ~2 GiB 分块，导致多片时丢失尾部数据；
 3. `merge.sh`：先验 `manifest.json` 与 `SHA256SUMS` 齐全、每片 sha256 匹配，缺片直接拒绝（exit 1）；全部通过才按序合并，最终 sha256 与原始一致；
 4. `unpack.sh`：解包到目标目录。
 
@@ -75,7 +75,7 @@ grep -R "8589934592" scripts/ | grep -v threshold.conf   # 期望：无输出
 
 # 打包-切分-合并-校验闭环（用构造的小缓存验证流程）
 bash scripts/cache/pack.sh   --src downloads --src sstate --out /tmp/cache.tar
-bash scripts/cache/split.sh  --in /tmp/cache.tar --max-bytes "$(. scripts/cache/threshold.conf; echo $SLICE_MAX_BYTES)" --out /tmp/slices
+bash scripts/cache/split.sh  --in /tmp/cache.tar --out /tmp/slices   # 阈值唯一源：threshold.conf；--max-bytes 已移除（CHG-006）
 bash scripts/cache/merge.sh  --in /tmp/slices --out /tmp/cache-restored.tar   # 缺片应 exit 1
 sha256sum /tmp/cache.tar /tmp/cache-restored.tar   # 两者一致
 
@@ -93,3 +93,4 @@ grep -R "sstate-mirror\|hashserv" . --include="*.yml" --include="*.conf"   # 期
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-24 | 初稿：缓存打包/切分/合并/校验设计 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-006 清理陈旧 `--max-bytes`/SHA256SUMS 表述；ISS-019 全量 11 GiB 回归暴露 dd 大 `bs` 缺陷，改为按字节 skip/count，并补多片回归口径 | zeek.zhao |

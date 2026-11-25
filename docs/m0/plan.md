@@ -33,7 +33,7 @@
 | S4 | 下载与缓存分卷挂载 | 完成 | YP-M0-DES-004（+ CHG-002） | — | 见提交 `Refs: YP-M0-DES-004`（容器验收 WRITE_OK/PERSIST_OK + 幂等 + 错属主 exit 2） |
 | S5 | 首次构建与缓存命中 | 完成 | YP-M0-DES-005 | YP-M0-RV-005 | CHG-003/004/005、ISS-008/009/010/011/013；measure.sh 已入库（T1） |
 | S6 | 缓存打包与切分（80% 阈值） | 完成（Stage E 接线 + 契约收紧） | YP-M0-DES-006 / DES-008 | YP-M0-ISS-006 | 见提交 `43b14d3`；Stage E：gen-meta.sh、split 阈值唯一源、manifest source_sha256、sha256 一致 |
-| S7 | 缓存分片发布到容器仓库 | 完成 / 端到端已验 | YP-M0-DES-007 / DES-008 / ADR-005 / CHG-007 / CHG-008 / CHG-010 / CHG-011 | YP-M0-ISS-005 / ISS-014 / ISS-016 / ISS-017 / ISS-018 | 基线镜像匿名拉取已验（F-02 降级）；CHG-007 区分低权限 dispatch 不可用与 CI 阻断——push 可用（run `45594520683`）；CHG-008/ISS-014 修复假绿；CHG-010 PAT 具名 secret 修复 GHCR 权限；CHG-011 真实 S5 样本生产 `cache-payload` 制品；ISS-017/018 修表达式与冒号文件名；run `45607197090` 四 job success，分片 digest `sha256:11ae257dd1049ab25667538fbcc79d5b342777f401c608718c5da7c35062088a` 经 GHCR 独立核验 |
+| S7 | 缓存分片发布到容器仓库 | 完成 / 端到端已验 | YP-M0-DES-007 / DES-008 / ADR-005 / CHG-007 / CHG-008 / CHG-010 / CHG-011 | YP-M0-ISS-005 / ISS-014 / ISS-016 / ISS-017 / ISS-018 | 基线镜像匿名拉取已验（F-02 降级）；CHG-007 区分低权限 dispatch 不可用与 CI 阻断——push 可用（run `45594520683`）；CHG-008/ISS-014 修复假绿；CHG-010 PAT 具名 secret 修复 GHCR 权限；CHG-011 真实 S5 样本生产 `cache-payload` 制品；ISS-017/018 修表达式与冒号文件名；run `45607197090` 四 job success；CHG-012 全量 S5 缓存 11 GiB 分 8 资产上传、两片 GHCR tag 独立核验 digest（ISS-019/020 关闭） |
 | S8 | PR 门禁 | 完成 | YP-M0-DES-009 | YP-M0-ISS-012 | `scripts/gate.sh` 五项 GATE_PASS；`m0-gate.yml` 接线（dispatch + push）；不跑 bitbake |
 | S9 | 验收与变量索引 | 完成 | YP-M0-DES-009 | — | `variable-index.md` 28 变量；`check-vars.sh` 故意手改 DRIFT+exit 1；判据 8 → 通过 |
 
@@ -70,3 +70,4 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.10 | 2026-11-25 | T6：CHG-009/ISS-015 统一 kas 规范性写法（根级 `editions` 链接）并实测 DUMP_STABLE + 四 edition；traceability 待提交 Refs 全换真实提交号；G2/check-vars 去阈值字面量与自我豁免；CI gate run 45600235881 success | zeek.zhao |
 | v2.11 | 2026-11-25 | T7：`kas shell` + `bitbake -e` 确认 `BB_HASHSERVE_DB_DIR` 为真实变量（`/work/sstate`），不删不改；归档 push run 45601074345 三 job 失败（缺 S5 制品 + GHCR 权限，ISS-016），判据 7 发布端到端保持 UNVERIFIED | zeek.zhao |
 | v2.12 | 2026-11-25 | CHG-010/011 + ISS-016/017/018：PAT 具名 secret 修复 GHCR 写包权限，真实 S5 载荷样本由 release 资产生产 `cache-payload` 制品；修复裸表达式与 sstate 冒号文件名；run 45607197090 四 job success、分片 digest 经 GHCR 独立核验；判据 7 → 通过，M0 收口 | zeek.zhao |
+| v2.13 | 2026-11-25 | CHG-012：全量 S5 缓存（11 GiB）分 8 个 release 资产上传并重组校验；ISS-019 修复 split.sh 大文件切片丢数据，ISS-020 全量分片 01 瞬时 unknown blob 重试成功；两片 GHCR digest 独立核验 | zeek.zhao |

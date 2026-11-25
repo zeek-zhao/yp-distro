@@ -21,3 +21,5 @@
 | 15 | 孤立分支上 `GITHUB_TOKEN` 的 `packages: write` 声明不保证 GHCR 真能写包；发布凭据要用具名加密 secret（只注入、不入库），并把 `workflow_dispatch` 的可用性与凭据范围绑定表述，不写绝对「不可用」 | YP-M0-CHG-010 / ISS-016 | 2026-11-25 |
 | 16 | workflow 里的 GitHub 表达式必须写 `${{ ... }}`；本地模拟时手工替换表达式会掩盖漏写 `$` 的错误，静态检查应断言不存在裸 `{{` | YP-M0-ISS-017 | 2026-11-25 |
 | 17 | `actions/upload-artifact@v4` 禁止文件名含 `:`/引号等字符；Yocto sstate 对象天然含冒号，制品上传前须清理传输文件名并断言无残留，真实 CI 是唯一可靠的验证场 | YP-M0-ISS-018 | 2026-11-25 |
+| 18 | `dd bs=<N>` 在 N>2 GiB 时 GNU coreutils 会按约 2 GiB 实际分块，`skip=<片号>` 因此只跳过约 2 GiB，造成多片大文件丢尾部；切片必须 `bs=1M iflag=skip_bytes,count_bytes skip=<字节偏移> count=<字节数>`，并用「超过阈值产生多片」的全量用例回归 | YP-M0-ISS-019 | 2026-11-25 |
+| 19 | 大 blob 推送 GHCR 可能一次性报 `unknown blob`（日志显示 layer already exists 时尤其）；先原样重试并用 registry API 核验 digest，不要先改构建参数 | YP-M0-ISS-020 | 2026-11-25 |

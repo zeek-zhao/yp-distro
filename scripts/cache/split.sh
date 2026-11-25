@@ -35,7 +35,11 @@ slices=$(( (total + MAX - 1) / MAX )); [ "$slices" -lt 1 ] && slices=1
 
 idx=0
 while [ "$idx" -lt "$slices" ]; do
-  dd if="$IN" of="$OUT_DIR/cache.slice.$(printf '%02d' "$idx")" bs="$MAX" skip="$idx" count=1 status=none
+  # ISS-019：不能用 dd bs=$MAX + skip=<片号>——GNU dd 对 >2GiB 的 bs 会按约 2GiB 分块，
+  # 使 skip=1 只跳过 ~2GiB 而非第二个 MAX 块，导致大文件切片丢失尾部数据。
+  # 用 iflag=skip_bytes,count_bytes 让 skip/count 按字节解释，bs 只影响 I/O 缓冲。
+  dd if="$IN" of="$OUT_DIR/cache.slice.$(printf '%02d' "$idx")" \
+     bs=1M iflag=skip_bytes,count_bytes skip=$((idx * MAX)) count="$MAX" status=none
   idx=$((idx+1))
 done
 
