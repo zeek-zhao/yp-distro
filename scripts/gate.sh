@@ -20,18 +20,20 @@ while IFS= read -r f; do
 done < <(find scripts -type f -name '*.sh' | sort)
 [ "$g1_bad" -eq 0 ] && pass "G1 全部 $g1_count 个脚本 bash -n 通过"
 
-# G2 阈值唯一性：源码范围仅 threshold.conf 命中；cache-meta.json 与 gen-meta 输出一致
-# 排除门禁脚本自身（其 grep 模式含阈值数字，属检查逻辑非定义）与注释行（ISS-012）
+# G2 阈值唯一性：数值来自 threshold.conf，门禁自身不再含阈值字面量（CHG-009）
+# 仅检查两项切分阈值；JENKINS_UID/MIN_FREE_BYTES 是挂载预检契约，由 check-vars 用变量断言
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=cache/threshold.conf
+. "$SCRIPT_DIR/cache/threshold.conf"
 echo "--- G2 阈值唯一性 ---"
-g2_out="$(grep -rn "8589934592\|8G" scripts/ .github/ 2>/dev/null \
+g2_pattern="${SLICE_MAX_BYTES}|${UPLOAD_TIMEOUT_SEC}"
+g2_out="$(grep -rnE "$g2_pattern" scripts/ .github/ 2>/dev/null \
   | grep -v '^scripts/cache/threshold.conf:' \
-  | grep -vE '^scripts/(gate|check-vars)\.sh:' \
-  | grep -vE ':[0-9]+:[[:space:]]*#' \
-  | grep -vE ':[0-9]+:[[:space:]]*#|（[^）]*8GB[^）]*）' || true)"
+  | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
 if [ -n "$g2_out" ]; then
   fail "G2 源码范围出现非 threshold.conf 的阈值定义:"; echo "$g2_out" >&2
 else
-  pass "G2 源码范围仅 threshold.conf 定义阈值（已排除门禁脚本自身与注释）"
+  pass "G2 源码范围仅 threshold.conf 定义阈值（数值取自唯一源，无门禁自我豁免）"
 fi
 if [ -x scripts/cache/gen-meta.sh ]; then
   gen="$(bash scripts/cache/gen-meta.sh 2>/dev/null)"

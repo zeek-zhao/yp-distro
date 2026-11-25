@@ -4,6 +4,9 @@
 set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=cache/threshold.conf
+. "$SCRIPT_DIR/cache/threshold.conf"   # CHG-009：阈值期望值不写死，唯一源
 
 DRIFT=0
 CHECKED=0
@@ -30,10 +33,10 @@ RULES=(
   'KERNEL_CONFIG_FRAGMENTS|kas/editions/dev-kernel.yml|KERNEL_CONFIG_FRAGMENTS ??= ""'
   'LAYERSERIES_COMPAT|meta-yp-distro/conf/layer.conf|LAYERSERIES_COMPAT_meta-yp-distro = "wrynose"'
   'LAYERDEPENDS|meta-yp-distro/conf/layer.conf|LAYERDEPENDS_meta-yp-distro = "core yocto"'
-  'SLICE_MAX_BYTES|scripts/cache/threshold.conf|SLICE_MAX_BYTES=8589934592'
-  'UPLOAD_TIMEOUT_SEC|scripts/cache/threshold.conf|UPLOAD_TIMEOUT_SEC=480'
-  'JENKINS_UID|scripts/cache/threshold.conf|JENKINS_UID=1000'
-  'MIN_FREE_BYTES|scripts/cache/threshold.conf|MIN_FREE_BYTES=10737418240'
+  "SLICE_MAX_BYTES|scripts/cache/threshold.conf|SLICE_MAX_BYTES=${SLICE_MAX_BYTES}"
+  "UPLOAD_TIMEOUT_SEC|scripts/cache/threshold.conf|UPLOAD_TIMEOUT_SEC=${UPLOAD_TIMEOUT_SEC}"
+  "JENKINS_UID|scripts/cache/threshold.conf|JENKINS_UID=${JENKINS_UID}"
+  "MIN_FREE_BYTES|scripts/cache/threshold.conf|MIN_FREE_BYTES=${MIN_FREE_BYTES}"
   'MACHINE_measure|scripts/build/measure.sh|MACHINE="qemux86-64"'
   'EDITION_measure|scripts/build/measure.sh|EDITION="ci"'
 )

@@ -41,7 +41,7 @@ for d in "$WORKDIR/kas" "$WORKDIR/meta-yp-distro" /work/downloads /work/sstate; 
 done
 mkdir -p "$LOGS"
 
-KAS_CFG="kas/yp.yml:kas/editions/${EDITION}.yml"
+KAS_CFG="kas/yp.yml:editions/${EDITION}.yml"   # CHG-009/ISS-015：cwd 相对 + 根级 editions 链接
 
 # 执行一次构建：清 build 保留两卷；保存 stdout、wall time、退出码与 cooker 日志副本。
 run_build() {

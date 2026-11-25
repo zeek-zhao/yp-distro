@@ -25,7 +25,7 @@ docker pull ghcr.io/<owner>/yp-builder:wrynose-m0
 scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
 
 # 3. 构建
-kas build kas/yp.yml:edition/prod.yml:machine/qemux86-64.yml
+kas build kas/yp.yml:editions/prod.yml
 ```
 
 ## 现状

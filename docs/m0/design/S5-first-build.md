@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-005 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-005） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-005、YP-M0-CHG-009） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-25 |
 | 覆盖需求 | B-12（缓存指标）、B-13（离线构建）、B-01/B-05/B-06 的端到端闭环 |
@@ -20,7 +20,7 @@
 
 | 输入 | 值 | 来源 |
 |---|---|---|
-| kas 入口 | `kas/yp.yml:kas/editions/ci.yml` | DES-002 §3.1；路径按 cwd 解析（ISS-007） |
+| kas 入口 | `kas/yp.yml:editions/ci.yml` | DES-002 §3.1 / CHG-009；`:` 后按 cwd 解析，依赖根级 `editions` 符号链接（ISS-015） |
 | 构建目标 | `core-image-minimal`（base.yml 的 `target`） | DES-002 `kas/base.yml` |
 | 机器 | `qemux86-64` | `kas/machines/qemux86-64.yml` |
 | 下载/缓存卷 | 宿主 `/tmp/yp-dl`、`/tmp/yp-st` → 容器 `/work/downloads`、`/work/sstate` | Stage C 已初始化，卷内无下载/缓存载荷（仅 `.yp-volume` 标识与 `.probe` 探针） |
@@ -64,7 +64,7 @@
 
 | 失败模式 | 可检测信号 | 处理 |
 |---|---|---|
-| kas 路径写错（ISS-007） | `Configuration file not found` | 用 `kas/yp.yml:kas/editions/<n>.yml`（cwd 相对路径） |
+| kas 路径写错（ISS-007/ISS-015） | `Configuration file not found` / `All concatenated config files must belong to the same repository` | 用 `kas/yp.yml:editions/<n>.yml`（cwd 相对路径 + 根级 `editions` 链接） |
 | 工作副本只读导致 clone 失败 | `could not create work tree dir … Permission denied` | 复制到 jenkins 属主的 `/work/build-run` |
 | 卷属主不符 | preflight `BAD_OWNER_EXIT=2` 或 entrypoint exit 1 | 先跑 `bootstrap.sh` 对齐属主 |
 | 网络下载失败 | 首次日志含 `Fetching` 错误/`Network is unreachable` | 如实记 UNVERIFIED + 开 ISS，不虚报 |
@@ -84,7 +84,7 @@ docker run -d --name kas-build -v "$PWD":/mnt/repo:ro \
   -v /tmp/yp-dl:/work/downloads -v /tmp/yp-st:/work/sstate \
   ghcr.io/zeek-zhao/yp-builder:wrynose-m0 sleep 86400
 docker exec kas-build bash -c \
-  'mkdir -p /work/build-run /work/measure-logs && cp -r /mnt/repo/kas /mnt/repo/meta-yp-distro /work/build-run/'
+  'mkdir -p /work/build-run /work/measure-logs && cp -r /mnt/repo/kas /mnt/repo/meta-yp-distro /work/build-run/ && cp -a /mnt/repo/editions /work/build-run/'
 
 # 容器内执行两次构建与统计
 docker exec kas-build bash -c 'cd /work/build-run && \
@@ -108,3 +108,4 @@ docker exec kas-build bash -c \
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：两次构建流程、命中率口径、离线证据、失败模式与验收命令 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-009/ISS-015：规范性 kas 入口改简写，工作副本同步复制根级 `editions` 符号链接 | zeek.zhao |

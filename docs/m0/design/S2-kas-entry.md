@@ -3,13 +3,13 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-002 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-002） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-002、YP-M0-CHG-009、YP-M0-ISS-015） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-25 |
 | 覆盖需求 | B-01（kas 单一入口）、B-02（层版本锁定）、B-07（不依赖缓存服务器） |
-| 关联问题 | F-01（缺 kas 入口）、F-06（kas 版本未锁） |
-| 关联决策 | ADR-003（Ubuntu 24.04 基础）、ADR-002（孤立分支方案 A） |
+| 关联问题 | F-01（缺 kas 入口）、F-06（kas 版本未锁）、ISS-015（简写路径解析） |
+| 关联决策 | ADR-003（Ubuntu 24.04 基础）、ADR-002（孤立分支方案 A）；YP-M0-CHG-009（规范性命令统一） |
 
 ## 1. 目的与边界
 
@@ -51,7 +51,19 @@ kas/
     └── ci.yml                 # CI：最小构建、缓存命中优先
 ```
 
-入口组合写为 `kas/yp.yml:editions/<name>.yml`（kas 多配置语法），machine 由 `yp.yml` 默认 include，可在命令行叠加 `machines/qemux86-64.yml`。
+规范性入口组合写为 `kas/yp.yml:editions/<name>.yml`（kas 多配置语法），machine 由 `yp.yml` 默认 include，无需再叠加 machine 片段。
+
+**路径解析规则（ISS-015 实测）**：kas 5.5 把 `:` 后的第二段按**调用时的 cwd** 解析，不按第一段配置文件所在目录解析。因此从仓库根调用时，`editions/<name>.yml` 必须在 cwd 可寻址；仓库根提供符号链接 `editions -> kas/editions` 作为映射。实测：
+
+```text
+$ kas --version                                        # kas 5.5
+$ kas dump kas/yp.yml:editions/prod.yml                # 无符号链接：rc=2，All concatenated config files must belong to the same repository...
+$ kas dump kas/yp.yml:kas/editions/prod.yml        # 长写法：rc=0（ISS-007 的历史证据写法）
+$ ln -s kas/editions editions
+$ kas dump kas/yp.yml:editions/prod.yml                # 有符号链接：rc=0，dump 49 行
+```
+
+历史 ISS-007/ISS-008/RV-005 中记录的长写法是当时执行的原命令，保持原样不改写；本设计自 CHG-009 起统一为简写。
 
 ### 3.2 repos 全部 commit pin
 
@@ -90,24 +102,24 @@ kas dump 把 include 展开、变量求值、repos 解析为确定性 YAML。输
 
 ## 5. 验收命令（在 Docker 容器内执行，用户指定）
 
-> 两条容器实操约束（ISS-007）：① kas 把 `:` 后的第二段路径按 cwd 解析，故写 `kas/yp.yml:kas/editions/<name>.yml`；② kas dump 会 clone repos 到 cwd，非 root 用户不能往只读挂载点写，故先把 `kas/` 与 `meta-yp-distro/` 复制到容器内可写工作副本 `/work/kas-run` 再跑。
+> 两条容器实操约束（ISS-007/ISS-015）：① kas 把 `:` 后的第二段路径按 cwd 解析，规范性写法是 `kas/yp.yml:editions/<name>.yml`，前提是 cwd 有 `editions` 符号链接（容器工作副本也要复制该链接）；② kas dump 会 clone repos 到 cwd，非 root 用户不能往只读挂载点写，故先把 `kas/`、`meta-yp-distro/` 与 `editions` 链接复制到可写副本 `/work/kas-run` 再跑。
 
 ```bash
 # 持久容器 + 可写工作副本（repos 只 clone 一次，后续 dump 复用）
 docker run -d --name kas-verify -v "$PWD":/mnt/repo:ro \
   ghcr.io/zeek-zhao/yp-builder:wrynose-m0 sleep 86400
 docker exec kas-verify bash -c \
-  'mkdir -p /work/kas-run && cp -r /mnt/repo/kas /mnt/repo/meta-yp-distro /work/kas-run/'
+  'mkdir -p /work/kas-run && cp -r /mnt/repo/kas /mnt/repo/meta-yp-distro /work/kas-run/ && cp -a /mnt/repo/editions /work/kas-run/'
 
 # 容器内验收
 docker exec kas-verify bash -c 'kas --version'
 docker exec kas-verify bash -c 'cd /work/kas-run && \
-  kas dump kas/yp.yml:kas/editions/prod.yml > /tmp/d1.yml && \
-  kas dump kas/yp.yml:kas/editions/prod.yml > /tmp/d2.yml && \
+  kas dump kas/yp.yml:editions/prod.yml > /tmp/d1.yml && \
+  kas dump kas/yp.yml:editions/prod.yml > /tmp/d2.yml && \
   diff -u /tmp/d1.yml /tmp/d2.yml && echo DUMP_STABLE'
 for e in dev prod dev-kernel ci; do
   docker exec kas-verify bash -c \
-    "cd /work/kas-run && kas dump kas/yp.yml:kas/editions/$e.yml >/dev/null && echo EDITION_OK $e"
+    "cd /work/kas-run && kas dump kas/yp.yml:editions/$e.yml >/dev/null && echo EDITION_OK $e"
 done
 ```
 
@@ -116,3 +128,10 @@ done
 ## 6. 回滚
 
 删除 `kas/` 目录、还原 `Dockerfile` 的 `pipx install kas`（去版本号），即可回到 S2 前状态；记录回滚到 DES-002 v1.0。本阶段不触碰镜像 tag 与缓存脚本，回滚无跨阶段影响。
+
+## 7. 变更记录
+
+| 版本 | 日期 | 变更 | 作者 |
+|---|---|---|---|
+| v1.0 | 2026-11-25 | 初稿：kas 入口、repos commit 锁、变量归口、dump 稳定性验收 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-009/ISS-015：规范性命令统一为 `kas/yp.yml:editions/<name>.yml`；写明 `:` 后按 cwd 解析 + 根级 `editions` 符号链接规则及实测输出 | zeek.zhao |

@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-DES-009 |
-| 版本 | v1.0 |
-| 状态 | Approved（见 YP-M0-RV-009） |
+| 版本 | v1.1 |
+| 状态 | Approved（见 YP-M0-RV-009、YP-M0-CHG-009） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-25 |
 | 覆盖需求 | 判据 8（手改配置可发现）、门禁自动化 |
@@ -33,7 +33,7 @@
 | # | 检查 | 命令 | 通过条件 |
 |---|---|---|---|
 | G1 | 脚本语法 | `for f in $(find scripts -name '*.sh'); do bash -n "$f"; done` | 全部 rc=0 |
-| G2 | 阈值唯一性 | `grep -rn "8589934592\|8G" scripts/ .github/`（源码范围）+ 校验 `docker/cache-meta.json` 与 gen-meta 输出一致 | 源码仅命中 threshold.conf；生成产物 cache-meta.json 数值与 gen-meta 一致（其含数值属正常产物） |
+| G2 | 阈值唯一性 | 先 source `scripts/cache/threshold.conf`，再用 `${SLICE_MAX_BYTES}`/`${UPLOAD_TIMEOUT_SEC}` 拼 `grep -rnE` 模式扫描 `scripts/`、`.github/`；校验 `docker/cache-meta.json` 与 gen-meta 输出一致 | 数值字面量仅出现在 threshold.conf；`gate.sh`/`check-vars.sh` 不再含阈值数字、不再需要自我豁免；生成产物 cache-meta.json 数值与 gen-meta 一致（CHG-009） |
 | G3 | 无缓存服务器 | `grep -rn "SSTATE_MIRRORS\|hashserv" scripts/ kas/ docker/ .github/` 后排除注释行 | 无非注释的真实远程配置（`SSTATE_MIRRORS =` 赋值、远程 hashserv URL）；允许 `BB_HASHSERVE = "auto"` 本地模式与说明性注释 |
 | G4 | 提交身份无 AI 署名 | `git log --format=%ae` + `git log --format=%B \| grep -i co-authored` | 邮箱仅 zeek.zhao；无 AI trailer |
 | G5 | 文档一致性 | traceability 每条状态在 acceptance 有对应判据、证据路径存在 | 逐行断言通过 |
@@ -95,3 +95,4 @@ bash scripts/check-vars.sh                 # 期望：VARS_OK
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：S8 五项门禁 + S9 变量索引 + 判据 8 检出机制 | zeek.zhao |
+| v1.1 | 2026-11-25 | CHG-009：G2 数值来自 threshold.conf，去掉 gate.sh/check-vars.sh 自我豁免；check-vars 用变量拼期望串 | zeek.zhao |
