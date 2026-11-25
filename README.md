@@ -15,32 +15,42 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 **文档先行**：每个 Step 先写设计（`docs/m0/design/`）并过四问评审（`docs/m0/reviews/`），再写代码；遇到的问题先开 `docs/m0/issues/` 单，再修；阈值与契约变更先开 `docs/m0/changes/` 单。记录规范见 [`docs/m0/iso-mapping.md`](docs/m0/iso-mapping.md)。进度以 [`docs/m0/plan.md`](docs/m0/plan.md) 为唯一事实源。
 
-## 三步上手（S9 后可用）
-
-```bash
-# 1. 拉镜像
-docker pull ghcr.io/<owner>/yp-builder:wrynose-m0
-
-# 2. 建挂载目录
-scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
-
-# 3. 构建
-kas build kas/yp.yml:editions/prod.yml
-```
-
 ## 现状
+
+状态与 [`docs/m0/plan.md`](docs/m0/plan.md) §1 进度表逐格一致；验收见 [`docs/m0/acceptance.md`](docs/m0/acceptance.md)（状态 `Final`，判据 1–8 全部 `通过`）。
 
 | Step | 内容 | 状态 |
 |---|---|---|
-| S0 | 空分支与实施提示词 | 已完成 |
-| S1 | 发行版层骨架 | 待开始 |
-| S2 | kas 入口与层锁定 | 待开始 |
-| S3 | Ubuntu 容器镜像（jenkins 用户） | 已完成 |
-| S4 | 下载与缓存分卷挂载 | 待开始 |
-| S5 | 首次构建 | 待开始 |
-| S6 | 缓存打包与切分（阈值 80%） | 完成 |
-| S7 | 缓存分片发布到容器仓库 | 基线镜像分发已验证（公共 GHCR 匿名拉取）；真实缓存载荷以 S5 产物为准（F-02 结论降级）；分片接线见 ADR-005 / DES-008 |
-| S8 | PR 门禁 | 待开始 |
-| S9 | 验收与文档 | 待开始 |
+| S0 | 空分支、提示词、AI 入口 | 完成 |
+| S1 | 发行版层骨架 | 完成 |
+| S2 | kas 入口与层锁定 | 完成 |
+| S3 | Ubuntu 容器镜像（jenkins 用户） | 完成 |
+| S4 | 下载与缓存分卷挂载 | 完成 |
+| S5 | 首次构建与缓存命中 | 完成 |
+| S6 | 缓存打包与切分（80% 阈值） | 完成（Stage E 接线 + 契约收紧） |
+| S7 | 缓存分片发布到容器仓库 | 完成 / 端到端已验 |
+| S8 | PR 门禁 | 完成 |
+| S9 | 验收与变量索引 | 完成 |
+
+验收结论：判据 1–8 全部 `通过`，`docs/m0/acceptance.md` 状态 `Final`。
+
+## 三步上手（容器内构建）
+
+宿主机只需要 Docker：**宿主机没有 kas**，`kas build` 必须在 builder 容器内执行。
+
+**首次使用必须先取回 S5 缓存**：没有缓存的冷构建在实测配额下耗时约 2h51m，而命中缓存的二次构建约 200–300s。取缓存（release 8 分片重组、sha256 校验、两步解包到两个卷）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md)。
+
+```bash
+# 1. 拉镜像（匿名可拉）
+docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
+
+# 2. 建挂载目录（幂等，不覆盖已有下载/缓存）
+bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
+
+# 3. 容器内构建
+docker run --rm -v "$PWD/downloads:/work/downloads" -v "$PWD/sstate:/work/sstate" ghcr.io/zeek-zhao/yp-builder:wrynose-m0 kas build kas/yp.yml:editions/prod.yml
+```
+
+> 注意：builder 镜像只内置 `kas` 与依赖，不含仓库的 `kas/` 配置。上面第 3 步保留为最简示意；**实际可执行的写法（含仓库挂载与工作副本）见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3 步骤 7**。
 
 执行规则见 [`docs/ai/m0-prompt.md`](docs/ai/m0-prompt.md)。
