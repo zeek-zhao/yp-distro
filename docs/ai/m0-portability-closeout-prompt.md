@@ -1,5 +1,11 @@
 # YP-M0 换机链路 direct 收口修复 · AI 执行提示词
 
+> **⚠ Errata（2026-11-26，AI-006/CHG-018）**：本文是 AI-005 历史提示词，正文按原样保留。两处命令参数有误，**不得照抄**：
+> - §1.2 的 `pack.sh --downloads <dir> --sstate <dir>` 参数不存在；真实参数是可重复的 `--src <dir>`（如 `pack.sh --src downloads --src sstate --out out.tar`）。AI-005 已按真实参数复现 two-stage。
+> - §1.3 的 `fetch-cache.sh --mode unpack-only --unpack-only <tar>` 还需 `--work <dir>`，否则因缺参数退出。
+>
+> 本轮收口口径见 `docs/ai/m0-uid-path-and-doc-closeout-prompt.md` 与 CHG-018/RV-016。
+
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-AI-005 |
@@ -108,7 +114,7 @@ bash scripts/cache/fetch-cache.sh --mode release --dry-run \
 
 必须改到的位置：
 
-- §2 分发口径表：release 全量归档标 `direct`；`pack.sh` 只标“本地打包/GHCR 源 tar 为 two-stage”，不要把两者混成一句。
+- §2 分发口径表：release 全量归档标 `direct`；`pack.sh` 只标“本地打包产出为 two-stage”；GHCR 源 tar（`a8870b50…`）布局标 `UNVERIFIED`（未拉取验证），不要把三者混成一句或断言 GHCR 为 two-stage。
 - §3 步骤顺序：把“取回缓存”移到 `bootstrap` 之前；先 fetch（目标为空，不需要 `--force`），再 bootstrap 归一属主，再 preflight。UID≠1000 的路径 A/B 决策放在 bootstrap 之前说明即可，但 fetch 不依赖镜像 UID。
 - §3 步骤 5 及所有“两步解包”措辞：改为“单层解包，直接得到 `downloads/` 与 `sstate/`”。
 - §4 手工恢复命令：改成 `tar -xf cache-full.tar -C <parent>`，校验 `downloads/`、`sstate/` 存在；删除 `tar -xf downloads.tar` / `sstate.tar` 这类命令。

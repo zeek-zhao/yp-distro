@@ -3,7 +3,7 @@
 > **⚠ 历史文件 / 已取代（2026-11-26，CHG-017 / AI-005）**：本文是 T1–T7 当时的历史提示词，**正文按原样保留，不冒充当前事实**。以下条目已被后续更正，**执行入口请改用最新 `docs/runbook-new-machine.md` 与 `docs/ai/m0-new-machine-test-prompt.md`**：
 > - **默认 UID**：正文 §T4 写"默认取当前用户 `id -u`/`id -g`" → 已由 **CHG-014/ISS-022** 改为默认取镜像用户 `JENKINS_UID/JENKINS_GID`（1000），非 root 且目标不一致须 exit 2 给两条路径。
 > - **payload 字节**：正文"三条事实"与 T3/T5 写 `11,153,397,760 B` → 已由 **CHG-015/ISS-023** 更正：release `1c8126d4…` 对应 `11,153,387,520 B`；`11,153,397,760 B` 属 GHCR 源 tar `a8870b50…`，两者不同对象。
-> - **two-stage 布局**：正文"归档是两层结构""恢复必须两步解包"仅适用于 `pack.sh` 本地产出 / GHCR 源 tar → **release 归档实测为 direct**（顶层 `downloads/ sstate/ yp-dl/ yp-st/`），已由 **CHG-017/ISS-029** 改为 direct 单层解包、官方顺序 fetch→bootstrap→preflight、manifest 拆 `layout`/`requires_reassembly`。
+> - **two-stage 布局**：正文"归档是两层结构""恢复必须两步解包"仅适用于 `pack.sh` 本地产出（已实测 two-stage）→ **release 归档实测为 direct**（顶层 `downloads/ sstate/ yp-dl/ yp-st/`），已由 **CHG-017/ISS-029** 改为 direct 单层解包、官方顺序 fetch→bootstrap→preflight、manifest 拆 `layout`/`requires_reassembly`；GHCR 源 tar（`a8870b50…`）布局 **UNVERIFIED**（未拉取验证，CHG-018），不得断言为 two-stage。
 >
 > 下文所有命令/期望输出均为当时的目标契约，不得直接作为当前执行依据。
 

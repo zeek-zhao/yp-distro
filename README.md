@@ -44,7 +44,10 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 # 1. 拉镜像（匿名可拉）
 docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
 
-# 2. 取回缓存后再归一属主（取缓存命令见 runbook §3 步骤 4；此处 bootstrap 幂等，不覆盖已有下载/缓存）
+# 2. 先按 runbook §3 步骤 4 取回缓存（目标为空，无需 --force），再归一属主：
+#    fetch 命令不在 README 复制以免漂移（见 docs/runbook-new-machine.md §3 步骤 4）；
+#    若已先 bootstrap，fetch 后必须重跑本步——root 解包会把属主变为归档 UID。
+#    bootstrap 幂等，不覆盖已有下载/缓存。
 bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
 
 # 3. 容器内构建 —— 此为示意，不可直接粘贴执行（见下方说明）

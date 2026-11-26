@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # S4 挂载初始化（DES-004 / CHG-002 / T4）：幂等创建两个宿主卷目录、写 .yp-volume 标识、对齐属主。
 # 只补缺失，不清空已有下载/缓存内容；完成后调用 preflight.sh 自检。
-# T4：目标 UID/GID 默认取当前用户；与当前非 root 用户不一致时拒绝执行并给两条修复路径，禁止静默 chown。
+# T4/CHG-014：目标 UID/GID 默认取镜像用户 JENKINS_UID/JENKINS_GID（threshold.conf，1000），非当前用户；与当前非 root 用户不一致时拒绝执行并给两条修复路径，禁止静默 chown。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

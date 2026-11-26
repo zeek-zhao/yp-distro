@@ -122,11 +122,15 @@ sudo bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1
 docker build --build-arg JENKINS_UID=$(id -u) --build-arg JENKINS_GID=$(id -g) \
   -t yp-builder:local docker/
 export YP_BUILDER_IMAGE=yp-builder:local
-bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
-bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate
+bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate \
+  --uid "$(id -u)" --gid "$(id -g)"
+bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate \
+  --uid "$(id -u)" --gid "$(id -g)"
 ```
 
-路径 B 的后续所有容器命令都必须使用 `yp-builder:local`，不能用 GHCR 的 `wrynose-m0`。
+**路径 B 必须显式 `--uid "$(id -u)" --gid "$(id -g)"`**：脚本默认目标来自 `threshold.conf` 的 1000，不读镜像的 `JENKINS_UID`；`--build-arg` 只决定容器内 UID，不会让 bootstrap/preflight 自动改用当前 UID，照抄不带 UID 参数会 exit 2。
+
+**路径 B 的 `docker run` 必须用 `$YP_BUILDER_IMAGE`（即 `yp-builder:local`）**，不能用 GHCR 的 `wrynose-m0`——否则当前 UID（如 1234）的卷配上 1000 容器，entrypoint 拒绝启动。§7 的命令已用 `"${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"`，路径 B 设了 `export` 后无需改动即可正确解析。
 
 ## 5. 拉取 builder 镜像并核对身份
 
@@ -207,7 +211,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
 ```
 
-路径 B：不带 `--uid/--gid`，或显式带当前 UID。
+路径 B：显式带当前 UID —— `bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid "$(id -u)" --gid "$(id -g)"`。
 
 期望两个卷 `OK role=... owner=... writable=yes`，exit 0。若 `LOW_SPACE` exit 3，先扩容/清理，不要删缓存。
 
@@ -262,6 +266,8 @@ bash scripts/cache/fetch-cache.sh --mode release --dry-run \
 bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate [--uid 1000 --gid 1000]
 ```
 
+上面 `[--uid 1000 --gid 1000]` 是路径 A（当前 UID=1000 或 sudo）的写法；**路径 B 必须替换为 `--uid "$(id -u)" --gid "$(id -g)"`**，与 §4.2/§7 保持同一目标 UID。
+
 期望：`KEEP`/`OWNER_OK`、dry-run 不产生下载、`preflight` 通过；不得覆盖或清空已有缓存。若脚本要求 `--force` 才能继续，停止并记录，说明目标目录保护生效但幂等路径需修。
 
 ## 10. 留痕与提交（必须）
@@ -296,7 +302,7 @@ git log --format='%h %ae' -5
 | K-2 | P1 | provenance/acceptance/CHG-013 把 `1c8126d4…` 配成 `11,153,397,760 B`；release 分片和是 `11,153,387,520 B`，`a8870b50…` 才是 `11,153,397,760 B` | §6 dry-run 是否打印 `11153387520`；`stat`/`sha256sum` 复核 | 统一改成 `1c8126d4 ↔ 11153387520`；重新生成 `cache-meta.json`；acceptance 升版并记录；开 ISS |
 | K-3 | P2 | `CHG-013` 声称 `cache-full.manifest.json` 已上传 release，实际 release 只有 9 个资产 | §6 GitHub API 资产列表 | 要么真实上传并核对 digest，要么把契约降为“仓库持久 manifest + 上传 UNVERIFIED” |
 | K-4 | P2 | `fetch-cache.sh --work <已存在目录>` 退出时会 `rm -rf` 整个目录 | 只在 `/tmp` 用一次性目录测，不要用真实数据 | 改为只清理自建临时子目录；开 ISS |
-| K-5 | P2 | `--parts` 对 two-stage 归档未实现重组，会把单片当整 tar 解包 | 代码走查 + 小样本（不要下载 1.5 GB 分片） | 删除该选项或明确只支持 sample |
+| K-5 | P2 | `--parts` 对 two-stage 归档未实现重组，会把单片当整 tar 解包 | 代码走查 + 小样本（不要下载 1.5 GB 分片） | **已由 CHG-017 修复**：重组判断改读 manifest `requires_reassembly`，`--parts` 部分取片对需重组归档显式拒绝（不再静默误解包）；历史缺陷保留供追溯，勿当成未修 |
 | K-6 | P2 | `runbook §7` 仍写“脚本尚未实现”，与 T2/T3 已交付矛盾 | 读文档即可 | 更新为“已实现、样本链路已验、全量 UNVERIFIED” |
 | K-7 | P2 | README 第 3 步未挂仓库，照抄必失败；README 的 200–300s 是 ci 数据 | 代码块对照 runbook §3 步骤 7 | README 指向可执行写法；时长标注 edition |
 | K-8 | P3 | `--mode ghcr` 按 tag 拉取，manifest 里的 digest 未用于 `docker pull`；`check_target` 在 11 GB 下载后才执行 | 代码走查 | 可选修；不阻塞 release 路径 |
@@ -308,7 +314,7 @@ git log --format='%h %ae' -5
 1. 干净 clone，HEAD 与记录一致；
 2. `verify-env.sh` 实跑并记录退出码；
 3. UID 路径选择正确，容器入口不因属主拒绝启动；
-4. release 8 分片全部 `ASSET_OK`，重组 `SHA256_OK=1c8126d4…`，两层解包 `STRUCT_OK`，目标卷可用；
+4. release 8 分片全部 `ASSET_OK`，重组 `SHA256_OK=1c8126d4…`，**单层解包** `STRUCT_OK mode=direct`，目标卷可用；
 5. prod edition 构建成功，产出 ext4 镜像；
 6. 二次构建成功，记录 prod 的 `Sstate summary` 与 `didn't need to be rerun`；
 7. 删除容器后重跑 bootstrap/preflight/dry-run 幂等，不覆盖缓存；

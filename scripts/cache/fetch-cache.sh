@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 换机缓存取回（T3 / RV-013；CHG-017 收口）：release 分片重组 或 GHCR 分片合并，校验通过后单层解包到 dest-parent。
-# release 归档为 direct（顶层 downloads/ sstate/）；pack.sh 本地 / GHCR 源 tar 为 two-stage。脚本对两种布局均探测。
+# release 归档为 direct（顶层 downloads/ sstate/）；pack.sh 本地产出为 two-stage；GHCR 源 tar（a8870b50…）布局 UNVERIFIED（未拉取验证）。脚本对实际 tar 布局探测。
 # 只读 GH_TOKEN 环境变量；公开仓库匿名下载；脚本内不保存任何 token。
 # 校验失败 exit 1；校验通过前不解包，所有解包在临时目录完成再 mv，不留半成品。
 # CHG-017：重组判断读 manifest.requires_reassembly（缺失回退 layout==two-stage）；官方顺序 fetch → bootstrap → preflight。
