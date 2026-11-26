@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 换机环境只读预检（T2 / RV-013）：只检查、不修改任何文件，不 chown、不 mkdir、不 docker pull。
 # registry 探测只走 GitHub Container Registry 的 token + tags list API。
-# 退出码：0 全通过 / 1 致命（docker、磁盘、网络、镜像不可拉）/ 2 警告（内存或 UID/GID 与镜像默认不一致）
+# 退出码：0 全通过 / 1 致命（docker、磁盘、网络、镜像不可拉）/ 2 警告（内存、UID/GID 或资源低于 32c/128GiB 标准基线）
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,6 +10,8 @@ BUILDER_REPO="zeek-zhao/yp-builder"
 BUILDER_TAG="wrynose-m0"
 NET_DOMAINS=(ghcr.io api.github.com git.openembedded.org git.yoctoproject.org)
 MEM_WARN_GB=16
+CPU_STD=32
+MEM_STD_GB=120   # 128 GiB 档的可见下限（MemTotal 实报约 123.3 GiB）
 
 DOWNLOADS=""; SSTATE=""; MIN_DISK_GB=200; SKIP_NETWORK=0
 FAIL_N=0; WARN_N=0
@@ -115,6 +117,11 @@ fi
 # 5) CPU 核数（只报告，不作为失败条件）
 cpus="$(nproc 2>/dev/null || echo unknown)"
 pass "CPU cores=$cpus"
+if [ "$cpus" != "unknown" ] && [ "$cpus" -lt "$CPU_STD" ] 2>/dev/null; then
+  warn "RESOURCE_PARTIAL cores=${cpus} < ${CPU_STD} 标准基线（结果不得写成 32c/128G full-quota PASS）"
+elif [ "$mem_gb" -lt "$MEM_STD_GB" ]; then
+  warn "RESOURCE_PARTIAL mem=${mem_gb} GB < ${MEM_STD_GB} GB 标准基线（结果不得写成 32c/128G full-quota PASS）"
+fi
 
 # 6) 当前 uid/gid 与镜像默认对比
 cur_uid="$(id -u)"; cur_gid="$(id -g)"

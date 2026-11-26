@@ -50,7 +50,7 @@ nproc
 date -u
 ```
 
-记录：OS 版本、Docker 版本与 daemon 是否可用、当前 `uid:gid`、目标盘可用空间、物理内存、核数、UTC 时间。机器建议 Ubuntu 24.04、Docker ≥24、≥200 GB 空闲、≥16 GB 内存、≥8 核。
+记录：OS 版本、Docker 版本与 daemon 是否可用、当前 `uid:gid`、目标盘可用空间、物理内存、核数、UTC 时间。机器标准基线 **Ubuntu 24.04、Docker ≥24、≥300 GB 空闲、32 核、128 GiB 内存档**；最低可用 **16 GB 内存、8 核**，低于标准必须标 `RESOURCE_PARTIAL` 并记录实际核数/内存，不得写成 32c/128G 全配额 PASS。构建容器不得加 `--cpus` / `--memory` 等限制，启动后按 `AGENTS.md` §2.1 四项核验。
 
 ## 3. 只读环境预检
 
@@ -62,7 +62,7 @@ echo "ENV_EXIT=$?"
 判定：
 
 - `ENV_OK` / exit 0：继续。
-- `ENV_WARN` / exit 2：允许继续，但必须把 warning 原文记入报告（常见为内存 <16 GB 或当前 UID≠1000）。
+- `ENV_WARN` / exit 2：允许继续，但必须把 warning 原文记入报告（常见为内存 <16 GB 或当前 UID≠1000）；若核数 <32 或内存 <128 GiB，另标 `RESOURCE_PARTIAL`，不得把结果写成 full-quota PASS。
 - `ENV_FAIL` / exit 1：停止，先按输出修网络/磁盘/Docker，不得跳过。
 
 同时记录 `editions` 符号链接、`threshold.conf`、GHCR 匿名探测的结果行。
