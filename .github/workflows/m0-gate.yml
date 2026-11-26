@@ -1,5 +1,5 @@
 # S8 PR 门禁（DES-009 / AGENTS §3）：方案 A 下用 workflow_dispatch + 分支 push 触发
-# 不跑 bitbake（耗时与 8GB 配额约束），构建验证由人工或独立 workflow 承担。
+# 不跑 bitbake（耗时；构建验证由独立 32c/128G 执行机承担）
 # 与本地 bash scripts/gate.sh / check-vars.sh 共用同一实现，避免两处逻辑漂移。
 name: M0 gate
 
