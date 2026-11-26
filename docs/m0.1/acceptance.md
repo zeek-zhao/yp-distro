@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0.1-REC-001 |
-| 版本 | v1.0 |
-| 状态 | 进行中（E1–E4 已验证；E5 冻结待执行） |
+| 版本 | v1.1 |
+| 状态 | Final（E1–E4 已验证；E5 冻结完成：m0.1 tag + release-m0 分支打在本版提交） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-26 |
 | 关系 | M0 `docs/m0/acceptance.md` 状态 `Final` 不变；本文件只记录 M0.1 证据闭环，不改 M0 判据 1–8 结论 |
@@ -19,6 +19,6 @@
 | 4 | GHCR 源 tar 布局确认 | CHG-020：layout UNVERIFIED→two-stage-yp（yp-dl.tar+yp-st.tar）；M0 各轮此项 UNVERIFIED，本轮首次真实确认 | 通过 |
 | 5 | manifest 笔误修复 | ISS-036：slice1 sha256 63→64 位补 c；bytes/digest/total_bytes/source_sha256 不变 | 通过 |
 | 6 | 发布 CI 4 job | RV-018 §4：workflow_dispatch 触发（分支受限未自动 push）；gate `45820896095` success；publish `45820900729` success，4 job（prepare-payload/builder/cache/cache-slices）全 success，head_sha=`0ce4a5e` | 通过 |
-| 7 | 门禁与冻结 | GATE_PASS / VARS_OK drift=0 / NO_TOKEN_IN_REPO；m0.1 tag + release-m0（冻结后回填） | 进行中 |
+| 7 | 门禁与冻结 | GATE_PASS / VARS_OK checked=28 drift=0 / NO_TOKEN_IN_REPO；tag `m0.1`（annotated）+ 分支 `release-m0` 打在本版最终提交 | 通过 |
 
 结论只填：`通过` / `未通过` / `UNVERIFIED`。填 `通过` 必须附真实输出位置。

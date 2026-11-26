@@ -23,7 +23,7 @@
 | E2 | 8 片重组边界（--parts 1 拒绝、unpack-only 布局、回退用例） | RV-018 §2 | 完成 |
 | E3 | ghcr 全链路 + K-8 + GHCR 源 tar 布局确认 + ISS-036 | RV-018 §3；CHG-020；ISS-036 | 完成 |
 | E4 | 发布 CI 4 job 观察 | RV-018 §4：gate `45820896095` / publish `45820900729` 均 success，4 job 全绿，head_sha=`0ce4a5e` | 已验证 |
-| E5 | 记录收口 + `m0.1` tag + `release-m0` | 本目录全套文档 + tag | 进行中 |
+| E5 | 记录收口 + `m0.1` tag + `release-m0` | 本目录全套文档 + tag | 已完成 |
 
 ## 2. 出口判据（§6.7）
 
@@ -35,3 +35,4 @@ E1 真实全量、E2 --parts 1 拒绝与 direct、E3 ghcr/K-8/布局、E4 publis
 |---|---|---|---|
 | v1.0 | 2026-11-26 | 建立 M0.1 证据闭环计划；E1–E3 完成，E4–E5 进行中 | zeek.zhao |
 | v1.1 | 2026-11-26 | E4 CI 回填：workflow_dispatch 触发 gate/publish 均 success、4 job 全绿；E5 冻结待执行 | zeek.zhao |
+| v1.2 | 2026-11-26 | E5 冻结完成：acceptance 状态 Final、E5 记录收口 + m0.1 tag + release-m0 分支打在本版提交 | zeek.zhao |

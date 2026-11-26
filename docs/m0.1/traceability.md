@@ -14,6 +14,6 @@
 | E2 | 8 片重组边界 | fetch-cache.sh（未改） | `--parts 1` exit 1；unpack-only STRUCT_OK direct（复用 tar sha256=1c8126d4…）；requires_reassembly 缺失回退 reassemble=1；RV-018 §2 | 已验证 |
 | E3 | ghcr + K-8 + 布局 + ISS-036 | CHG-020 / ISS-036 | fetch-cache.sh 改造（check_target 前置、digest 拉取、RepoDigests、DIGEST_FALLBACK、two-stage-yp 布局）；manifest sha256 63→64、layout UNVERIFIED→two-stage-yp（不改 bytes/digest/total/source）；RV-018 §3 + `/workspace/m01-e3-ghcr3.log`：DIGEST_OK×2、SLICE_OK×2、MERGE_OK a8870b50…、STRUCT_OK two-stage-yp 1288/6945、FETCH_OK | 已验证 |
 | E4 | 发布 CI 4 job | m0.yml / m0-gate.yml（未改） | workflow_dispatch 触发（分支受限）；RV-018 §4：gate `45820896095` success、publish `45820900729` success、4 job 全 success，head_sha=`0ce4a5e` | 已验证 |
-| E5 | 记录与冻结 | 本目录 + `m0.1` tag | gate/vars/token 全绿；tag m0.1 + release-m0 | 进行中 |
+| E5 | 记录与冻结 | 本目录 + `m0.1` tag | gate/vars/token 全绿；tag m0.1 + release-m0 打在本版最终提交 | 已验证 |
 
 状态取值：`未开始` / `进行中` / `已验证` / `UNVERIFIED` / `阻塞（ISS-0NN）`。
