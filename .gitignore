@@ -8,6 +8,10 @@ tmp/
 *.slice*
 cache-manifest.json
 
+# new-machine test scratch (RV-014): reassembled tar + slices (~21 GiB), not part of repo
+cache-work/
+cache-work-*/
+
 # secrets
 .env
 *.token

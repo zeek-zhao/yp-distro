@@ -20,8 +20,9 @@ SSTATE=""
 MIN_FREE="${MIN_FREE_BYTES:-}"
 CURRENT_UID="$(id -u)"
 CURRENT_GID="$(id -g)"
-TARGET_UID="$CURRENT_UID"
-TARGET_GID="$CURRENT_GID"
+# CHG-014 / ISS-022：默认目标取镜像用户（唯一源 threshold.conf），而非当前宿主用户。
+TARGET_UID="${JENKINS_UID}"
+TARGET_GID="${JENKINS_GID}"
 
 uid_mismatch_help() {
   cat >&2 <<EOF
@@ -41,8 +42,8 @@ usage() {
 
   --downloads <dir>        下载卷的宿主目录（容器挂载点 /work/downloads）
   --sstate <dir>           缓存卷的宿主目录（容器挂载点 /work/sstate）
-  --uid <n>                目标 UID（默认当前用户 id -u；镜像默认 JENKINS_UID=${JENKINS_UID:-unset}）
-  --gid <n>                目标 GID（默认当前用户 id -g；镜像默认 JENKINS_GID=${JENKINS_GID:-unset}）
+  --uid <n>                目标 UID（默认镜像 JENKINS_UID=${JENKINS_UID:-unset}，CHG-014；可显式覆盖）
+  --gid <n>                目标 GID（默认镜像 JENKINS_GID=${JENKINS_GID:-unset}，CHG-014；可显式覆盖）
   --min-free-bytes <n>     覆盖最小可用空间阈值（仅用于验收模拟，默认取 threshold.conf）
 
 退出码: 0 可继续 / 1 其他错误 / 2 属主或可写性不符 / 3 空间不足

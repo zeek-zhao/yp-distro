@@ -210,7 +210,7 @@ tar -xf "$DEST_PARENT/sstate.tar"    -C "$DEST_PARENT"
 
 - **判定**：`verify-env.sh` 打印 `WARN UID` → 退出码 `2`；`bootstrap.sh` / `preflight.sh` 打印 `ERROR[2] UID_MISMATCH` → 退出码 `2`；容器内 `entrypoint.sh` 报 `属主 UID=… 与 jenkins UID=1000 不一致` 并退出。
 - **根因**：无条件 `chown` 到 1000 需要 sudo，chown 完当前用户反而不可写，流程自锁。
-- **脚本契约（T4）**：`bootstrap.sh` 与 `preflight.sh` 均支持 `--uid <n>`、`--gid <n>`，**默认取当前用户** `id -u`/`id -g`；`JENKINS_UID/JENKINS_GID`（1000）保留为镜像默认与文档默认。当前用户为 1000 时行为与 M0 验收命令完全一致；目标 UID/GID 与当前非 root 用户不一致时脚本 exit 2，明确给出下面两条路径，禁止静默 chown；以 root（sudo）执行时视为 sudo 路径，允许显式 `--uid/--gid`，因为 root 仍可写。
+- **脚本契约（T4，CHG-014 修订）**：`bootstrap.sh` 与 `preflight.sh` 均支持 `--uid <n>`、`--gid <n>`，**默认取镜像用户** `JENKINS_UID/JENKINS_GID`（1000，来自唯一源 `threshold.conf`），与容器 `jenkins` 用户对齐；仍可显式 `--uid/--gid` 覆盖。当前用户为 1000 时行为与 M0 验收命令完全一致；目标 UID/GID 与当前非 root 用户不一致时脚本 exit 2，明确给出下面两条路径，禁止静默 chown；以 root（sudo）执行时视为 sudo 路径，允许 chown（root 仍可写）。旧版“默认取当前用户”契约已由 ISS-022/CHG-014 修订：非 1000 UID 宿主不带参数会把卷建在错误的当前 UID 上，导致容器入口拒绝启动。
 - **两条路径（二选一）**：
   1. 用 sudo 执行，卷属主保持镜像默认 1000：
      ```bash
@@ -248,7 +248,7 @@ tar -xf "$DEST_PARENT/sstate.tar"    -C "$DEST_PARENT"
 
 ## 7. 验证边界
 
-- 本 runbook 是文档交付：§3 中 `verify-env.sh`（T2）与 `fetch-cache.sh`（T3）的脚本尚未实现时，命令与输出 token 是**目标契约**，不是已实跑结果；完成后按本节命令逐条验证。
-- release 资产名称与大小经 GitHub API 匿名查询核对；`cache-full.sha256` 内容经资产下载核对；外层 tar 的两层结构经本地 `pack.sh` 实跑核对（`./`、`./downloads.tar`、`./sstate.tar`）。
-- **全量 11 GB 路径标 `UNVERIFIED`**：按本轮约束不在本机下载全量包；样本 release `m0-s5-payload-sample`（18 MB，sha256 `ca3063ab1d164b4c7556896507912a5a23bd4ccab341b924d57615704028cf1d`）的下载→校验→两步解包自测在 T3 完成。全量分片 digest 沿用 CHG-012/ISS-020 的 GHCR registry API 独立核验记录，本轮未重验。
-- 构建时长与命中率引用 RV-005 的真实输出，本轮未重新构建。
+- §3 中 `verify-env.sh`（T2）与 `fetch-cache.sh`（T3）**均已实现**：样本链路自测见 RV-013 T2/T3；全量 release 11 GB 路径已由本轮 RV-014 端到端实跑（`FETCH_OK` / `SHA256_OK=1c8126d4…` / `STRUCT_OK downloads=1288 sstate=6945`）；`--mode ghcr` 全链路仍标 `UNVERIFIED`（release 路径已实跑，两者都产出同构两卷）。
+- release 资产名称与大小经 GitHub API 匿名查询核对；`cache-full.sha256` 内容经资产下载核对。发布归档顶层实测为 `downloads/ sstate/ yp-dl/ yp-st/`（`STRUCT_OK mode=direct`），脚本同时支持 direct 与 two-stage 两种布局，以实跑 `mode=` 为准（ISS-029）。
+- **全量 GHCR 分片路径标 `UNVERIFIED`**：本轮未跑 `--mode ghcr`；全量分片 digest 沿用 CHG-012/ISS-020 的 GHCR registry API 独立核验记录。release 8 分片路径已由 RV-014 实跑通过。
+- 构建时长与命中率：RV-005 为 4 核/8 GB 配额实测（ci 冷 7096s / prod 冷 10253s / 二次 214s）；RV-014 在本机 32 核/123 GiB 全配额下 prod 首次 5m29s、二次 3m56s、`Sstate 99% match`。时长依配额与 edition 而异，不得跨 edition 比较。

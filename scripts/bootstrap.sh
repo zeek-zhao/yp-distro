@@ -22,8 +22,10 @@ IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
 CONTAINER="yp-m0-build"
 CURRENT_UID="$(id -u)"
 CURRENT_GID="$(id -g)"
-TARGET_UID="$CURRENT_UID"
-TARGET_GID="$CURRENT_GID"
+# CHG-014 / ISS-022：默认目标取镜像用户（唯一源 threshold.conf），而非当前宿主用户。
+# 当前 UID≠1000 且未显式 --uid 时，卷属主会与容器 jenkins/1000 不符导致入口拒绝启动。
+TARGET_UID="${JENKINS_UID}"
+TARGET_GID="${JENKINS_GID}"
 
 uid_mismatch_help() {
   cat >&2 <<EOF
@@ -44,13 +46,13 @@ usage() {
 
   --downloads <dir>        下载卷宿主目录（容器挂载点 /work/downloads）
   --sstate <dir>           缓存卷宿主目录（容器挂载点 /work/sstate）
-  --uid <n>                目标 UID（默认当前用户 id -u；镜像默认 JENKINS_UID=${JENKINS_UID:-unset}）
-  --gid <n>                目标 GID（默认当前用户 id -g；镜像默认 JENKINS_GID=${JENKINS_GID:-unset}）
+  --uid <n>                目标 UID（默认镜像 JENKINS_UID=${JENKINS_UID:-unset}，CHG-014；可显式覆盖）
+  --gid <n>                目标 GID（默认镜像 JENKINS_GID=${JENKINS_GID:-unset}，CHG-014；可显式覆盖）
   --min-free-bytes <n>     覆盖最小可用空间阈值（透传给 preflight 自检）
   --start                  可选：拉起命名持久容器 yp-m0-build（已存在则跳过）
 
 幂等：重复执行只补缺失，不覆盖已有下载/缓存内容，不重复 chown。
-当前用户为 1000 时，默认行为与 M0 验收命令完全一致（chown 到 1000:1000）。
+默认目标为镜像 jenkins 用户 ${JENKINS_UID}:${JENKINS_GID}（CHG-014），当前用户为 1000 时与 M0 验收命令一致。
 目标 UID/GID 与当前非 root 用户不一致时 exit 2，并给出 sudo / 重建镜像两条路径。
 EOF
 }

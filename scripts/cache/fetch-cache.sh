@@ -136,12 +136,20 @@ download_release_asset() {
   note "ASSET_OK name=$name bytes=$actual_bytes sha256=$actual_sha"
 }
 
+# ISS-025/CHG-016：--work 可能是用户已存在的目录；不得无条件 rm -rf 整个它。
+# 仅当 WORK 由本脚本创建时才整体删除；否则只清理本脚本自建的工件与 STAGE。
+WORK_CREATED=0
+[ -d "$WORK" ] || WORK_CREATED=1
 mkdir -p "$WORK"
-if [ "$KEEP" -ne 1 ] && [ "$DRY_RUN" -ne 1 ]; then
-  trap 'rm -rf "$WORK"' EXIT
-fi
 STAGE="$WORK/.unpack.$$"
 mkdir -p "$STAGE"
+if [ "$KEEP" -ne 1 ] && [ "$DRY_RUN" -ne 1 ]; then
+  if [ "$WORK_CREATED" -eq 1 ]; then
+    trap 'rm -rf "$WORK"' EXIT
+  else
+    trap 'rm -rf "$STAGE" "$WORK/release.env" "$WORK/slices.env" "$WORK"/cache-full.part-* "$WORK/cache-full.tar" "$WORK/cache-full.sha256" "$WORK/cache-full.manifest.json" "$WORK/merged.tar" "$WORK/slices"' EXIT
+  fi
+fi
 
 case "$MODE" in
   unpack-only)
@@ -188,6 +196,11 @@ PY
       count="$PARTS"
     fi
     if [ "$count" -lt 1 ] || [ "$count" -gt "$M_COUNT" ]; then die "--parts 超出范围 1..$M_COUNT"; fi
+    # ISS-026：two-stage 归档只有取全部分片才能重组；--parts 部分取片未实现重组，显式拒绝，
+    # 不得静默把单个分片当作整 tar 解包（会产生误导性解包失败）。
+    if [ -n "$PARTS" ] && [ "$M_LAYOUT" = "two-stage" ] && [ "$count" -ne "$M_COUNT" ]; then
+      die "--parts 对 two-stage 归档的部分取片未实现重组（ISS-026）；请取全部分片或改用 sample/direct release"
+    fi
     if [ "$DRY_RUN" -ne 1 ]; then check_target; fi
     note "MODE_INFO mode=release tag=$tag assets=$count layout=$M_LAYOUT dry_run=$DRY_RUN"
 

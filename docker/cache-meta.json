@@ -29,7 +29,7 @@
       "meta-openembedded": "c0fcd7cca3760ef24e087ac4a31b8f357cb204da"
     },
     "payload_sha256": "1c8126d4b1c57d5dc5a4f772617cd74dacbeab475d79e8ce2ee49bbcea1be624",
-    "payload_bytes": 11153397760,
+    "payload_bytes": 11153387520,
     "file_counts": {
       "downloads": 1288,
       "sstate": 6945

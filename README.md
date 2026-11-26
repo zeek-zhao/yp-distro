@@ -38,7 +38,7 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 宿主机只需要 Docker：**宿主机没有 kas**，`kas build` 必须在 builder 容器内执行。
 
-**首次使用必须先取回 S5 缓存**：没有缓存的冷构建在实测配额下耗时约 2h51m，而命中缓存的二次构建约 200–300s。取缓存（release 8 分片重组、sha256 校验、两步解包到两个卷）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md)。
+**首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、两步解包到两个卷）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md)。
 
 ```bash
 # 1. 拉镜像（匿名可拉）
@@ -47,10 +47,10 @@ docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
 # 2. 建挂载目录（幂等，不覆盖已有下载/缓存）
 bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
 
-# 3. 容器内构建
-docker run --rm -v "$PWD/downloads:/work/downloads" -v "$PWD/sstate:/work/sstate" ghcr.io/zeek-zhao/yp-builder:wrynose-m0 kas build kas/yp.yml:editions/prod.yml
+# 3. 容器内构建 —— 此为示意，不可直接粘贴执行（见下方说明）
+# docker run --rm ... ghcr.io/zeek-zhao/yp-builder:wrynose-m0 kas build kas/yp.yml:editions/prod.yml
 ```
 
-> 注意：builder 镜像只内置 `kas` 与依赖，不含仓库的 `kas/` 配置。上面第 3 步保留为最简示意；**实际可执行的写法（含仓库挂载与工作副本）见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3 步骤 7**。
+> 注意：builder 镜像只内置 `kas` 与依赖，**不含仓库的 `kas/` 配置**。上面第 3 步（注释行）是概念示意，照抄会因找不到 `kas/` 配置而失败；**可执行写法必须用命名容器把仓库挂载到 `/mnt/repo:ro` 并复制到 `/work/build-run`，完整命令见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3 步骤 7（本轮 RV-014 已按该写法实跑通过）**。
 
 执行规则见 [`docs/ai/m0-prompt.md`](docs/ai/m0-prompt.md)。
