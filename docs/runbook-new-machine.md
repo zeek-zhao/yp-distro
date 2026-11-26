@@ -16,7 +16,7 @@
 |---|---|---|
 | 操作系统 | Ubuntu 24.04 | Yocto 6.0 官方支持矩阵（ADR-003） |
 | Docker | ≥ 24 | `docker version` 与 daemon 均可用；本流程不依赖 compose |
-| 宿主工具 | `git`、`bash`、`python3`、`curl`、`tar`、`sha256sum` | clone/fetch/verify 的前置：`git clone` 需 git；`fetch-cache.sh` 硬依赖 python3（token JSON 解析）；下载用 curl、解包用 tar、校验用 sha256sum。不锁版本，但必须存在；`verify-env.sh` 最先检查（缺则 `FAIL DEP_MISSING <tool>`，不是 registry 401）。不要求宿主装 kas/bitbake |
+| 宿主工具 | `git`、`bash`、`python3`、`curl`、`tar`、`sha256sum` | clone/fetch/verify 的前置：`git clone` 需 git；`fetch-cache.sh` 硬依赖 python3（token JSON 解析）；下载用 curl、解包用 tar、校验用 sha256sum。不锁版本，但必须存在；`verify-env.sh` 最先检查（缺则 `FAIL DEP_MISSING <tool>`，不是 registry 401）。不要求宿主装 kas/bitbake。路径 A 另需 `sudo`（root 可去掉 `sudo`，无 `sudo` 走路径 B）；路径 B 不需要 `sudo`；UID=1000 非 root 且无 `sudo` 走路径 B |
 | CPU | ≥ 8 核（建议） | RV-005 实测在 4 核有效配额下可完成，但首次构建约 2h51m |
 | 内存 | ≥ 16 GB（建议 32 GB） | RV-005 实测 8 GB cgroup 限额需下调并发（ISS-011/CHG-005）；16 GB 为舒适下限 |
 | 磁盘空闲 | ≥ 200 GB（建议） | 预算见下表 |
@@ -243,6 +243,7 @@ tar -xf cache-full.tar -C "$DEST_PARENT"
      sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
      sudo bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
      ```
+     路径 A 需 `sudo`：root 可去掉 `sudo` 直接执行；非 root 且无 `sudo` 请走路径 B。
      构建用默认 GHCR 镜像（§3 步骤 7 的 `"$IMAGE"` 解析为 `ghcr.io/.../wrynose-m0`）。
   2. **路径 B** — 按当前用户重建镜像，卷保持当前 UID 可写；**bootstrap 与 preflight 仍必须显式 `--uid "$(id -u)" --gid "$(id -g)"`**：
      ```bash

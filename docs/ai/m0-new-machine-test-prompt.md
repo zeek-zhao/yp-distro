@@ -109,6 +109,8 @@ stat -c '%u:%g %n' /tmp/uid-probe/dl /tmp/uid-probe/sstate
 
 **路径 A（sudo，卷保持 1000）**
 
+路径 A 需 `sudo`：root 可去掉 `sudo` 直接执行；非 root 且无 `sudo` 请走路径 B（UID=1000 非 root 无 sudo 同样走 B）。
+
 ```bash
 sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
 sudo bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000

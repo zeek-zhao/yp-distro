@@ -36,7 +36,7 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 ## 三步上手（容器内构建）
 
-宿主机需要 **Docker + git / bash / python3 / curl / tar / sha256sum**；**不需要 kas / bitbake**，`kas build` 必须在 builder 容器内执行。这些工具是 `git clone`、fetch 缓存、环境预检的前置；Ubuntu 24.04 默认具备大部分，缺失见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §1「宿主工具」。
+宿主机需要 **Docker + git / bash / python3 / curl / tar / sha256sum**；**不需要 kas / bitbake**，`kas build` 必须在 builder 容器内执行。这些工具是 `git clone`、fetch 缓存、环境预检的前置；Ubuntu 24.04 默认具备大部分，缺失见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §1「宿主工具」。路径 A 另需 `sudo`（root 用户可去掉 `sudo` 直接执行）；路径 B 不需要 `sudo`；若当前 UID=1000 但非 root 且无 `sudo`，走路径 B。
 
 **首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、**direct 单层解包**得到 `downloads/` 与 `sstate/`）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3；正常顺序是 fetch → bootstrap → preflight，不使用 `--force`。S5 缓存取回入口只在 runbook，不在 README 复制会漂移的命令。
 
@@ -50,7 +50,7 @@ docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
 
 **第 2 步 · 归一属主（二选一）**
 
-路径 A（当前 UID=1000 或 root，卷保持镜像 1000）：
+路径 A（当前 UID=1000 或 root，卷保持镜像 1000；需 `sudo`，root 可去掉 `sudo` 直接执行，非 root 且无 `sudo` 请走路径 B）：
 
 ```bash
 sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate \
