@@ -39,6 +39,25 @@
 
 状态取值仅四种：`待开始` / `进行中` / `完成` / `阻塞`。置为 `阻塞` 必须同时存在一张未关闭的 `ISS-` 单。
 
+### 换机链路收口追踪（S7 延伸，AI-004 → AI-005）
+
+> 进度唯一事实源仍为本表；下表集中登记两轮换机相关实测/修复的 T/K 项与记录编号，便于审计。
+
+| 轮次 | 工作项 | 内容 | 记录 |
+|---|---|---|---|
+| AI-004（新机端到端） | K-1 P1 | 非 1000 UID 默认目标错误 | ISS-022 / CHG-014（closed） |
+| AI-004 | K-2 P1 | 字节数 11153397760/11153387520 错配 | ISS-023 / CHG-015（closed） |
+| AI-004 | K-3~K-7 P2 | manifest 上传/trap/--parts/runbook/README | ISS-024..028 / CHG-016（closed） |
+| AI-004 | K-8 P3 | ghcr digest 未用于 pull、check_target 在 11 GB 后 | 无单，留待后续 |
+| AI-004 | NEW P2 | 归档布局 direct vs two-stage | ISS-029（当时 closed，AI-005 重开） |
+| AI-005（direct 收口） | T1 | `check_target` 无损放行 marker-only + root OWNER_HINT | CHG-017 / RV-015 V1/V2 |
+| AI-005 | T2 | runbook direct 单层 + fetch→bootstrap→preflight | CHG-017 / RV-015 |
+| AI-005 | T3 | README 去两步解包 | CHG-017 / RV-015 |
+| AI-005 | T4 | manifest 拆 layout/requires_reassembly + fetch 重组改读 + 一致性校验 | ISS-030 / CHG-017 / RV-015 V4/V5 |
+| AI-005 | T5 | 更正 ISS-029/RV-013/RV-014/CHG-012/deviations | CHG-017 / RV-015 |
+| AI-005 | T6 | 清理两份过期提示词 | CHG-017 / RV-015 V8 |
+| AI-005 | T7 | 验证矩阵 V1–V10 | RV-015 |
+
 ## 2. 阶段出口判据
 
 M0 结束需同时满足：入口能解析、容器能构建、挂载能复用、缓存能切片、门禁能拦截、记录能审计。逐条证据写入 `docs/m0/acceptance.md`。
@@ -71,3 +90,5 @@ M0 结束需同时满足：入口能解析、容器能构建、挂载能复用�
 | v2.11 | 2026-11-25 | T7：`kas shell` + `bitbake -e` 确认 `BB_HASHSERVE_DB_DIR` 为真实变量（`/work/sstate`），不删不改；归档 push run 45601074345 三 job 失败（缺 S5 制品 + GHCR 权限，ISS-016），判据 7 发布端到端保持 UNVERIFIED | zeek.zhao |
 | v2.12 | 2026-11-25 | CHG-010/011 + ISS-016/017/018：PAT 具名 secret 修复 GHCR 写包权限，真实 S5 载荷样本由 release 资产生产 `cache-payload` 制品；修复裸表达式与 sstate 冒号文件名；run 45607197090 四 job success、分片 digest 经 GHCR 独立核验；判据 7 → 通过，M0 收口 | zeek.zhao |
 | v2.13 | 2026-11-25 | CHG-012：全量 S5 缓存（11 GiB）分 8 个 release 资产上传并重组校验；ISS-019 修复 split.sh 大文件切片丢数据，ISS-020 全量分片 01 瞬时 unknown blob 重试成功；两片 GHCR digest 独立核验 | zeek.zhao |
+| v2.14 | 2026-11-26 | 新机端到端实测（AI-004）：CHG-014/015/016 + ISS-022..029 + RV-014；K-1/K-2 先修并复跑、K-3~K-7 报告后修、K-8 留待；release 8 分片实跑 `mode=direct`、prod 两构建成功、幂等验证通过；发现归档布局与文档 two-stage 矛盾（ISS-029 当时关闭） | zeek.zhao |
+| v2.15 | 2026-11-26 | 换机链路 direct 收口（AI-005）：CHG-017 + ISS-029（重开）/ISS-030 + RV-015；复现 release direct（HTTP Range）、pack.sh two-stage、marker-only 误杀、manifest layout 混用。T1 check_target 无损放行 marker-only + root OWNER_HINT；T2 runbook 改 direct 单层 + 顺序 fetch→bootstrap→preflight；T3 README 去两步解包；T4 manifest 拆 layout/requires_reassembly + fetch 重组改读后者 + 一致性校验（字节/哈希/资产不变）；T5 更正 ISS-029/RV-013/RV-014/CHG-012/deviations；T6 清理两份过期提示词；T7 验证矩阵 V1–V10；gate/vars 绿、不改发布资产 | zeek.zhao |

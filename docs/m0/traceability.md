@@ -18,5 +18,7 @@
 | B-12 缓存指标 | DES-005 | `87b49c5`（RV-005）、`458ea86`（measure.sh 入库） | 两次 `Sstate summary` 原始行 + `Tasks Summary`：首次 0% match/4083 全跑；二次 99% match（2049/2054）、3829 免重跑；wall 7096s→214s | 容器实跑 2026-11-25 | 已验证 |
 | B-13 离线构建 | DES-005 | `87b49c5`（RV-005）、`458ea86`（measure.sh 入库） | 第二次 `=== STATS second === fetching_lines=0`，无网络重新拉取 | 容器实跑 2026-11-25 | 已验证 |
 | S8 门禁 / S9 变量索引（判据 8） | DES-009 / RV-009 / ISS-012 / CHG-009 | `b072417`（Stage F）、`458ea86`（measure.sh 入库） | `bash scripts/gate.sh`→GATE_PASS（五项全绿）；`bash scripts/check-vars.sh`→VARS_OK；故意改 `BB_NUMBER_THREADS` 4→8→`DRIFT`+exit 1→还原→VARS_OK（RV-009 §验收输出） | 判据 8 | 已验证 |
+| 换机端到端（S7 延伸） | AI-004 / CHG-014/015/016 / ISS-022..029 / RV-014 | `b818251`（本轮提交） | RV-014 §2–§10：dry-run 字节 11153387520；真实 8 分片 `REASSEMBLE_OK`/`SHA256_OK=1c8126d4…`/`STRUCT_OK mode=direct downloads=1288 sstate=6945`；prod 两构建成功（99% match、4340 免重跑）；幂等缓存指纹不变；`GATE_PASS`/`VARS_OK` | 判据 7 / 判据 8 | 已验证（功能链路；执行偏差见 RV-014 §13） |
+| 换机 direct 收口（S7 延伸） | AI-005 / CHG-017 / ISS-029（重开）/ISS-030 / RV-015 | 本轮提交（见 RV-015） | RV-015 V1–V10：HTTP Range `part-00` 无顶层 `downloads.tar`；`pack.sh` 小样本 two-stage；marker-only 目标无需 `--force` 且 marker 保留；marker+额外文件 exit 1；dry-run `layout=direct reassemble=1` bytes=11153387520；`--parts 1` 拒绝；`git grep downloads.tar` 仅更正/历史块；`GATE_PASS`/`VARS_OK drift=0` | 判据 7 / 判据 8 | 已验证（V10 真实全量正常顺序重跑 UNVERIFIED，见 RV-015） |
 
 状态取值：`未开始` / `进行中` / `已验证` / `UNVERIFIED` / `阻塞（ISS-0NN）`。

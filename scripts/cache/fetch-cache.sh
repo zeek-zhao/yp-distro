@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# 换机缓存取回（T3 / RV-013）：release 分片重组 或 GHCR 分片合并，校验通过后两步解包到 dest-parent。
+# 换机缓存取回（T3 / RV-013；CHG-017 收口）：release 分片重组 或 GHCR 分片合并，校验通过后单层解包到 dest-parent。
+# release 归档为 direct（顶层 downloads/ sstate/）；pack.sh 本地 / GHCR 源 tar 为 two-stage。脚本对两种布局均探测。
 # 只读 GH_TOKEN 环境变量；公开仓库匿名下载；脚本内不保存任何 token。
 # 校验失败 exit 1；校验通过前不解包，所有解包在临时目录完成再 mv，不留半成品。
+# CHG-017：重组判断读 manifest.requires_reassembly（缺失回退 layout==two-stage）；官方顺序 fetch → bootstrap → preflight。
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -61,17 +63,30 @@ done
 [ -n "$WORK" ] || die "缺少 --work"
 command -v python3 >/dev/null 2>&1 || die "缺少 python3（manifest 解析需要）"
 
-# 幂等检查：目标非空且无 --force 时拒绝覆盖
+# 幂等检查（CHG-017/T1）：目标不存在、空目录、或仅含 .yp-volume 视为可写；
+# 只要含任何其他条目（含隐藏文件）仍拒绝覆盖。判断无损——不删除 marker。
+marker_only() {
+  local t="$1" e
+  [ -d "$t" ] || return 1                       # 不存在：交给外层按“可写”处理
+  while IFS= read -r e; do
+    [ "$(basename "$e")" = ".yp-volume" ] || return 1
+  done < <(find "$t" -mindepth 1 -print 2>/dev/null)
+  return 0
+}
 check_target() {
-  local d t
+  local d t extra
   for d in downloads sstate; do
     t="$DEST_PARENT/$d"
-    if [ -d "$t" ] && [ -n "$(find "$t" -mindepth 1 -print -quit 2>/dev/null)" ]; then
-      if [ "$FORCE" -ne 1 ]; then
-        die "目标 $t 非空，拒绝覆盖（如需覆盖请加 --force）"
-      fi
-      note "WARN --force 将覆盖非空目标 $t"
+    [ -d "$t" ] || continue                      # 目标不存在 → 可写
+    if marker_only "$t"; then
+      note "TARGET_OK dir=$t marker-only（.yp-volume 保留，无需 --force）"
+      continue
     fi
+    extra="$(find "$t" -mindepth 1 ! -name '.yp-volume' -print -quit 2>/dev/null)"
+    if [ "$FORCE" -ne 1 ]; then
+      die "目标 $t 含非 marker 条目（如 ${extra:-<隐藏或嵌套项>}），拒绝覆盖；--force 会删除整个目标目录（破坏性，不可恢复）"
+    fi
+    note "WARN --force 将删除整个目标目录 $t（含 ${extra:-非 marker 条目}，破坏性不可恢复）"
   done
 }
 
@@ -105,13 +120,22 @@ unpack_archive() {
   [ -n "$first" ] || die "sstate/ 为空"
   note "STRUCT_OK mode=$mode downloads=$(find "$stage/downloads" -type f | wc -l) sstate=$(find "$stage/sstate" -type f | wc -l)"
 
-  if [ "$FORCE" -eq 1 ]; then
-    rm -rf "$DEST_PARENT/downloads" "$DEST_PARENT/sstate"
-  fi
+  # CHG-017/T1：先保留目标已有的 .yp-volume（归档自身若带 marker 则不覆盖），
+  # 再替换目标卷。走到这里的目标已由 check_target 判为不存在/空/仅 marker（或 --force），可安全替换。
+  local _d
+  for _d in downloads sstate; do
+    if [ -f "$DEST_PARENT/$_d/.yp-volume" ] && [ ! -f "$stage/$_d/.yp-volume" ]; then
+      cp -a "$DEST_PARENT/$_d/.yp-volume" "$stage/$_d/.yp-volume" || die "保留 $_d marker 失败"
+    fi
+  done
+  rm -rf "$DEST_PARENT/downloads" "$DEST_PARENT/sstate"
   mkdir -p "$DEST_PARENT"
   mv "$stage/downloads" "$DEST_PARENT/downloads" || die "mv downloads 失败"
   mv "$stage/sstate" "$DEST_PARENT/sstate" || die "mv sstate 失败"
   note "UNPACK_OK dest_parent=$DEST_PARENT mode=$mode"
+  if [ "$(id -u)" -eq 0 ]; then
+    note "OWNER_HINT current_uid=0：归档条目可能带非 1000 属主，请随后执行 bootstrap.sh --uid 1000 --gid 1000 归一属主"
+  fi
 }
 
 # 下载单个 release 资产并校验大小与 sha256
@@ -177,6 +201,11 @@ d=json.load(open(sys.argv[1]))
 def p(k,v): print('%s=%s'%(k,shlex.quote(str(v))))
 p('M_TAG',d.get('release_tag',''))
 p('M_LAYOUT',d.get('layout',''))
+# CHG-017/T4：requires_reassembly 描述“下载后需合并分片”；缺失时回退旧逻辑 layout==two-stage
+_set = 'requires_reassembly' in d
+_rr = bool(d['requires_reassembly']) if _set else (d.get('layout','') == 'two-stage')
+p('M_REASSEMBLE', 1 if _rr else 0)
+p('M_REASSEMBLE_SET', 1 if _set else 0)
 p('M_ARCHIVE',d.get('archive_name',''))
 p('M_EXPECTED_SHA',d.get('expected_sha256',''))
 p('M_EXPECTED_BYTES',d.get('expected_bytes',''))
@@ -196,13 +225,19 @@ PY
       count="$PARTS"
     fi
     if [ "$count" -lt 1 ] || [ "$count" -gt "$M_COUNT" ]; then die "--parts 超出范围 1..$M_COUNT"; fi
-    # ISS-026：two-stage 归档只有取全部分片才能重组；--parts 部分取片未实现重组，显式拒绝，
-    # 不得静默把单个分片当作整 tar 解包（会产生误导性解包失败）。
-    if [ -n "$PARTS" ] && [ "$M_LAYOUT" = "two-stage" ] && [ "$count" -ne "$M_COUNT" ]; then
-      die "--parts 对 two-stage 归档的部分取片未实现重组（ISS-026）；请取全部分片或改用 sample/direct release"
+    # CHG-017/T4 一致性校验：防止 layout 与 requires_reassembly 再次漂移（ISS-030）
+    if [ "$M_LAYOUT" = "direct" ] && [ "$M_COUNT" -gt 1 ] && [ "$M_REASSEMBLE" -ne 1 ]; then
+      die "manifest 不一致：layout=direct 且 assets>1 时必须 requires_reassembly=true（ISS-030）"
+    fi
+    if [ "$M_LAYOUT" = "two-stage" ] && [ "$M_REASSEMBLE_SET" -eq 1 ] && [ "$M_REASSEMBLE" -eq 0 ]; then
+      die "manifest 不一致：layout=two-stage 时 requires_reassembly 不应为 false（ISS-030）"
+    fi
+    # CHG-017/T4：分片归档只在取全部分片时可重组；部分取片显式拒绝，不再写死 two-stage（ISS-026/030）
+    if [ -n "$PARTS" ] && [ "$M_REASSEMBLE" -eq 1 ] && [ "$count" -ne "$M_COUNT" ]; then
+      die "分片归档不支持部分取片（requires_reassembly=true，ISS-026/ISS-030）；请取全部分片或改用 sample 归档"
     fi
     if [ "$DRY_RUN" -ne 1 ]; then check_target; fi
-    note "MODE_INFO mode=release tag=$tag assets=$count layout=$M_LAYOUT dry_run=$DRY_RUN"
+    note "MODE_INFO mode=release tag=$tag assets=$count layout=$M_LAYOUT reassemble=$M_REASSEMBLE dry_run=$DRY_RUN"
 
     i=0
     while [ "$i" -lt "$count" ]; do
@@ -218,7 +253,8 @@ PY
     note "ASSETS_OK count=$count"
 
     archive="$WORK/$M_ARCHIVE"
-    if [ "$count" -eq "$M_COUNT" ] && [ "$M_LAYOUT" = "two-stage" ]; then
+    # CHG-017/T4：是否重组由 requires_reassembly 决定，不再拿 layout 当开关
+    if [ "$count" -eq "$M_COUNT" ] && [ "$M_REASSEMBLE" -eq 1 ]; then
       : > "$archive"
       i=0
       while [ "$i" -lt "$count" ]; do

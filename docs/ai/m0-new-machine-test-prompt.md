@@ -22,6 +22,7 @@
 6. 阈值只能来自 `scripts/cache/threshold.conf`，不得在脚本里写死数值。
 7. 构建可能持续数小时，**不要中途 `docker rm -f` 或重启机器**；先看 cooker 日志是否还在增长。
 8. 本提示词写于 HEAD `85f0b24`，已记录若干待验证缺陷（见 §11）。**不要盲信 runbook 的通过性描述**，按本提示词逐项实测。
+9. **官方顺序（CHG-017 收口，2026-11-26）**：新机器为 fetch → bootstrap → preflight。先取缓存（目标为空），再 bootstrap 归一属主，再 preflight。**正常路径不得使用 `--force`**；`check_target` 已无损放行仅含 `.yp-volume` 的目标，marker 保留。若因故用了 `--force`，必须按 `docs/m0/deviations.md` 登记偏差并在报告写明。release 归档为 **direct**（顶层 `downloads/ sstate/ yp-dl/ yp-st/`），单层解包即得两卷，`STRUCT_OK mode=direct`。manifest 重组判断读 `requires_reassembly`，`layout` 只描述布局。
 
 ## 1. 开工先冻结事实（5 分钟）
 
@@ -76,7 +77,7 @@ id -g
 grep -E 'JENKINS_UID|JENKINS_GID' scripts/cache/threshold.conf
 ```
 
-镜像内用户是 `jenkins/1000`。**卷属主必须与容器内 UID 一致**，否则容器入口会拒绝启动。
+镜像内用户是 `jenkins/1000`。**卷属主必须与容器内 UID 一致**，否则容器入口会拒绝启动。自 CHG-014/ISS-022 起，`bootstrap.sh`/`preflight.sh` 的**默认目标 UID/GID 已是镜像用户 1000**（来自唯一源 `threshold.conf`），不再取当前用户；不带 `--uid/--gid` 时即以 1000 为目标。当前用户就是 1000 时默认路径与 M0 验收一致；root（sudo）执行视为 sudo 路径，可显式 `--uid 1000 --gid 1000`；非 root 且当前 UID≠1000 时脚本 exit 2 并给两条路径（见下）。
 
 ### 4.1 当前 UID=1000
 
@@ -113,7 +114,7 @@ sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate --uid 1
 sudo bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 --gid 1000
 ```
 
-后续所有 `preflight.sh` 都必须显式带 `--uid 1000 --gid 1000`；不带参数会以当前 UID 为目标误报 `BAD_OWNER`。
+路径 A 下 `preflight.sh` 带 `--uid 1000 --gid 1000` 可保持与构建时一致（CHG-014 后默认已是 1000，不带参数也不会再以当前 UID 误报 `BAD_OWNER`）。
 
 **路径 B（按当前用户重建镜像，卷保持当前 UID）**
 
@@ -161,6 +162,8 @@ EXPECTED_ARCHIVE name=cache-full.tar sha256=1c8126d4b1c57d5dc5a4f772617cd74dacbe
 
 正式下载（约 11 GiB，耗时取决于带宽；保留 work 以便复核）：
 
+> **顺序说明（CHG-017）**：在全新机器上应**先 fetch 再 bootstrap**（此时目标为空，无需 `--force`）。若你已按 §4 在正式卷上执行过 bootstrap，仅含 `.yp-volume` 的目标现在会被 `check_target` 无损放行（marker 保留），因此**本轮不需要 `--keep` 之外的任何覆盖参数，更不要 `--force`**；fetch 后用 bootstrap 归一属主即可（root 解包会打印 `OWNER_HINT`）。
+
 ```bash
 time bash scripts/cache/fetch-cache.sh --mode release --keep \
   --dest-parent . --work ./cache-work --release-tag m0-s5-payload-full
@@ -172,7 +175,7 @@ echo "FETCH_EXIT=$?"
 1. 8 个 `ASSET_OK`，每个 name/bytes/sha256 与 `manifests/cache-full.release.json` 一致；
 2. `REASSEMBLE_OK`，`bytes=11153387520`；
 3. `SHA256_OK sha256=1c8126d4b1c57d5dc5a4f772617cd74dacbeab475d79e8ce2ee49bbcea1be624`；
-4. `STRUCT_OK mode=two-stage downloads=... sstate=...`，文件数记录实际值（文档期望 1288/6945，若不同只记录，不硬判）；
+4. `STRUCT_OK mode=direct downloads=... sstate=...`（CHG-017：release 归档为 direct，非 two-stage），文件数记录实际值（文档期望 1288/6945，若不同只记录，不硬判）；
 5. `UNPACK_OK`，exit 0；
 6. 独立复核：
 

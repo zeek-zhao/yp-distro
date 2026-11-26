@@ -38,13 +38,13 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 宿主机只需要 Docker：**宿主机没有 kas**，`kas build` 必须在 builder 容器内执行。
 
-**首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、两步解包到两个卷）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md)。
+**首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、**direct 单层解包**得到 `downloads/` 与 `sstate/`）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3；正常顺序是 fetch → bootstrap → preflight，不使用 `--force`。S5 缓存取回入口只在 runbook，不在 README 复制会漂移的命令。
 
 ```bash
 # 1. 拉镜像（匿名可拉）
 docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
 
-# 2. 建挂载目录（幂等，不覆盖已有下载/缓存）
+# 2. 取回缓存后再归一属主（取缓存命令见 runbook §3 步骤 4；此处 bootstrap 幂等，不覆盖已有下载/缓存）
 bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
 
 # 3. 容器内构建 —— 此为示意，不可直接粘贴执行（见下方说明）

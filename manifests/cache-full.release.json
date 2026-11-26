@@ -1,7 +1,8 @@
 {
   "schema": "yp-cache-release-manifest-v1",
   "release_tag": "m0-s5-payload-full",
-  "layout": "two-stage",
+  "layout": "direct",
+  "requires_reassembly": true,
   "archive_name": "cache-full.tar",
   "checksum_asset": "cache-full.sha256",
   "checksum_asset_sha256": "66ea490f3cc74b9be6376558d502d7e53ef61e25c4c6a0083d136f33e97c0ec1",
