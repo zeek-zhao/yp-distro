@@ -4,7 +4,7 @@
 
 ## 目标
 
-只装 Docker 的机器，拉取预置镜像后一条命令产出 prod 镜像；下载目录与缓存目录以挂载复用；缓存可打包、可切分、可恢复；无缓存服务器、无 root 构建。
+宿主机具备 Docker 与 git / bash / python3 / curl / tar / sha256sum（不需 kas / bitbake），拉取预置镜像后一条命令产出 prod 镜像；下载目录与缓存目录以挂载复用；缓存可打包、可切分、可恢复；无缓存服务器、无 root 构建。宿主工具清单与缺失处理见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §1。
 
 ## AI 与人类协作者的入口
 
@@ -36,21 +36,37 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 ## 三步上手（容器内构建）
 
-宿主机只需要 Docker：**宿主机没有 kas**，`kas build` 必须在 builder 容器内执行。
+宿主机需要 **Docker + git / bash / python3 / curl / tar / sha256sum**；**不需要 kas / bitbake**，`kas build` 必须在 builder 容器内执行。这些工具是 `git clone`、fetch 缓存、环境预检的前置；Ubuntu 24.04 默认具备大部分，缺失见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §1「宿主工具」。
 
 **首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、**direct 单层解包**得到 `downloads/` 与 `sstate/`）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3；正常顺序是 fetch → bootstrap → preflight，不使用 `--force`。S5 缓存取回入口只在 runbook，不在 README 复制会漂移的命令。
 
+**第 2 步先取缓存、再归一属主**：先按 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3 步骤 4 取回缓存（目标为空，无需 `--force`；fetch 命令不在 README 复制以免漂移），然后按下面**二选一**执行第 2 步（不要顺序执行两条）。若你已先执行 bootstrap，fetch 后必须重跑第 2 步——root 解包会把属主变为归档 UID。
+
+**第 1 步 · 拉镜像（路径 B 可跳过本行，改用 runbook §5.2 的 `yp-builder:local`；不要把 GHCR 1000 镜像用于路径 B 构建）**
+
 ```bash
-# 1. 拉镜像（匿名可拉）
 docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
+```
 
-# 2. 先按 runbook §3 步骤 4 取回缓存（目标为空，无需 --force），再归一属主：
-#    fetch 命令不在 README 复制以免漂移（见 docs/runbook-new-machine.md §3 步骤 4）；
-#    若已先 bootstrap，fetch 后必须重跑本步——root 解包会把属主变为归档 UID。
-#    bootstrap 幂等，不覆盖已有下载/缓存。
-bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate
+**第 2 步 · 归一属主（二选一）**
 
-# 3. 容器内构建 —— 此为示意，不可直接粘贴执行（见下方说明）
+路径 A（当前 UID=1000 或 root，卷保持镜像 1000）：
+
+```bash
+sudo bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate \
+  --uid 1000 --gid 1000
+```
+
+路径 B（当前 UID≠1000，卷保持当前 UID；先按 runbook §5.2 构建 `yp-builder:local`）：
+
+```bash
+bash scripts/bootstrap.sh --downloads ./downloads --sstate ./sstate \
+  --uid "$(id -u)" --gid "$(id -g)"
+```
+
+**第 3 步 · 容器内构建 —— 此为示意，不可直接粘贴执行（见下方说明）**
+
+```bash
 # docker run --rm ... ghcr.io/zeek-zhao/yp-builder:wrynose-m0 kas build kas/yp.yml:editions/prod.yml
 ```
 

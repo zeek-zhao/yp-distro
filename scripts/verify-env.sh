@@ -52,6 +52,15 @@ esac
 
 echo "===== ENV PRECHECK (read-only) ====="
 
+# 0) 宿主依赖（fetch/verify/clone 需要；缺 python3 不得落到 registry 401）
+for c in git bash python3 curl tar sha256sum; do
+  if command -v "$c" >/dev/null 2>&1; then
+    pass "DEP $c=$(command -v "$c")"
+  else
+    fail "DEP_MISSING $c（fetch/verify/clone 需要；先安装再继续）"
+  fi
+done
+
 # 1) 集中配置存在性（唯一阈值源）
 if [ -f "$CONF" ]; then
   pass "THRESHOLD_CONF $CONF"
@@ -168,5 +177,3 @@ elif [ "$WARN_N" -gt 0 ]; then
   echo "ENV_WARN"; exit 2
 fi
 echo "ENV_OK"; exit 0
-EOF
-bash -n scripts/verify-env.sh && echo SYNTAX_OK

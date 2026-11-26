@@ -8,7 +8,7 @@
 | 适用范围 | 在一台新机器上复现 M0：取回 S5 缓存 → 构建 prod 镜像 → 验证缓存命中 |
 | 事实源 | `docs/m0/plan.md`（进度）、`docs/m0/acceptance.md`（验收）、`CHG-012`/`ISS-019`/`ISS-020`（全量缓存）、`RV-005`（构建时长与命中率） |
 
-> 宿主机只装 Docker。**宿主机没有 kas**，所有 `kas` 命令都在 builder 容器内执行。
+> 宿主机需要 Docker **与 git / bash / python3 / curl / tar / sha256sum**（见下表），**宿主机没有 kas**，所有 `kas` 命令都在 builder 容器内执行；不需要 bitbake。缺宿主工具时 `verify-env.sh` 首行会报 `FAIL DEP_MISSING <tool>`（不是 registry 401）。
 
 ## 1. 机器要求
 
@@ -16,6 +16,7 @@
 |---|---|---|
 | 操作系统 | Ubuntu 24.04 | Yocto 6.0 官方支持矩阵（ADR-003） |
 | Docker | ≥ 24 | `docker version` 与 daemon 均可用；本流程不依赖 compose |
+| 宿主工具 | `git`、`bash`、`python3`、`curl`、`tar`、`sha256sum` | clone/fetch/verify 的前置：`git clone` 需 git；`fetch-cache.sh` 硬依赖 python3（token JSON 解析）；下载用 curl、解包用 tar、校验用 sha256sum。不锁版本，但必须存在；`verify-env.sh` 最先检查（缺则 `FAIL DEP_MISSING <tool>`，不是 registry 401）。不要求宿主装 kas/bitbake |
 | CPU | ≥ 8 核（建议） | RV-005 实测在 4 核有效配额下可完成，但首次构建约 2h51m |
 | 内存 | ≥ 16 GB（建议 32 GB） | RV-005 实测 8 GB cgroup 限额需下调并发（ISS-011/CHG-005）；16 GB 为舒适下限 |
 | 磁盘空闲 | ≥ 200 GB（建议） | 预算见下表 |
@@ -150,6 +151,8 @@ bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate \
 README 的三步保留为最简示意；builder 镜像不含仓库的 `kas/` 配置，因此必须把仓库挂载进容器并复制出可写工作副本。用命名容器保留 `build/` 与日志，供步骤 8/9 核对：
 
 ```bash
+# 路径 B：必须在同一 shell 先 export YP_BUILDER_IMAGE=yp-builder:local；
+# 若跨 shell，直接把下一行改为 IMAGE=yp-builder:local。
 IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
@@ -205,6 +208,8 @@ sstate/...
 ```
 
 因此恢复只需**单层解包**（`--dest-parent` 的父目录下直接得到 `downloads/` 与 `sstate/`）：
+
+> **官方/手工边界**：本节 `DEST_PARENT` **仅用于手工恢复**；官方步骤 4（`--dest-parent .`）与步骤 7（`-v "$PWD/downloads"`、`-v "$PWD/sstate"`）**固定使用仓库根目录 `.`**。不要把这里的自定义值带入步骤 7；若确要自定义，必须**同步修改步骤 7 的两个 `-v` 挂载**，否则会挂错目录。
 
 ```bash
 DEST_PARENT="${DEST_PARENT:-.}"   # 解包目标父目录；默认当前目录

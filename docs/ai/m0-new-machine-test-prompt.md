@@ -130,22 +130,21 @@ bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate \
 
 **路径 B 必须显式 `--uid "$(id -u)" --gid "$(id -g)"`**：脚本默认目标来自 `threshold.conf` 的 1000，不读镜像的 `JENKINS_UID`；`--build-arg` 只决定容器内 UID，不会让 bootstrap/preflight 自动改用当前 UID，照抄不带 UID 参数会 exit 2。
 
-**路径 B 的 `docker run` 必须用 `$YP_BUILDER_IMAGE`（即 `yp-builder:local`）**，不能用 GHCR 的 `wrynose-m0`——否则当前 UID（如 1234）的卷配上 1000 容器，entrypoint 拒绝启动。§7 的命令已用 `"${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"`，路径 B 设了 `export` 后无需改动即可正确解析。
+**路径 B 的 `docker run` 必须用 `$YP_BUILDER_IMAGE`（即 `yp-builder:local`）**，不能用 GHCR 的 `wrynose-m0`——否则当前 UID（如 1234）的卷配上 1000 容器，entrypoint 拒绝启动。§5/§7 的命令都用 `"${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"`，**同一 shell** 里设了 `export` 即可正确解析；**若另开 shell（如 §7/§9 在新终端执行），必须重新 `export YP_BUILDER_IMAGE=yp-builder:local`，或直接把该命令的 `IMAGE` 行设为 `IMAGE=yp-builder:local`**，否则静默回退 GHCR 1000。
 
 ## 5. 拉取 builder 镜像并核对身份
 
-路径 A：
+**不要写死 GHCR 镜像**：用与步骤 7 相同的变量解析，路径 A/B 都适用（同一 shell；跨 shell 需重新 export 或把 IMAGE 行写死）：
 
 ```bash
-docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0
-docker image inspect ghcr.io/zeek-zhao/yp-builder:wrynose-m0 \
-  --format '{{index .RepoDigests 0}}'
-docker run --rm ghcr.io/zeek-zhao/yp-builder:wrynose-m0 sh -c 'whoami; id -u; kas --version'
+IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
+docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}'
+docker run --rm "$IMAGE" sh -c 'whoami; id -u; kas --version'
 ```
 
-路径 B：对 `yp-builder:local` 执行同样的 `inspect` 与 `run` 核对。
+路径 A（`$IMAGE` = GHCR `wrynose-m0`）先 `docker pull ghcr.io/zeek-zhao/yp-builder:wrynose-m0` 再核对 `jenkins/1000` 基线；路径 B（`$IMAGE` = §4.2 构建的 `yp-builder:local`）核对**自己构建的当前 UID 镜像**，不要拉/验 GHCR 的 1000 镜像。
 
-期望：`jenkins`、`1000`（路径 B 为当前 UID）、`kas 5.5`。记录镜像 digest。
+期望：`jenkins`、`1000`（路径 B 为当前 UID）、`kas 5.5`。记录镜像 digest（本地镜像 `RepoDigests` 为空属正常，记录 `IMAGE` 值即可）。
 
 ## 6. 取回全量 S5 缓存（真实 11 GiB）
 
