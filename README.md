@@ -38,6 +38,8 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 
 宿主机需要 **Docker + git / bash / python3 / curl / tar / sha256sum**；**不需要 kas / bitbake**，`kas build` 必须在 builder 容器内执行。这些工具是 `git clone`、fetch 缓存、环境预检的前置；Ubuntu 24.04 默认具备大部分，缺失见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §1「宿主工具」。路径 A 另需 `sudo`（root 用户可去掉 `sudo` 直接执行）；路径 B 不需要 `sudo`；若当前 UID=1000 但非 root 且无 `sudo`，走路径 B。
 
+构建容器必须使用宿主**全部 CPU/内存**：`docker run` / `docker build` 不得加 `--cpus`、`--memory` 等限制；标准执行机为 **32 核 / 128 GiB 内存档**。低于此基线仍用实际全部资源，但须在记录中标 `RESOURCE_PARTIAL`，不得写成 full-quota PASS。硬性细则见 [`AGENTS.md`](AGENTS.md) §2.1。
+
 **首次使用必须先取回 S5 缓存**：没有缓存的冷构建在 4 核/8 GB 配额下耗时约 2h51m（prod edition，RV-005），命中缓存的二次构建约 200–300s（**ci edition**，RV-005；prod edition 见 RV-014，时长依配额与 edition 而异）。取缓存（release 8 分片重组、sha256 校验、**direct 单层解包**得到 `downloads/` 与 `sstate/`）与换机完整命令序列见 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3；正常顺序是 fetch → bootstrap → preflight，不使用 `--force`。S5 缓存取回入口只在 runbook，不在 README 复制会漂移的命令。
 
 **第 2 步先取缓存、再归一属主**：先按 [`docs/runbook-new-machine.md`](docs/runbook-new-machine.md) §3 步骤 4 取回缓存（目标为空，无需 `--force`；fetch 命令不在 README 复制以免漂移），然后按下面**二选一**执行第 2 步（不要顺序执行两条）。若你已先执行 bootstrap，fetch 后必须重跑第 2 步——root 解包会把属主变为归档 UID。

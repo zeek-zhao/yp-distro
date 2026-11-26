@@ -17,9 +17,10 @@
 | 操作系统 | Ubuntu 24.04 | Yocto 6.0 官方支持矩阵（ADR-003） |
 | Docker | ≥ 24 | `docker version` 与 daemon 均可用；本流程不依赖 compose |
 | 宿主工具 | `git`、`bash`、`python3`、`curl`、`tar`、`sha256sum` | clone/fetch/verify 的前置：`git clone` 需 git；`fetch-cache.sh` 硬依赖 python3（token JSON 解析）；下载用 curl、解包用 tar、校验用 sha256sum。不锁版本，但必须存在；`verify-env.sh` 最先检查（缺则 `FAIL DEP_MISSING <tool>`，不是 registry 401）。不要求宿主装 kas/bitbake。路径 A 另需 `sudo`（root 可去掉 `sudo`，无 `sudo` 走路径 B）；路径 B 不需要 `sudo`；UID=1000 非 root 且无 `sudo` 走路径 B |
-| CPU | ≥ 8 核（建议） | RV-005 实测在 4 核有效配额下可完成，但首次构建约 2h51m |
-| 内存 | ≥ 16 GB（建议 32 GB） | RV-005 实测 8 GB cgroup 限额需下调并发（ISS-011/CHG-005）；16 GB 为舒适下限 |
-| 磁盘空闲 | ≥ 200 GB（建议） | 预算见下表 |
+| CPU | 标准 **32 核**；最低 8 核 | 标准基线见 `AGENTS.md` §2.1；低于 32 核按 `RESOURCE_PARTIAL` 记录实际核数，不得冒充 32c 结果。RV-005 在 4 核有效配额下可完成，但首次构建约 2h51m |
+| 内存 | 标准 **128 GiB 档**（系统可见约 123.3 GiB）；最低 16 GB | 标准基线见 `AGENTS.md` §2.1；8 GB cgroup 为 RV-005 历史配额，需 `BB_NUMBER_THREADS=4` / `PARALLEL_MAKE=-j2`（ISS-011/CHG-005），不得作为 128 GiB 全配额证据 |
+| 构建容器资源 | **不设上限**：`docker run` / `docker build` 不加 `--cpus`、`--memory`、`--cpu-quota`、`--cpuset-cpus` | 容器必须继承 Docker daemon 可见的全部 CPU/内存；启动后按 `AGENTS.md` §2.1 四项核验 `NanoCpus=0`、`Memory=0`、`CpuQuota=0`。宿主 shell 自身 cgroup 限额不代表 Docker 限额 |
+| 磁盘空闲 | ≥ 200 GB（建议 ≥300 GB） | 预算见下表 |
 | 出网 | ghcr.io、git.openembedded.org、git.yoctoproject.org、api.github.com | 镜像、层源码、release 资产；无远程 sstate/hashserv |
 
 磁盘预算（均为量级值，以 `df -h` 实测为准）：
@@ -44,7 +45,7 @@
 | 全量切片（GHCR） | 源 tar `11,153,397,760 B`、`sha256=a8870b50f2b262d90978a17c6bcdf28794659e1dfd7f500f24ddf097dad4febc`；2 片：`8,589,934,592 B` + `2,563,463,168 B` |
 | 全量分片 tag / digest | `ghcr.io/zeek-zhao/yp-cache:wrynose-m0-full-part-00` → `sha256:f1404012d98fb7956619aa4c89b293a435a322b67fcc57227b1c15baef974390`；`-part-01` → `sha256:899af6fa46c9223223d978fa110dabb5215f161e1d1a4b6d8352e6d1e2271d36`；均匿名可拉 |
 | release 全量归档布局 | **direct**：顶层为 `yp-dl/`、`yp-st/`（空目录）、`downloads/`、`sstate/`，无 `downloads.tar` / `sstate.tar`；HTTP Range 读 `part-00` 前 4 KB 与 RV-014 全量实跑 `STRUCT_OK mode=direct` 均证实（CHG-017/ISS-029） |
-| 本地打包 / GHCR 源 tar 布局 | `pack.sh` 本地产出已实测为 **two-stage**（顶层 `./`、`./downloads.tar`、`./sstate.tar`）；GHCR 两片分片的源 tar 是另一对象（`a8870b50…`），**布局 `UNVERIFIED`**（本轮未拉取验证）——不要与 release 的 direct 混为一谈（CHG-017/CHG-018） |
+| 本地打包 / GHCR 源 tar 布局 | `pack.sh` 本地产出已实测为 **two-stage**（顶层 `./`、`./downloads.tar`、`./sstate.tar`）；GHCR 两片分片的源 tar 是另一对象（`a8870b50…`），已由 RV-018/CHG-020 真实拉取确认为 **two-stage-yp**（`yp-dl.tar`+`yp-st.tar`）——不要与 release 的 direct 混为一谈（CHG-020） |
 | 全量分发口径 | release 8 分片归档 + GHCR 两片分片（两种取法见 §3 步骤 4）；**不发布单一大镜像** `yp-cache:wrynose-m0-full`（该 tag 从未产出；CHG-013 §7 方案 A，CHG-012 v1.2） |
 | 切片 manifest | 由 `split.sh` 产出 `manifest.json`（序号、字节数、sha256、`source_sha256`），消费端必须用它调 `merge.sh`；持久副本提交在 `manifests/full-slices-manifest.json`，release 资产清单在 `manifests/cache-full.release.json`。两 manifest 的 `layout` 仅描述各自 tar 内部布局；`requires_reassembly` 单独描述“下载后需合并分片”，重组判断读后者（CHG-017/ISS-030） |
 | 元数据来源 | `docker/cache-meta.json` 的 `provenance` 段（edition/machine/kas commit/载荷哈希/文件数），静态来自 `docker/cache-provenance.json`；`CHG-013` |
@@ -153,12 +154,17 @@ README 的三步保留为最简示意；builder 镜像不含仓库的 `kas/` 配
 ```bash
 # 路径 B：必须在同一 shell 先 export YP_BUILDER_IMAGE=yp-builder:local；
 # 若跨 shell，直接把下一行改为 IMAGE=yp-builder:local。
+# 标准执行机 32 核/128 GiB：不要添加 --cpus / --memory / --cpu-quota / --cpuset-cpus。
 IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
   -v "$PWD/downloads:/work/downloads" \
   -v "$PWD/sstate:/work/sstate" \
   "$IMAGE" sleep infinity
+
+# 启动后核验：必须 NanoCpus=0 Memory=0 CpuQuota=0（无限制），否则停止构建。
+docker inspect yp-m0-build --format \
+  'NanoCpus={{.HostConfig.NanoCpus}} Memory={{.HostConfig.Memory}} CpuQuota={{.HostConfig.CpuQuota}}'
 
 docker exec yp-m0-build bash -c \
   'mkdir -p /work/build-run && tar -C /mnt/repo --exclude=./.git --exclude=./downloads --exclude=./sstate -cf - . | tar -C /work/build-run -xf -'
@@ -220,7 +226,7 @@ tar -xf cache-full.tar -C "$DEST_PARENT"
 [ -d "$DEST_PARENT/downloads" ] && [ -d "$DEST_PARENT/sstate" ] && echo STRUCT_OK
 ```
 
-> 历史背景：`downloads.tar`/`sstate.tar` 的“两步解包”**只适用于 `pack.sh` 本地产出（已实测 two-stage）**，**不是** release 归档，也不是 GHCR 源 tar。GHCR 源 tar（`a8870b50…`）布局 **UNVERIFIED**（本轮未拉取验证，见 §2、RV-015/CHG-018）。
+> 历史背景：`downloads.tar`/`sstate.tar` 的“两步解包”**只适用于 `pack.sh` 本地产出（已实测 two-stage）**，**不是** release 归档，也不是 GHCR 源 tar。GHCR 源 tar（`a8870b50…`）已由 RV-018/CHG-020 确认为 `yp-dl.tar`+`yp-st.tar`（two-stage-yp），`fetch-cache.sh` 会自动归一为 `downloads/` 与 `sstate/`。
 
 `fetch-cache.sh` 在临时目录完成校验后才单层解包并 `mv` 到目标，失败不留半成品；`unpack_archive` 仍保留对 direct/two-stage 两种实际布局的探测作为最后防线。目标不存在、空目录、或仅含 `.yp-volume` 视为可写并保留 marker（无需 `--force`）；含其他任何条目则拒绝覆盖并提示 `--force`（破坏性，删除整个目标目录）。root 执行时打印 `OWNER_HINT`，随后按步骤 5 bootstrap 归一属主。
 
@@ -229,7 +235,7 @@ tar -xf cache-full.tar -C "$DEST_PARENT"
 ### 5.1 磁盘 / 内存不足
 
 - **判定**：`verify-env.sh` 打印 `FAIL DISK` → 退出码 `1`；`preflight.sh` 打印 `LOW_SPACE` → 退出码 `3`；`free -h` 明显低于 16 GB 或构建日志出现 `Killed` / cgroup `oom_kill`。
-- **处理**：清理旧 `cache-work/`、`build/`、无用镜像（`docker image prune`）；扩容到 ≥200 GB；内存不足时不要提高并发——仓库已把 `BB_NUMBER_THREADS=4`、`PARALLEL_MAKE="-j 2"` 固定为 8 GB 可跑的值（CHG-005）。
+- **处理**：清理旧 `cache-work/`、`build/`、无用镜像（`docker image prune`）；扩容到 ≥200 GB；内存不足时不要提高并发——8 GB 历史配额下仓库固定 `BB_NUMBER_THREADS=4`、`PARALLEL_MAKE="-j 2"`（CHG-005）。注意：**32c/128G 全配额构建不能沿用这组 4/-j2 值**；当前 `kas/base.yml` 仍固定 4/-j2 是已知缺口，按 `AGENTS.md` §2.1 另开变更收口，未收口前不得声称用满 32 核。
 - **不要**：直接删 `downloads/` 或 `sstate/`，那会让二次构建退回冷构建。
 
 ### 5.2 UID 不一致（新机用户 UID≠1000）
@@ -274,14 +280,16 @@ tar -xf cache-full.tar -C "$DEST_PARENT"
 | 场景 | 实测时长 | 来源 |
 |---|---|---|
 | 首次冷构建（ci edition） | 7096s（约 1h58m） | RV-005 |
-| 首次冷构建（prod edition） | 10253s（约 2h51m） | RV-005 |
-| 二次构建（命中缓存） | 214s，量级 **200–300s** | RV-005 |
+| 首次冷构建（prod edition，4 核/8 GB 历史配额） | 10253s（约 2h51m） | RV-005 |
+| 二次构建（命中缓存，4 核/8 GB 历史配额） | 214s，量级 **200–300s** | RV-005 |
+| 二次构建（prod，32 核/128 GiB 全配额） | 236s（3m56s），`Sstate 99% match` | RV-014 / RV-019 |
+| 首次构建（prod，32 核/128 GiB 全配额，带 E1 真实缓存） | 291s（4m51s） | RV-019 |
 
-以上是在 4 核有效配额 / 8 GB cgroup 下的实测值；更宽的配额通常更快。首次构建长时间无输出属正常，先看 `cooker` 日志是否仍在增长，不要中途 `docker rm -f`。
+以上 4 核/8 GB 行为 RV-005 历史配额；32 核/128 GiB 为 RV-014/RV-019 全配额实测。更宽配额通常更快，但**不得把 4 核/8 GB 与 32 核结果混在同一结论**。
 
 ## 7. 验证边界
 
-- §3 中 `verify-env.sh`（T2）与 `fetch-cache.sh`（T3）**均已实现**：样本链路自测见 RV-013 T2/T3；全量 release 11 GB 路径已由 RV-014 端到端实跑（`FETCH_OK` / `SHA256_OK=1c8126d4…` / `STRUCT_OK mode=direct downloads=1288 sstate=6945`）；`--mode ghcr` 全链路仍标 `UNVERIFIED`（release 路径已实跑，两者都产出同构两卷）。
-- release 资产名称与大小经 GitHub API 匿名查询核对；`cache-full.sha256` 内容经资产下载核对。**release 归档权威布局为 direct**（顶层 `downloads/ sstate/ yp-dl/ yp-st/`，RV-014 `STRUCT_OK mode=direct`；CHG-017 收口）；`pack.sh` 本地产出已实测为 two-stage；GHCR 源 tar（`a8870b50…`）布局 **UNVERIFIED**（未拉取验证），三者不是同一对象、不得混用。`fetch-cache.sh` 对两种实际 tar 布局均探测，以实跑 `mode=` 为准；重组与否由 manifest `requires_reassembly` 决定（CHG-017/ISS-030）。本轮收口验证见 RV-015/CHG-018。
-- **全量 GHCR 分片路径标 `UNVERIFIED`**：本轮未跑 `--mode ghcr`；全量分片 digest 沿用 CHG-012/ISS-020 的 GHCR registry API 独立核验记录。release 8 分片路径已由 RV-014 实跑通过。
-- 构建时长与命中率：RV-005 为 4 核/8 GB 配额实测（ci 冷 7096s / prod 冷 10253s / 二次 214s）；RV-014 在本机 32 核/123 GiB 全配额下 prod 首次 5m29s、二次 3m56s、`Sstate 99% match`。时长依配额与 edition 而异，不得跨 edition 比较。
+- §3 中 `verify-env.sh`（T2）与 `fetch-cache.sh`（T3）**均已实现**：样本链路自测见 RV-013 T2/T3；全量 release 11 GB 路径已由 RV-014/RV-018 端到端实跑（`FETCH_OK` / `SHA256_OK=1c8126d4…` / `STRUCT_OK mode=direct downloads=1288 sstate=6945`）；`--mode ghcr` 全链路已由 RV-018 §3 实跑验证（digest 拉取 / `RepoDigests` / 前置拒绝 / 回退 / `MERGE_OK` / `STRUCT_OK two-stage-yp` / `FETCH_OK`）。
+- release 资产名称与大小经 GitHub API 匿名查询核对；`cache-full.sha256` 内容经资产下载核对。**release 归档权威布局为 direct**（顶层 `downloads/ sstate/`，RV-014/RV-018 `STRUCT_OK mode=direct`）；`pack.sh` 本地产出已实测为 two-stage（`downloads.tar`+`sstate.tar`）；GHCR 源 tar（`a8870b50…`，11,153,397,760 B）已由 RV-018/CHG-020 真实拉取确认，顶层为 `yp-dl.tar`+`yp-st.tar`（two-stage-yp）。三者不是同一对象、不得混用。`fetch-cache.sh` 对三种实际 tar 布局均探测，以实跑 `mode=` 为准；重组与否由 manifest `requires_reassembly` 决定（CHG-017/ISS-030）。
+- **GHCR 全量分片路径已由 RV-018 §3 实跑验证**：按 digest 拉取、`RepoDigests` 校验、非空目标前置拒绝、`DIGEST_FALLBACK` 回退、`MERGE_OK a8870b50…`、`STRUCT_OK two-stage-yp`、`FETCH_OK`。仍保留的 `UNVERIFIED` 只有 §7 明确列出的项，不得沿用旧「ghcr 未跑」表述。
+- 构建时长与命中率：RV-005 为 4 核/8 GB 配额实测（ci 冷 7096s / prod 冷 10253s / 二次 214s）；RV-014/RV-019 为 32 核/123–128 GiB 全配额，prod 首次 291–329s、二次 236s、`Sstate 99% match`。时长依配额与 edition 而异，不得跨 edition / 跨配额比较。

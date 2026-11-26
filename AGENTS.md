@@ -22,7 +22,17 @@ scripts/ai-entry.sh --next   # 打印可直接粘贴给 AI 的单步提示词
 | 6 | 当前 Step 对应的 `docs/m0/design/*.md` | 本步的设计与接口 |
 | 7 | `docs/ai/m0-resume-prompt.md` | 续做提示词（按 RV-010 审计排的 A→F 阶段），接手时必读 |
 
-## 3. 十条硬约束（摘要，全文见 m0-prompt）
+## 2.1 执行机与 Docker 资源基线（强制）
+
+- 标准执行机：Ubuntu 24.04、**32 个 CPU 核**、**128 GiB 内存档**（裸机标称 128 GB，系统可见约 123.3 GiB）、≥300 GB 空闲磁盘。
+- 所有 `docker build` / `docker run` / 构建容器**不得设置** `--cpus`、`--memory`、`--cpu-quota`、`--cpuset-cpus`，也不得在 compose / kas 配置中限制；容器默认继承 Docker daemon 可见的全部 CPU 与内存。
+- 每次启动构建容器前必须记录四项：`nproc`、`/proc/meminfo` 的 `MemTotal`、`docker info --format 'NCPU={{.NCPU}} MemTotal={{.MemTotal}}'`、`docker inspect <容器> --format 'NanoCpus={{.HostConfig.NanoCpus}} Memory={{.HostConfig.Memory}} CpuQuota={{.HostConfig.CpuQuota}}'`。四项必须显示宿主全部资源，且 `NanoCpus=0`、`Memory=0`、`CpuQuota=0`；不满足则停止，不得继续构建，也不得把结果写成 full-quota PASS。
+- Docker 无限制不等于 bitbake 用满：构建并发（`BB_NUMBER_THREADS` / `PARALLEL_MAKE`）必须按实际 CPU/内存配置；32c/128G 不得沿用 8 GB 配额的 `4` / `-j 2` 固定值。并发取值须由设计/变更单明确，并在 RV 记录实际核数、内存与并发。
+- 宿主 shell 自身被 cgroup 限到 4 核/8 GB，不代表 Docker daemon 受限；不要用宿主 shell 的 `nproc` / 内存上限判断容器能力。若 Docker daemon 实际只有 4 核/8 GB，按 `RESOURCE_PARTIAL` 记录，只声明该配额下的结果。
+- 适用范围：本地/独立执行机上的 bitbake 构建与缓存操作容器。GitHub 托管 runner 不是该基线，CI 结果不得冒充 32c/128G 全配额构建证据。
+- 机器不足 32 核 / 128 GiB 时，仍使用实际全部资源，但在 RV 与报告中写 `RESOURCE_PARTIAL`、实际核数与内存；不得伪称 32c/128G。标准 32c/128G 结论只能在该基线上产生。
+
+## 3. 十一条硬约束（摘要，全文见 m0-prompt）
 
 1. 只在本分支工作；本分支为孤立分支，不向 `main` 开 PR（方案 A，见 YP-M0-ADR-002）
 2. 提交身份 `zeek-zhao`，禁止 AI 署名 trailer
@@ -34,6 +44,7 @@ scripts/ai-entry.sh --next   # 打印可直接粘贴给 AI 的单步提示词
 8. 切分阈值只在 `scripts/cache/threshold.conf` 定义
 9. 一次一步，提交后停止等评审
 10. 不新增 PRD 之外的需求，偏离记 `docs/m0/deviations.md`
+11. 构建/运行容器必须使用宿主全部 CPU/内存：不得加 `--cpus` / `--memory` 等限制；标准机 32 核/128 GiB，低于基线用实际全量并标 `RESOURCE_PARTIAL`
 
 ## 4. 文档先行（Doc-First Gate）
 

@@ -30,6 +30,10 @@ if [ "${1:-}" = "--next" ]; then
 4) 提交带 Refs: 设计编号 与 Doc: 路径；一次一步，提交后停下等评审
 5) 回报六件事：改动文件、执行命令、已验证、未验证及原因、新增记录编号、下一步建议
 
+资源基线（AGENTS.md §2.1）：标准执行机 32 核 / 128 GiB；docker build/run 不得加 --cpus/--memory 等限制；
+每次构建前记录 nproc、MemTotal、docker info NCPU/MemTotal、docker inspect 的 NanoCpus/Memory/CpuQuota；
+Docker 无限制不等于 bitbake 用满，并发须按实际资源设置。低于基线用实际全量并标 RESOURCE_PARTIAL。
+
 约束与禁区见 AGENTS.md 与 docs/ai/m0-prompt.md，不得越界。
 EOF
   exit 0
@@ -40,6 +44,7 @@ echo "分支     : $(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || e
 echo "最新提交 : $(git -C "$ROOT" log -1 --pretty='%h %s' 2>/dev/null || echo unknown)"
 echo
 echo "必读顺序 : AGENTS.md → README.md → docs/ai/m0-prompt.md → docs/m0/plan.md → docs/m0/iso-mapping.md"
+echo "资源基线 : 32 核 / 128 GiB；容器不加 --cpus/--memory；低于基线标 RESOURCE_PARTIAL（AGENTS §2.1）"
 echo
 echo "进度（来自 docs/m0/plan.md）:"
 awk -F'|' '/^\| S[0-9]+ \|/ {gsub(/^ +| +$/,"",$2);gsub(/^ +| +$/,"",$3);gsub(/^ +| +$/,"",$4); printf "  %-4s %-32s %s\n", $2, $3, $4}' "$PLAN"
