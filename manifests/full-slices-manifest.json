@@ -2,9 +2,9 @@
   "schema": "yp-cache-slice-manifest-v1",
   "source": "cache-full.tar",
   "source_sha256": "a8870b50f2b262d90978a17c6bcdf28794659e1dfd7f500f24ddf097dad4febc",
-  "layout": "UNVERIFIED",
+  "layout": "two-stage-yp",
   "requires_reassembly": true,
-  "layout_note": "CHG-017/ISS-030：源 tar（a8870b50…，GHCR 两片，另一对象）内部布局本轮未拉取验证；本 manifest 的 layout 与 release 的 direct 无关，不混用。源 tar 若由 pack.sh 产出则为 two-stage，但无证据，标 UNVERIFIED，不篡改既有 digest/字节。",
+  "layout_note": "CHG-020/RV-018：GHCR 源 tar（a8870b50…，11,153,397,760 B）已真实拉取并按 digest 校验；实测顶层为 yp-dl.tar+yp-st.tar，内层 yp-dl/（1288 文件，含 .yp-volume）与 yp-st/（6945 文件，含 .yp-volume），fetch-cache.sh 归一为 downloads/ 与 sstate/。与 release 的 direct 布局及 pack.sh 的 downloads.tar+sstate.tar two-stage 均不同，三者不是同一对象，不得混用。total_bytes/分片 bytes/sha256/digest 均未改（分片 01 sha256 的 63→64 位截断修复见 ISS-036）。",
   "total_bytes": 11153397760,
   "slice_max_bytes": 8589934592,
   "total_slices": 2,
@@ -19,7 +19,7 @@
     {
       "index": 1,
       "bytes": 2563463168,
-      "sha256": "fbe9e3567a87cc427a5e016b5e5b54c797ff8b2e4b4e6ebcbbe92bb47666d54",
+      "sha256": "fbe9e3567a87cc427a5e016b5e5b54c797ff8b2e4b4e6ebcbbe92bb47666d54c",
       "image": "ghcr.io/zeek-zhao/yp-cache:wrynose-m0-full-part-01",
       "digest": "sha256:899af6fa46c9223223d978fa110dabb5215f161e1d1a4b6d8352e6d1e2271d36"
     }

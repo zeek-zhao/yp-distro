@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # 换机缓存取回（T3 / RV-013；CHG-017 收口）：release 分片重组 或 GHCR 分片合并，校验通过后单层解包到 dest-parent。
-# release 归档为 direct（顶层 downloads/ sstate/）；pack.sh 本地产出为 two-stage；GHCR 源 tar（a8870b50…）布局 UNVERIFIED（未拉取验证）。脚本对实际 tar 布局探测。
+# release 归档为 direct（顶层 downloads/ sstate/）；pack.sh 本地产出为 two-stage（downloads.tar+sstate.tar）；GHCR 源 tar（a8870b50…）实测为 two-stage-yp（yp-dl.tar+yp-st.tar，内层 yp-dl/ 与 yp-st/，CHG-020/RV-018）。脚本对实际 tar 布局探测并归一。
 # 只读 GH_TOKEN 环境变量；公开仓库匿名下载；脚本内不保存任何 token。
 # 校验失败 exit 1；校验通过前不解包，所有解包在临时目录完成再 mv，不留半成品。
 # CHG-017：重组判断读 manifest.requires_reassembly（缺失回退 layout==two-stage）；官方顺序 fetch → bootstrap → preflight。
+# K-8/CHG-020（ghcr）：check_target 前置到 pull 循环前（非空目标在下载前失败）；有 digest 按 digest 拉取并校验 RepoDigests 含该 digest，缺 digest 才回退 tag 并记 DIGEST_FALLBACK。不改分片 bytes/sha256/digest。
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -102,6 +103,20 @@ unpack_archive() {
       tar -xf "$stage/downloads.tar" -C "$stage" || die "downloads.tar 解包失败"
       tar -xf "$stage/sstate.tar" -C "$stage" || die "sstate.tar 解包失败"
       ;;
+    *" yp-dl.tar yp-st.tar "*)
+      # E3/RV-018：GHCR 源 tar（a8870b50…，11,153,397,760 B）实测为 yp-dl.tar+yp-st.tar，
+      # 内层各含 yp-dl/ 与 yp-st/（带 .yp-volume）。归一为 downloads/ 与 sstate/。
+      mode="two-stage-yp"
+      tar -xf "$tar" -C "$stage" || die "外层 tar 解包失败"
+      [ -f "$stage/yp-dl.tar" ] && [ -f "$stage/yp-st.tar" ] || die "外层 tar 缺少内层 yp-dl.tar/yp-st.tar"
+      tar -xf "$stage/yp-dl.tar" -C "$stage" || die "yp-dl.tar 解包失败"
+      tar -xf "$stage/yp-st.tar" -C "$stage" || die "yp-st.tar 解包失败"
+      [ -d "$stage/yp-dl" ] && [ -d "$stage/yp-st" ] || die "yp-dl.tar/yp-st.tar 内缺少 yp-dl/ 或 yp-st/"
+      rm -rf "$stage/downloads" "$stage/sstate"
+      mv "$stage/yp-dl" "$stage/downloads" || die "yp-dl -> downloads 归一失败"
+      mv "$stage/yp-st" "$stage/sstate" || die "yp-st -> sstate 归一失败"
+      rm -f "$stage/yp-dl.tar" "$stage/yp-st.tar"
+      ;;
     *" downloads sstate "*)
       mode="direct"
       case "$tar" in
@@ -109,7 +124,7 @@ unpack_archive() {
         *) tar -xf "$tar" -C "$stage" || die "tar 解包失败" ;;
       esac
       ;;
-    *) die "未知归档布局（顶层项: ${names:-empty}）；期望 downloads.tar+sstate.tar 或 downloads/+sstate/" ;;
+    *) die "未知归档布局（顶层项: ${names:-empty}）；期望 downloads.tar+sstate.tar / yp-dl.tar+yp-st.tar / downloads/+sstate/" ;;
   esac
 
   [ -d "$stage/downloads" ] || die "解包后缺少 downloads/"
@@ -313,7 +328,11 @@ PY
       i=0
       while [ "$i" -lt "$S_TOTAL" ]; do
         eval "nn=\$(printf '%02d' \$S${i}_INDEX); im=\$S${i}_IMAGE; dg=\$S${i}_DIGEST; b=\$S${i}_BYTES; s=\$S${i}_SHA"
-        note "SLICE_IMAGE index=$nn image=$im digest=$dg bytes=$b sha256=$s"
+        if [ -n "$dg" ]; then
+          note "SLICE_IMAGE index=$nn image=$im digest=$dg bytes=$b sha256=$s pull_ref=digest"
+        else
+          note "SLICE_IMAGE index=$nn image=$im digest=$dg bytes=$b sha256=$s pull_ref=tag DIGEST_FALLBACK=1"
+        fi
         i=$((i+1))
       done
       note "DRY_RUN_OK no docker pull performed"
@@ -321,14 +340,29 @@ PY
     fi
     command -v docker >/dev/null 2>&1 || die "ghcr 模式需要 docker"
     docker version --format '{{.Server.Version}}' >/dev/null 2>&1 || die "docker daemon 不可用"
+    # K-8：非空目标必须在任何 pull 之前拒绝，避免白下 11 GB 才发现目标占用。
+    check_target
     mkdir -p "$WORK/slices"
     cp "$MANIFEST" "$WORK/slices/manifest.json" || die "复制 manifest 失败"
     i=0
     while [ "$i" -lt "$S_TOTAL" ]; do
-      eval "nn=\$(printf '%02d' \$S${i}_INDEX); im=\$S${i}_IMAGE; b=\$S${i}_BYTES; s=\$S${i}_SHA"
-      docker pull "$im" || die "docker pull 失败: $im"
-      note "PULL_OK image=$im"
-      cid="$(docker create "$im" true)" || die "docker create 失败: $im"
+      eval "nn=\$(printf '%02d' \$S${i}_INDEX); im=\$S${i}_IMAGE; b=\$S${i}_BYTES; s=\$S${i}_SHA; dg=\$S${i}_DIGEST"
+      if [ -n "$dg" ]; then
+        pull_ref="${im}@${dg}"
+        docker pull "$pull_ref" || die "docker pull 失败: $pull_ref"
+        # 校验本地镜像 RepoDigests 含 manifest 声明的 digest（防 tag 漂移/错层）
+        repo_digests="$(docker image inspect "$pull_ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' 2>/dev/null)"
+        case "$repo_digests" in
+          *"$dg"*) note "DIGEST_OK index=$nn manifest_digest=$dg repo_digest_match=yes" ;;
+          *) die "RepoDigests 未含 manifest digest: want=$dg got=${repo_digests:-<none>}" ;;
+        esac
+      else
+        pull_ref="$im"
+        docker pull "$pull_ref" || die "docker pull 失败: $pull_ref"
+        note "DIGEST_FALLBACK index=$nn reason=manifest_digest_absent pull_ref=tag image=$im"
+      fi
+      note "PULL_OK image=$im ref=$pull_ref"
+      cid="$(docker create "$pull_ref" true)" || die "docker create 失败: $pull_ref"
       docker cp "$cid:/work/slices/cache.slice.$nn" "$WORK/slices/cache.slice.$nn" || { docker rm -f "$cid" >/dev/null 2>&1 || true; die "docker cp 缺片 cache.slice.$nn"; }
       docker rm -f "$cid" >/dev/null 2>&1 || true
       actual_bytes="$(stat -c %s "$WORK/slices/cache.slice.$nn")"
@@ -340,6 +374,7 @@ PY
       i=$((i+1))
     done
     bash "$ROOT/scripts/cache/merge.sh" --in "$WORK/slices" --out "$WORK/merged.tar" || die "merge.sh 失败（缺片/哈希不符）"
+    # 解包前再核一次目标（pull 期间可能被写入）；前置 check_target 保证拉取不白费。
     check_target
     unpack_archive "$WORK/merged.tar" "$STAGE"
     note "FETCH_OK mode=ghcr"

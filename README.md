@@ -32,7 +32,7 @@ scripts/ai-entry.sh --next   # 可直接粘贴给 AI 的单步提示词
 | S8 | PR 门禁 | 完成 |
 | S9 | 验收与变量索引 | 完成 |
 
-验收结论：判据 1–8 全部 `通过`，`docs/m0/acceptance.md` 状态 `Final`。
+验收结论：判据 1–8 全部 `通过`，`docs/m0/acceptance.md` 状态 `Final`。M0 遗留的「真实全量 / `--mode ghcr` / GHCR 源 tar 布局 / K-8」已由 M0.1 证据闭环补齐（基线 `m0.0`），见 [`docs/m0.1/`](docs/m0.1/)（`RV-018` / `CHG-020` / `ISS-036`）。
 
 ## 三步上手（容器内构建）
 
