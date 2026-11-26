@@ -1,5 +1,7 @@
 # YP-M0-AI-008 · M0 收口冻结 + M0.1 证据闭环
 
+> **Superseded（2026-11-26）**：本文件是同一内容的独立稿，已并入 `docs/ai/m0-readme-prereq-and-pathb-closeout-prompt.md` v1.1；以 AI-007 v1.1 为准，本文件不再作为执行入口。
+
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-AI-008 |
