@@ -114,13 +114,22 @@ else
   pass "MEMORY physical=${mem_gb} GB >= ${MEM_WARN_GB} GB"
 fi
 
-# 5) CPU 核数（只报告，不作为失败条件）
+# 5) CPU 核数 / Docker daemon 实际资源（只报告，不作为失败条件）
 cpus="$(nproc 2>/dev/null || echo unknown)"
-pass "CPU cores=$cpus"
-if [ "$cpus" != "unknown" ] && [ "$cpus" -lt "$CPU_STD" ] 2>/dev/null; then
-  warn "RESOURCE_PARTIAL cores=${cpus} < ${CPU_STD} 标准基线（结果不得写成 32c/128G full-quota PASS）"
-elif [ "$mem_gb" -lt "$MEM_STD_GB" ]; then
-  warn "RESOURCE_PARTIAL mem=${mem_gb} GB < ${MEM_STD_GB} GB 标准基线（结果不得写成 32c/128G full-quota PASS）"
+pass "CPU host_cores=$cpus"
+res_cpus="$cpus"; res_mem_gb="$mem_gb"; res_src="host"
+if command -v docker >/dev/null 2>&1 && docker version --format '{{.Server.Version}}' >/dev/null 2>&1; then
+  dncpu="$(docker info --format '{{.NCPU}}' 2>/dev/null || echo '')"
+  dmem="$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo '')"
+  if [ -n "$dncpu" ] && [ -n "$dmem" ] && [ "$dncpu" -gt 0 ] 2>/dev/null && [ "$dmem" -gt 0 ] 2>/dev/null; then
+    res_cpus="$dncpu"; res_mem_gb=$((dmem / 1024 / 1024 / 1024)); res_src="docker"
+  fi
+fi
+pass "RESOURCE source=$res_src cores=$res_cpus mem_gb=$res_mem_gb"
+if [ "$res_cpus" != "unknown" ] && [ "$res_cpus" -lt "$CPU_STD" ] 2>/dev/null; then
+  warn "RESOURCE_PARTIAL source=$res_src cores=${res_cpus} < ${CPU_STD} 标准基线（结果不得写成 32c/128G full-quota PASS）"
+elif [ "$res_mem_gb" -lt "$MEM_STD_GB" ]; then
+  warn "RESOURCE_PARTIAL source=$res_src mem=${res_mem_gb} GB < ${MEM_STD_GB} GB 标准基线（结果不得写成 32c/128G full-quota PASS）"
 fi
 
 # 6) 当前 uid/gid 与镜像默认对比
