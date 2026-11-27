@@ -43,7 +43,7 @@
 - 行为：
   1. 校验 installer 存在且可执行（`test -x`），否则 `SDK_INSTALL_FAIL` 非 0；
   2. `mkdir -p <prefix>`；
-  3. 以 `-y <prefix>` 非交互执行 installer（eSDK installer 标准参数：`-y` 免确认、位置参数或 `-d` 指定目录——以实际 installer `--help` 为准，实现时探测）；
+  3. 以 `-y -d <prefix>` 非交互执行 installer（**已探测**：模板 `openembedded-core/meta/files/toolchain-shar-extract.sh:72` 为 `getopts ":yd:npDRSl"`，`:101` Usage `[-y] [-d <dir>]`、`:102` `-y` = Automatic yes；故 `-y` 免确认、`-d <dir>` 指定目录。脚本默认 `-y -d <prefix>`，并支持 `--` 透传覆盖）；
   4. 验证 `<prefix>/environment-setup-*` 存在（glob 命中）→ 打印 `SDK_INSTALL_OK prefix=<prefix>`；否则 `SDK_INSTALL_FAIL` 非 0。
 - 不写仓库外持久状态之外的东西；prefix 由调用方给（验收用 `/tmp/yp-sdk*`）。不 source（source 由调用方/验收脚本做，避免子进程环境丢失）。
 - 日志/错误一律 stdout/stderr，不落盘到仓库。
@@ -54,7 +54,7 @@
 - 最小样例（在临时工作目录 `/tmp/yp-devtool-smoke-*` 内，不污染仓库）：
   1. `devtool --help` → 断言含 `add`/`build`/`modify`；
   2. `devtool ide-sdk --help` → 可用性检查（非交互；若该版本不支持则记 `IDE_SDK_UNAVAILABLE`，非阻断）；
-  3. `devtool add` / `modify` / `build`：用最小本地 recipe 样例（autotools 或 make 单文件），在 temp workdir 内走 add → modify → build 流程。每一步打印真实输出与 rc；任一步非 0 → `DEVTOOL_SMOKE_FAIL`。
+  3. `devtool add` / `modify` / `build`：用最小本地 make 样例走 add → build → `reset -n` → modify → build → reset 流程。**add 与 modify 对同一 recipe 互斥**（add 后 recipe 已在 workspace，modify 同名报 `already in your workspace`，实测），故 modify 用 SDK 内现成 recipe（默认 `m4`，`--modify-recipe` 可配）。每一步打印真实输出与 rc；任一步非 0 → `DEVTOOL_SMOKE_FAIL`。
 - 输出 `DEVTOOL_SMOKE_OK` 仅当 add/modify/build 三步均成功；`ide-sdk` 单独标 `IDE_SDK_HELP_OK` 或 `UNAVAILABLE`，不并入主结论。
 - 不在仓库内创建 recipe/workspace；临时目录用 `mktemp -d`，结束时清理（或保留路径供取证，记录于 RV）。
 - 交互 `devshell` / `devshell -p` 不跑（plan 明示 CI 不跑），记录 `UNVERIFIED`。
@@ -70,7 +70,7 @@
 | # | 失败模式 | 检测信号 | 处理 |
 |---|---|---|---|
 | F1 | `populate_sdk_ext` 任务不存在 | `bitbake -c listtasks` 无 `do_populate_sdk_ext` / `No such task` | 已探测任务存在；若发生开 ISS，核对 image.bbclass IMGCLASSES/SDK_OS，不擅自全局 INHERIT |
-| F2 | ext SDK 构建 OOM（buildtools 链全量编译） | `Killed` / `Error 137` / do_compile 失败 | 用 6/-j2 本地 overlay（ISS-M1-002 机制），不写「已通过」；峰 Recording 于 RV |
+| F2 | ext SDK 构建 OOM 或超长编译（buildtools + llvm/clang native 链） | `Killed` / `Error 137` / do_compile 失败 / 编译耗时数十分钟至数小时 | 用 6/-j2 本地 overlay（ISS-M1-002 机制），不写「已通过」；实测 dev edition 未裁图形特性使 `populate_sdk_ext` 拉入 llvm-native（3472 步）+ clang-native（2282 步）全编，耗时显著；内存峰值与耗时 Recording 于 RV |
 | F3 | installer 名/路径不符预期 | `ls $SDK_DEPLOY/*.sh` 空 / `TOOLCHAINEXT_OUTPUTNAME` 与文件不符 | 脚本用 `--installer` 传参 + 通配探测，不硬编码名；记录真实文件名 |
 | F4 | installer 非交互参数错误 | installer 退出非 0 / prefix 无 environment-setup | 实现时读 installer `--help` 确认 `-y`/`-d` 用法；失败开 ISS |
 | F5 | devtool 在 SDK 中缺失 | `source environment-setup` 后 `command -v devtool` 空 | 核对 buildtools installer 是否装入；缺项开 ISS，不写「已验证」 |
