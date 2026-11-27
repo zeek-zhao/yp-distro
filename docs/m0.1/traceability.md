@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0.1-TRAC-001 |
-| 基线 | `m0.0`（`06543c4`）；分支 `feat-m0.1-evidence` |
+| 基线 | `m0.0`（`06543c4`）；M0.1 证据闭环分支 `feat-m0.1-evidence`；M0.1.1 增补基线 `m0.1.1`=`8cb0fc6`；M0.1.2 增补基线 `m0.1.2`=`8c28dc1`（分支 `feat-m0.1.2-resource-fallback`）；M0.1.3 增补分支 `feat-m0.1.3-ai-entry`（基线 `m0.1.2`） |
 | 维护规则 | 每条 E 项写「命令 + 输出位置」；不以「已验证」代替原始证据 |
 
 ## 证据矩阵
@@ -19,5 +19,6 @@
 | E7 | 全配额构建复验 + 4c/8G 边界 | 容器无资源限制 + E1 真实卷 + RV-019 / RV-020 §2 | RV-019：宿主 32 核/129308484 kB、Docker NCPU=32/132GB、容器 NanoCpus=0 Memory=0；prod 构建 #1 291s / #2 236s。RV-020 §2（本增补）：容器 `yp-m0-build-m011` inspect 0/0/0、prod 构建 #1 14s / #2 314s（rm -rf build）、4630 tasks all succeeded、0 ERROR、ext4 42M（`/workspace/m01-build-artifacts/*.ext4` sha256=5a5f03e2…）；CPU ~400%/mem ~2.2GiB 无 OOM；4 核/8 GB 冷构建仍 UNVERIFIED | 已验证（全配额）；4c/8G UNVERIFIED |
 | E8 | M0.1.1 发布线（CI + tag） | workflow 触发改动 + RV-020 §5 | push `59e254d` 到 `feat-m0.1-evidence`（分支 `feat-m0*` + paths `kas/**`/`scripts/build/**` 命中）自动触发：gate `45962283036` success、publish `45962283012` success（4 job 全绿：prepare-cache-payload/publish-builder/publish-cache/publish-cache-slices），event=push、head_sha=`59e254d`（RV-020 §5.2）；`m0.1` 仍 `91adcc5` 未动，`m0.1.1` annotated tag + `release-m0` 快进见 RV-020 §5.3 | 已验证（CI）；发布线 tag/branch 见 §5.3 |
 | E9 | 资源兜底（CPU+内存分级）+ 文档去误导 | base.yml / threads.sh / CHG-022 / ISS-038 / ISS-039 / RV-021 | RV-021 §1：纯 Python 分级复核 ALL_OK（32/123→32/-j16、4/8→4/-j2、16/16→8/-j4、32/64→16/-j8、64/4→4/-j2 不按 CPU 翻倍、2/4→2/-j1 无 -j0）；`threads.sh` 只读输出 `SUGGEST_*` 无 `export YP_*`；`git grep` runbook/测试提示词无 eval/export；gate G6 + check-vars drift=0、手改检出还原；bitbake-getvar 为唯一验收。实测/CI 见 RV-021 §2–§5；4c/8G 全冷构建按用户要求不做（RV-021 §4） | 已验证（静态+门禁）；实测/CI 见 RV-021；4c/8G 全冷构建按用户要求不做 |
+| E10 | ai-entry 状态解析 + M1 立项闸门（M0.1.3） | scripts/ai-entry.sh / ISS-041 / CHG-023 / RV-022 | RV-022 §1：修复前普通模式误报 `下一步 S6（完成（Stage E…））`、`--next` 输出「实现 Step S6」；修复后 `bash -n` SYNTAX_OK、普通模式 `M0/M0.1 已闭环；M1 未立项`、`--next` 输出闭环提示 exit 0、无空 Step；临时 `PLAN_OVERRIDE` 三态样例：三种完成写法跳过、`未完成`/`进行中` 被选中、`未完成` 不被 `^完成` 前缀误吞；M1 入口提示见 RV-022 §2 | 已验证（真实输出）；T2–T5 见 RV-022 |
 
 状态取值：`未开始` / `进行中` / `已验证` / `UNVERIFIED` / `阻塞（ISS-0NN）`。
