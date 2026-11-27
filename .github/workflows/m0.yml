@@ -9,11 +9,13 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feat-m0-kas-bootstrap
+      - 'feat-m0*'
+      - 'release-m0*'
     paths:
       - 'docker/**'
       - 'scripts/cache/**'
       - 'kas/**'
+      - 'scripts/build/**'
 
 permissions:
   contents: read

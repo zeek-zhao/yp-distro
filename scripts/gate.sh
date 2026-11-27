@@ -89,6 +89,24 @@ while IFS= read -r n; do
 done < <(grep -oE '^\| [1-8] \|' docs/m0/acceptance.md | grep -oE '[1-8]')
 [ "$g5_bad" -eq 0 ] && pass "G5 traceability 引用的判据在 acceptance 均存在，且判据 1-8 均被引用"
 
+# G6 构建并发资源化契约（M0.1.1 / CHG-021）：分级唯一实现存在，base.yml 不写死标准值
+echo "--- G6 构建并发资源化契约 ---"
+g6_bad=0
+if [ ! -x scripts/build/threads.sh ]; then
+  fail "G6 缺少可执行 scripts/build/threads.sh（分级唯一实现）"; g6_bad=$((g6_bad+1))
+else
+  for tok in 'RESOURCE_TIER=' 'docker info' 'YP_BUILD_THREADS' 'YP_PARALLEL_MAKE' 'standard'; do
+    grep -Fq "$tok" scripts/build/threads.sh || { fail "G6 threads.sh 缺关键契约: $tok"; g6_bad=$((g6_bad+1)); }
+  done
+fi
+if grep -qE 'BB_NUMBER_THREADS[[:space:]]*=[[:space:]]*"32"|PARALLEL_MAKE[[:space:]]*=[[:space:]]*"-j 16"' kas/base.yml; then
+  fail "G6 kas/base.yml 写死了 32/-j16 默认值（应由 oe.utils.cpu_count() 动态分级）"; g6_bad=$((g6_bad+1))
+fi
+if ! grep -Fq 'oe.utils.cpu_count()' kas/base.yml; then
+  fail "G6 kas/base.yml 缺 oe.utils.cpu_count() 动态分级（CHG-021）"; g6_bad=$((g6_bad+1))
+fi
+[ "$g6_bad" -eq 0 ] && pass "G6 threads.sh 分级实现在位，base.yml 用 cpu_count 动态分级且未写死标准值"
+
 echo "===== GATE RESULT ====="
 if [ "$FAIL" -eq 0 ]; then
   echo "GATE_PASS"

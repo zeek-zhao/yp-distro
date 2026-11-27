@@ -155,6 +155,10 @@ README 的三步保留为最简示意；builder 镜像不含仓库的 `kas/` 配
 # 路径 B：必须在同一 shell 先 export YP_BUILDER_IMAGE=yp-builder:local；
 # 若跨 shell，直接把下一行改为 IMAGE=yp-builder:local。
 # 标准执行机 32 核/128 GiB：不要添加 --cpus / --memory / --cpu-quota / --cpuset-cpus。
+# 构建并发按 Docker daemon 实际资源分级（M0.1.1 / CHG-021）：32c/128G → 32/-j16；
+# 低配回退见 threads.sh 分级表。eval 输出可直接设置导出变量，容器继承后注入 bitbake。
+eval "$(bash scripts/build/threads.sh)"
+export YP_BUILD_THREADS YP_PARALLEL_MAKE
 IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
@@ -173,7 +177,7 @@ docker exec -w /work/build-run yp-m0-build \
   kas build kas/yp.yml:editions/prod.yml
 ```
 
-期望：容器状态 `Up`；复制命令无输出、退出码 `0`；构建末尾 `Tasks Summary: Attempted ... and all succeeded`，退出码 `0`。
+期望：容器状态 `Up`；`threads.sh` 在 32c/128G 输出 `RESOURCE_TIER=standard` / `YP_BUILD_THREADS=32` / `YP_PARALLEL_MAKE='-j 16'`；`docker inspect` 三项 `0/0/0`（无限制）；复制命令无输出、退出码 `0`；构建末尾 `Tasks Summary: Attempted ... and all succeeded`，退出码 `0`。可在容器内用 `bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE` 确认并发确实为 32/-j16（见 RV-020）。
 
 > **镜像与卷属主必须同源**：路径 A 用默认 GHCR 镜像（`jenkins/1000`）配 1000 卷；**路径 B 必须设 `export YP_BUILDER_IMAGE=yp-builder:local`，让 `"$IMAGE"` 解析为本地重建的当前 UID 镜像**。GHCR 的 `wrynose-m0`（1000）在路径 B **不用于构建**——卷是当前 UID（如 1234）配上 1000 容器会被 entrypoint 拒绝。§3 步骤 3 的 GHCR pull 在路径 B 可跳过或仅作对照。
 

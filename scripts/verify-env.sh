@@ -132,6 +132,24 @@ elif [ "$res_mem_gb" -lt "$MEM_STD_GB" ]; then
   warn "RESOURCE_PARTIAL source=$res_src mem=${res_mem_gb} GB < ${MEM_STD_GB} GB 标准基线（结果不得写成 32c/128G full-quota PASS）"
 fi
 
+# 5b) 建议并发（M0.1.1 / CHG-021）：复用 threads.sh 唯一分级实现，不在此重复阈值表。
+# threads.sh 只读 daemon；daemon 不可用时它 exit 1，此处降级为 SKIP，不新增 fail/warn。
+threads_sh="$ROOT/scripts/build/threads.sh"
+if [ -x "$threads_sh" ] || [ -f "$threads_sh" ]; then
+  t_out="$(bash "$threads_sh" 2>/dev/null)"
+  if [ $? -eq 0 ] && [ -n "$t_out" ]; then
+    t_tier="$(printf '%s\n' "$t_out" | sed -n 's/^RESOURCE_TIER=//p')"
+    t_thr="$(printf '%s\n' "$t_out" | sed -n 's/^export YP_BUILD_THREADS=//p')"
+    t_par="$(printf '%s\n' "$t_out" | sed -n "s/^export YP_PARALLEL_MAKE='//p" | tr -d "'")"
+    pass "SUGGEST_BUILD_THREADS tier=$t_tier threads=$t_thr"
+    pass "SUGGEST_PARALLEL_MAKE parallel=$t_par (via scripts/build/threads.sh)"
+  else
+    skip "SUGGEST_BUILD_THREADS threads.sh 未能读取 docker daemon（不改 fail/warn）"
+  fi
+else
+  warn "SUGGEST_BUILD_THREADS 缺 scripts/build/threads.sh（CHG-021 契约）"
+fi
+
 # 6) 当前 uid/gid 与镜像默认对比
 cur_uid="$(id -u)"; cur_gid="$(id -g)"
 if [ "${JENKINS_UID:-}" != "$cur_uid" ] || [ "${JENKINS_GID:-}" != "$cur_gid" ]; then

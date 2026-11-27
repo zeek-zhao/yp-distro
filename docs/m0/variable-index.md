@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-VAR-001 |
-| 版本 | v1.1 |
-| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对） |
+| 版本 | v1.2 |
+| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对；M0.1.1/CHG-021 并发资源化） |
 | 目的 | 记录关键变量的默认值、唯一定义处、可覆盖层与手改检测命令，使「手改配置可发现」（判据 8）闭环 |
 | 检测脚本 | `scripts/check-vars.sh`（统一断言，本表所有变量的期望值来源） |
 
@@ -27,8 +27,8 @@
 | 7 | `BB_HASHSERVE` | `auto`（本地） | `kas/base.yml` | 只读 | `grep -q 'BB_HASHSERVE = "auto"' kas/base.yml` |
 | 8 | `BB_HASHSERVE_DB_DIR` | `${SSTATE_DIR}` | `kas/base.yml` | 只读 | `grep -q 'BB_HASHSERVE_DB_DIR = "\${SSTATE_DIR}"' kas/base.yml`；T7 变量空间核对：`kas shell -c 'bitbake -e' kas/yp.yml:editions/ci.yml` → `BB_HASHSERVE_DB_DIR="/work/sstate"`、`BB_HASHSERVE="unix:///.../build/hashserve.sock"`（本地 socket）、`BB_SERVER_TIMEOUT="300"`，确认是真实 bitbake 变量，不改行 |
 | 9 | `BB_SERVER_TIMEOUT` | `300` | `kas/base.yml` | 只读 | `grep -q 'BB_SERVER_TIMEOUT = "300"' kas/base.yml` |
-| 10 | `BB_NUMBER_THREADS` | `4` | `kas/base.yml` | 只读（8GB 配额，ISS-011） | `grep -q 'BB_NUMBER_THREADS = "4"' kas/base.yml` |
-| 11 | `PARALLEL_MAKE` | `-j 2` | `kas/base.yml` | 只读（8GB 配额，ISS-011） | `grep -q 'PARALLEL_MAKE = "-j 2"' kas/base.yml` |
+| 10 | `BB_NUMBER_THREADS` | `${@oe.utils.cpu_count()}`（按 bitbake 可见 CPU，32c→32、4c→4） | `kas/base.yml` | 只读（bitbake 动态分级，CHG-021/ISS-037；环境变量因 kas 隔离 datastore 不生效） | `grep -Fq 'BB_NUMBER_THREADS = "${@oe.utils.cpu_count()}"' kas/base.yml` |
+| 11 | `PARALLEL_MAKE` | `-j ${@oe.utils.cpu_count() // 2}`（32c→-j16、4c→-j2） | `kas/base.yml` | 只读（同上；8GB 历史回退由 4c→-j2 自动保留） | `grep -Fq 'PARALLEL_MAKE = "-j ${@oe.utils.cpu_count() // 2}"' kas/base.yml` |
 | 12 | `PACKAGE_CLASSES` | `package_rpm`（`??=`） | `kas/base.yml` | base < edition | `grep -q 'PACKAGE_CLASSES ??= "package_rpm"' kas/base.yml` |
 | 13 | `DISTRO_FEATURES` | 空（`??=`） | `kas/base.yml` | base < edition（dev append debug-tweaks；ci remove 图形） | `grep -q 'DISTRO_FEATURES ??= ""' kas/base.yml` |
 | 14 | `INIT_MANAGER` | `systemd`（`??=`） | `kas/base.yml` | base < edition | `grep -q 'INIT_MANAGER ??= "systemd"' kas/base.yml` |
@@ -53,3 +53,4 @@
 |---|---|---|---|
 | v1.0 | 2026-11-25 | 初稿：28 个关键变量四要素索引（判据 8） | zeek.zhao |
 | v1.1 | 2026-11-25 | T7：用 `kas shell` + `bitbake -e` 确认 `BB_HASHSERVE_DB_DIR` 是真实变量（值 `/work/sstate`），不删不改；记录命令与输出 | zeek.zhao |
+| v1.2 | 2026-11-26 | CHG-021：`BB_NUMBER_THREADS`/`PARALLEL_MAKE` 改 `oe.utils.cpu_count()` 动态分级（32c→32/-j16、4c→4/-j2），替代写死 4/-j2；env 注入因 kas 隔离 datastore 不生效（ISS-037）；手改检测断言新串 | zeek.zhao |

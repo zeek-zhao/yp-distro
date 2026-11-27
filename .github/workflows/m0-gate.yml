@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feat-m0-kas-bootstrap
+      - 'feat-m0*'
+      - 'release-m0*'
 
 permissions:
   contents: read
@@ -22,7 +23,7 @@ jobs:
           fetch-depth: 0   # 提交身份检查需要完整历史
 
       - name: Set executable bits
-        run: chmod +x scripts/gate.sh scripts/check-vars.sh scripts/cache/gen-meta.sh 2>/dev/null || true
+        run: chmod +x scripts/gate.sh scripts/check-vars.sh scripts/cache/gen-meta.sh scripts/build/threads.sh 2>/dev/null || true
 
       - name: S8 five checks (bash -n / threshold / no-cache-server / identity / doc consistency)
         run: bash scripts/gate.sh

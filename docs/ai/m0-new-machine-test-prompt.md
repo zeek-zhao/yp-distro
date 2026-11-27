@@ -219,20 +219,33 @@ bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 -
 构建（保留命名容器，便于二次构建）：
 
 ```bash
+# 并发资源化（M0.1.1 / CHG-021）：按 Docker daemon 资源分级，32c/128G → 32/-j16。
+# 记录 threads.sh 输出的 RESOURCE_TIER / RESOURCE_CORES / RESOURCE_MEM_GB。
+eval "$(bash scripts/build/threads.sh)"
+export YP_BUILD_THREADS YP_PARALLEL_MAKE
+
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
   -v "$PWD/downloads:/work/downloads" \
   -v "$PWD/sstate:/work/sstate" \
   "${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}" sleep infinity
 
+# 容器不得加 --cpus/--memory；核验三项 0/0/0。
+docker inspect yp-m0-build --format \
+  'NanoCpus={{.HostConfig.NanoCpus}} Memory={{.HostConfig.Memory}} CpuQuota={{.HostConfig.CpuQuota}}'
+
 docker exec yp-m0-build bash -c \
   'mkdir -p /work/build-run && tar -C /mnt/repo --exclude=./.git --exclude=./downloads --exclude=./sstate -cf - . | tar -C /work/build-run -xf -'
+
+# 确认并发真生效（不要只信 Docker 无限制）。
+docker exec -w /work/build-run yp-m0-build \
+  bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE
 
 time docker exec -w /work/build-run yp-m0-build \
   kas build kas/yp.yml:editions/prod.yml
 ```
 
-记录：容器是否 `Up`、复制退出码、构建墙钟、末尾 `Tasks Summary`、`Sstate summary` 原文。期望 prod 产物：
+记录：容器是否 `Up`、`RESOURCE_TIER/RESOURCE_CORES/RESOURCE_MEM_GB`、`docker inspect` 三项、`bitbake-getvar` 的 `BB_NUMBER_THREADS`/`PARALLEL_MAKE`、复制退出码、构建墙钟、末尾 `Tasks Summary`、`Sstate summary` 原文。期望 prod 产物：
 
 ```bash
 docker exec yp-m0-build bash -c \
