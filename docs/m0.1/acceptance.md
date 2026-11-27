@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0.1-REC-001 |
-| 版本 | v1.2 |
-| 状态 | Final + M0.1.1 增补（E1–E5 见 v1.1；E6/E7 资源并发增补见 RV-020；`m0.1` tag 仍对应历史 v1.1 的 `91adcc5`，不改写旧结论） |
+| 版本 | v1.3 |
+| 状态 | Final + M0.1.1 增补（E1–E5 见 v1.1；E6/E7 资源并发增补、E8 发布线见 RV-020；`m0.1` tag 仍对应历史 v1.1 的 `91adcc5`，不改写旧结论） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-26 |
 | 关系 | M0 `docs/m0/acceptance.md` 状态 `Final` 不变；本文件只记录 M0.1 证据闭环，不改 M0 判据 1–8 结论 |
@@ -21,11 +21,12 @@
 | 6 | 发布 CI 4 job | RV-018 §4：workflow_dispatch 触发（分支受限未自动 push）；gate `45820896095` success；publish `45820900729` success，4 job（prepare-payload/builder/cache/cache-slices）全 success，head_sha=`0ce4a5e` | 通过 |
 | 7 | 门禁与冻结 | GATE_PASS / VARS_OK checked=28 drift=0 / NO_TOKEN_IN_REPO；tag `m0.1`（annotated）+ 分支 `release-m0` 打在本版最终提交 | 通过 |
 
-### M0.1.1 增补（E6/E7，RV-020）
+### M0.1.1 增补（E6/E7/E8，RV-020）
 
 | # | 项 | 证据 | 结论 |
 |---|---|---|---|
 | E6 | 并发资源化 + bitbake 真生效 | RV-020 §1：threads.sh=standard/32/-j16；fresh bitbake-getvar=32/-j16（ISS-037 修复：cpu_count 动态分级）；变量契约防回归 | 通过 |
 | E7 | 全配额构建复验 + 4c/8G 边界 | RV-020 §2：容器 inspect 0/0/0；prod 构建 #1 14s / #2 314s、0 ERROR、all succeeded、ext4 42M；CPU ~400%/mem ~2.2GiB 无 OOM；4c/8G 全冷构建未跑 | 部分通过：全配额构建通过；4c/8G 全冷构建 UNVERIFIED |
+| E8 | 发布线（CI + tag） | RV-020 §5：push `59e254d` 自动触发 gate `45962283036` success、publish `45962283012` success（4 job 全绿、head_sha=`59e254d`）；`m0.1` 仍 `91adcc5`，`m0.1.1` annotated tag + `release-m0` 快进见 RV-020 §5.3 | 通过（CI）；tag/branch 见 RV-020 §5.3 |
 
 结论只填：`通过` / `未通过` / `部分通过` / `UNVERIFIED`。填 `通过` 必须附真实输出位置。

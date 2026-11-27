@@ -4,7 +4,7 @@
 |---|---|
 | 文档编号 | YP-M0.1-PLAN-001 |
 | 版本 | v1.3 |
-| 状态 | Approved + M0.1.1 增补（E1–E5 见 v1.2；E6/E7 资源并发增补见 RV-020；`m0.1` tag 仍对应历史 v1.2 的 `91adcc5`，不改写旧结论） |
+| 状态 | Approved + M0.1.1 增补（E1–E5 见 v1.2；E6/E7/E8 资源并发与发布线增补见 RV-020；`m0.1` tag 仍对应历史 v1.2 的 `91adcc5`，不改写旧结论） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-26 |
 | 关联 | AI-007 v1.1 §6（`docs/ai/m0-readme-prereq-and-pathb-closeout-prompt.md`）；AI-009 v1.0；RV-018 / RV-019 / RV-020 / CHG-020 / CHG-021 / ISS-036 / ISS-037 |
@@ -29,7 +29,7 @@
 
 ## 2. 出口判据（§6.7）
 
-E1 真实全量、E2 --parts 1 拒绝与 direct、E3 ghcr/K-8/布局、E4 publish 4 job、E5 记录与门禁，全部有真实输出或明确 UNVERIFIED；不以本地检查冒充远端，不以 sample 冒充 full。M0.1.1 增补 E6/E7 另按 AI-009 §6 验收矩阵口径，核心是「32 线程真生效 + 容器无限制 + 无 OOM」，4c/8G 冷构建未跑记 UNVERIFIED（见 RV-020 §3）。
+E1 真实全量、E2 --parts 1 拒绝与 direct、E3 ghcr/K-8/布局、E4 publish 4 job、E5 记录与门禁，全部有真实输出或明确 UNVERIFIED；不以本地检查冒充远端，不以 sample 冒充 full。M0.1.1 增补 E6/E7/E8 另按 AI-009 §6 验收矩阵口径，核心是「32 线程真生效 + 容器无限制 + 无 OOM」，4c/8G 冷构建未跑记 UNVERIFIED（见 RV-020 §3）；E8 发布线 CI 已真实通过（RV-020 §5.2）。
 
 ## 3. 变更记录
 
