@@ -3,11 +3,11 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M1-RV-002 |
-| 版本 | v1.1 |
+| 版本 | v1.2 |
 | 评审对象 | YP-M1-S1 实现（三包组 + dev/prod 镜像 + kas dev 配置）；设计 DES-002 |
 | 评审人 | zeek.zhao |
 | 评审日期 | 2026-11-27 |
-| 关联 | `docs/m1/plan.md` §M1-S1；`docs/m1/design/S1-dev-prod-images.md`（DES-002）；S0=`2501402` |
+| 关联 | `docs/m1/plan.md` §M1-S1；`docs/m1/design/S1-dev-prod-images.md`（DES-002）；S0=`2501402`；push HEAD=`885a04d` |
 | 结论 | S1 通过（Q1–Q4 + R1–R4）：dev/prod 镜像可构建、dev 带全部目标调试工具、prod 无残留、dev sstate 隔离、GATE/VARS 绿；标注 RESOURCE_PARTIAL（嵌套沙箱 OOM，降并发后成功）。D-05 远程断点属 S3 未验证 |
 
 ## 1. 四问自评
@@ -82,6 +82,8 @@ dev 独立 sstate：`/work/sstate/dev` 存在，7189 个对象；prod 用 M0 共
 
 `bash scripts/gate.sh` → **GATE_PASS**；`bash scripts/check-vars.sh` → **VARS_OK checked=36 drift=0**；提交身份 `zeek.zhao <zeek.zhao@foxmail.com>`（本地 `-c` 指定，不改 git config）；无 AI 署名、无 token、无大二进制入库（ext4/构建产物均在 /work 与 /tmp，不在仓库）。
 
+**CI 状态（如实）**：本地两个提交（`54c4a85` 设计评审、`885a04d` 实现回填）用一次性凭据 push `feat-m1-dev-platform` 成功（`2501402..885a04d`，远端 HEAD=`885a04d`）；按 head_sha 与分支查询 GitHub Actions `total_count=0`——gate/publish workflow 的 push 分支限制为 `feat-m0*`/`release-m0*`，本分支 `feat-m1-*` 不匹配，故未触发 CI。与 S0 同一口径：不为让 CI 跑而改 workflow paths（遵循前序硬边界），以本地 GATE_PASS/VARS_OK 为质量证据，远端 CI 记「未触发（分支不匹配）」，不冒充 success。push 凭据经临时环境变量与一次性 git 参数传递，未写入 git config/仓库、未打印 token。
+
 ### 3.5 结论
 
 **S1 通过（D-04、D-01 目标侧）**：三个包组 + dev/prod 镜像可构建；dev 带全部目标工具、prod 无残留；dev 缓存按 edition 隔离；GATE/VARS 绿。标注 `RESOURCE_PARTIAL`（嵌套沙箱 OOM，降并发后成功，非 full-quota）。D-05 gdbserver 远程断点、debugging 链路属 S3，本 Stage 未验证。
@@ -92,3 +94,4 @@ dev 独立 sstate：`/work/sstate/dev` 存在，7189 个对象；prod 用 M0 共
 |---|---|---|---|
 | v1.0 | 2026-11-27 | 新建：S1 设计四问评审 + 设计阶段真实探测证据（层/target 覆盖/packagegroup 写法）；实测待回填 | zeek.zhao |
 | v1.1 | 2026-11-27 | 回填实测：dev/prod 镜像产物、D-04 负向对照（manifest+二进制）、dev sstate 隔离、GATE/VARS；记录 ISS-M1-002 三次构建障碍与 RESOURCE_PARTIAL；S1 通过 | zeek.zhao |
+| v1.2 | 2026-11-27 | 补记 push 后 CI 状态：`885a04d` 推送成功、Actions `total_count=0`（`feat-m1-*` 不匹配 workflow 分支过滤），口径同 S0，不冒充 success | zeek.zhao |
