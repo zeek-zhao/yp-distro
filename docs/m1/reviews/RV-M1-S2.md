@@ -79,7 +79,7 @@ install-sdk.sh --installer <上述> --prefix /work/yp-sdk-test
 
 ### 3.6 CI 状态（如实）
 
-按 S0/S1 同一口径：本分支 `feat-m1-*` 不匹配 gate/publish workflow 的 `feat-m0*`/`release-m0*` push 过滤，远端 CI 未触发，不冒充 success；以本地 GATE_PASS/VARS_OK 为质量证据。
+两个提交（`fa652a3` 设计评审、`98b5ef5` 实现回填）用一次性凭据 push `feat-m1-dev-platform` 成功（`dd8463e..98b5ef5`，远端 HEAD=`98b5ef5`）；按 head_sha 与分支查询 GitHub Actions `total_count=0`——gate/publish workflow 的 push 分支限制为 `feat-m0*`/`release-m0*`，本分支 `feat-m1-*` 不匹配，故未触发 CI。与 S0/S1 同一口径：不为让 CI 跑而改 workflow paths（前序硬边界），以本地 GATE_PASS/VARS_OK 为质量证据，远端 CI 记「未触发（分支不匹配）」，不冒充 success。push 凭据经临时环境变量与一次性 git 参数传递，未写入 git config/仓库、未打印 token。
 
 ## 4. 变更记录
 
