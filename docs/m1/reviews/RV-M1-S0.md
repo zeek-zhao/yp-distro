@@ -3,12 +3,12 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M1-RV-001 |
-| 版本 | v1.0 |
-| 评审对象 | YP-M1-DES-001（S0 QEMU 启动与串口基线设计） |
+| 版本 | v1.1 |
+| 评审对象 | YP-M1-S0 实现（qemu-run.sh / qemu-smoke.sh）；设计 YP-M1-DES-001 |
 | 评审人 | zeek.zhao |
 | 评审日期 | 2026-11-27 |
 | 关联 | YP-M1-AI-001 v1.0；`docs/m1/design/S0-qemu-boot.md`；DES-001 |
-| 结论 | 设计通过（四问均通过）；代码与实测证据待评审后单独提交回填 |
+| 结论 | S0 通过（R1–R6）：BOOT_OK / QEMU_SMOKE_OK、串口 login 行、TCG 9–10s、超时无残留、负向非 0、门禁绿；无 KVM 用 TCG 不写硬件加速 |
 
 ## 1. 四问自评
 
@@ -33,12 +33,40 @@
 
 以上为设计输入探测，最终实跑证据待代码提交后在 §3 回填。
 
-## 3. 实测证据（代码提交后回填）
+## 3. 实测证据（代码提交后，宿主 TCG）
 
-（本节在 qemu-run.sh / qemu-smoke.sh 提交并实跑后回填：BOOT_OK / QEMU_SMOKE_OK / login 行 / nproc / MemTotal / TCG 启动耗时 / 超时无残留 / 负向非 0 / gate/vars。）
+镜像：`/workspace/m012-build-artifacts/core-image-minimal-qemux86-64.rootfs-20261127090522.ext4`（`file` → Linux rev 1.0 ext4），内核由脚本从 ext4 `/boot/bzImage-6.18.52-yocto-standard` 自动提取。
+
+### 3.1 正向
+
+- `bash scripts/dev/qemu-run.sh --image <ext4> --timeout 180 --log /tmp/qemu-final.log` →
+  - `RESOURCE nproc=32 MemTotal_kb=129308484 docker_inspect=N/A(host-is-nested-container)`
+  - `ACCEL=tcg（TCG 为软件仿真，不视为硬件加速通过）`
+  - `BOOT_OK image=<ext4> log=/tmp/qemu-final.log timeout=180`
+  - `BOOT_ELAPSED=10s ACCEL=tcg nproc=32 MemTotal_kb=129308484`（exit 0）
+- 串口登录行原文：`395:qemux86-64 login: INIT: Id "S1" respawning too fast: disabled for 5 minutes`（`respawning too fast` 为 getty 非致命警告，不影响 login 出现）。
+- `bash scripts/dev/qemu-smoke.sh --image <ext4> --log /tmp/qemu-final-smoke.log` → `QEMU_SMOKE_OK image=<ext4> ... marker=login:` + 同一 login 行（exit 0）。
+- 资源口径：宿主 32c / MemTotal=129308484 kB（达 32c/128G 基线）；无 `/dev/kvm` → TCG；QEMU 进程未加 `--cpus`/`--memory`/`--cpu-quota`/`--cpuset-cpus`（脚本内无这些参数）；沙箱为嵌套容器、无法 inspect 自身，故 docker 三项标 `N/A(host-is-nested-container)`，不冒充 `0/0/0`。
+
+### 3.2 负向（均非 0，错误指向镜像/启动失败）
+
+| 命令 | rc | 关键输出 |
+|---|---|---|
+| `qemu-run.sh --image /tmp/not-an-image --timeout 10 --log /tmp/qemu-bad.log` | 1 | `BOOT_FAIL reason=image not ext4: ... (ASCII text)` |
+| `qemu-run.sh --image /tmp/does-not-exist --timeout 10 --log /tmp/qemu-bad2.log` | 1 | `BOOT_FAIL reason=image not found: ...` |
+| `qemu-smoke.sh --image /tmp/not-an-image --log /tmp/qemu-bad-smoke.log` | 1 | `QEMU_SMOKE_FAIL reason=qemu-run.sh failed ...` |
+
+### 3.3 超时清理（R2）
+
+`qemu-run.sh --image <ext4> --timeout 3 --log /tmp/qemu-timeout.log` → rc=1、wall=3s、`qemu-system-x86_64: terminating on signal 15`；等待 2s 后 `pgrep -af qemu-system-x86_64` → `NO_QEMU_RESIDUE_AFTER_TIMEOUT`。正向/smoke 后同样 `NO_RESIDUE`，无僵尸残留。
+
+### 3.4 门禁（R5/R6）
+
+`bash -n scripts/dev/qemu-run.sh scripts/dev/qemu-smoke.sh` → SYNTAX_OK（gate G1 亦覆盖全部 36 个脚本）；`bash scripts/gate.sh` → **GATE_PASS**；`bash scripts/check-vars.sh` → **VARS_OK checked=36 drift=0**；token 扫描 0、无大二进制、工作区干净。
 
 ## 4. 变更记录
 
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-27 | 新建：S0 设计四问评审 + 设计阶段真实探测证据（F3/F4 来源）；实测待回填 | zeek.zhao |
+| v1.1 | 2026-11-27 | 回填实测：BOOT_OK/QEMU_SMOKE_OK、login 行、TCG 9–10s、超时无残留、三个负向非 0、GATE_PASS/VARS_OK；修 qemu-run 内核提取 awk（$5→$NF）、qemu-smoke 的 qemu-run 路径（BASH_SOURCE/..→dirname）；结论 S0 通过 | zeek.zhao |
