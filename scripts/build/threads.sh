@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# M0.1.1（AI-009 §2.1）：按 Docker daemon 实际可见 CPU/内存分级，输出分级诊断与建议并发值。
-# 只读脚本：不启动容器、不写文件、不下载。daemon 不可用时 exit 1，不静默回退。
-# 唯一分级实现：verify-env.sh 的 SUGGEST_* 亦调用本脚本，不重复阈值表。
-# 实际构建并发由 kas/base.yml 的 oe.utils.cpu_count() 动态取（ISS-037：kas 隔离
-# bitbake server 的 os.environ，环境变量注入无法进 datastore）；本脚本输出的
-# YP_BUILD_THREADS/YP_PARALLEL_MAKE 供诊断/文档记录，分级表与 cpu_count 结果一致。
+# M0.1.2（AI-010 §2.2 / CHG-022 / ISS-038）：Docker daemon 级资源诊断（只读）。
+#
+# 本脚本只在宿主读取 Docker daemon 的 NCPU / MemTotal，输出分级标签与“建议值”
+# SUGGEST_*，供 runbook / verify-env 记录。**它不是 bitbake 并发控制通道**：
+#   - 不输出可 eval 的 export；YP_BUILD_THREADS / YP_PARALLEL_MAKE 已不再是控制变量（ISS-039）；
+#   - 实际并发由容器内 kas/base.yml 的 yp_build_threads(d) 按 cgroup 内存 + 可见 CPU 计算；
+#   - 负向容器（--cpuset-cpus/--memory）下，daemon 建议值（宿主级）与容器内实际值会不同，
+#     最终必须以容器内 bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE 为准（ISS-037）。
+# 只读：不启动容器、不写文件、不下载。daemon 不可用时 exit 1，不静默回退。
 set -uo pipefail
 
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -18,41 +21,24 @@ mem_bytes="$(docker info --format '{{.MemTotal}}' 2>/dev/null)"
 [ -n "$mem_bytes" ] && [ "$mem_bytes" -gt 0 ] 2>/dev/null || die "docker info MemTotal 无效: ${mem_bytes:-<empty>}"
 mem_gb=$((mem_bytes / 1024 / 1024 / 1024))
 
-# 分级表（AI-009 §2.1）：standard / mid / small / legacy
+# 分级表（与 kas/base.yml 的 yp_build_threads(d) 完全一致，AI-010 §2.1/§2.2）：
+# standard cpus>=32 且 mem>=120 -> 32；mid cpus>=16 且 mem>=32 -> min(16,cpus)；
+# small   cpus>=8  且 mem>=16  -> min(8,cpus)；legacy 其他 -> min(4,cpus)。
+# 建议线程至少 1；PARALLEL_MAKE = max(1, threads//2)，不出现 -j 0。
 if [ "$cpus" -ge 32 ] && [ "$mem_gb" -ge 120 ]; then
-  tier="standard"; threads="32"; parallel="-j 16"
+  tier="standard"; n=32
 elif [ "$cpus" -ge 16 ] && [ "$mem_gb" -ge 32 ]; then
-  tier="mid"; threads="16"; parallel="-j 8"
+  tier="mid"; n=16; [ "$cpus" -lt 16 ] && n=$cpus
 elif [ "$cpus" -ge 8 ] && [ "$mem_gb" -ge 16 ]; then
-  tier="small"; threads="8"; parallel="-j 4"
+  tier="small"; n=8; [ "$cpus" -lt 8 ] && n=$cpus
 else
-  tier="legacy"; threads="4"; parallel="-j 2"
+  tier="legacy"; n=4; [ "$cpus" -lt 4 ] && n=$cpus
 fi
-
-# 显式环境覆盖：YP_BUILD_THREADS 须正整数；YP_PARALLEL_MAKE 须 '-j <正整数>'
-if [ -n "${YP_BUILD_THREADS:-}" ]; then
-  case "$YP_BUILD_THREADS" in
-    ''|*[!0-9]*) die "YP_BUILD_THREADS 必须为正整数，实际: '$YP_BUILD_THREADS'" ;;
-  esac
-  [ "$YP_BUILD_THREADS" -gt 0 ] 2>/dev/null || die "YP_BUILD_THREADS 必须为正整数，实际: '$YP_BUILD_THREADS'"
-  threads="$YP_BUILD_THREADS"
-fi
-if [ -n "${YP_PARALLEL_MAKE:-}" ]; then
-  case "$YP_PARALLEL_MAKE" in
-    -j[[:space:]]*)
-      mk_n="$(printf '%s' "$YP_PARALLEL_MAKE" | awk '{print $2}')"
-      case "$mk_n" in
-        ''|*[!0-9]*) die "YP_PARALLEL_MAKE 必须为 '-j <正整数>'，实际: '$YP_PARALLEL_MAKE'" ;;
-      esac
-      [ "$mk_n" -gt 0 ] 2>/dev/null || die "YP_PARALLEL_MAKE 必须为 '-j <正整数>'，实际: '$YP_PARALLEL_MAKE'"
-      parallel="-j $mk_n"
-      ;;
-    *) die "YP_PARALLEL_MAKE 必须为 '-j <正整数>'，实际: '$YP_PARALLEL_MAKE'" ;;
-  esac
-fi
+[ "$n" -ge 1 ] || n=1
+parallel_n=$((n / 2)); [ "$parallel_n" -ge 1 ] || parallel_n=1
 
 echo "RESOURCE_TIER=$tier"
 echo "RESOURCE_CORES=$cpus"
 echo "RESOURCE_MEM_GB=$mem_gb"
-echo "export YP_BUILD_THREADS=$threads"
-echo "export YP_PARALLEL_MAKE='$parallel'"
+echo "SUGGEST_BUILD_THREADS=$n"
+echo "SUGGEST_PARALLEL_MAKE='-j $parallel_n'"

@@ -155,10 +155,10 @@ README 的三步保留为最简示意；builder 镜像不含仓库的 `kas/` 配
 # 路径 B：必须在同一 shell 先 export YP_BUILDER_IMAGE=yp-builder:local；
 # 若跨 shell，直接把下一行改为 IMAGE=yp-builder:local。
 # 标准执行机 32 核/128 GiB：不要添加 --cpus / --memory / --cpu-quota / --cpuset-cpus。
-# 构建并发按 Docker daemon 实际资源分级（M0.1.1 / CHG-021）：32c/128G → 32/-j16；
-# 低配回退见 threads.sh 分级表。eval 输出可直接设置导出变量，容器继承后注入 bitbake。
-eval "$(bash scripts/build/threads.sh)"
-export YP_BUILD_THREADS YP_PARALLEL_MAKE
+# threads.sh 只是 Docker daemon 级诊断（只读），输出分级标签与 SUGGEST_* 建议值；
+# 它不是 bitbake 并发控制通道（M0.1.2 / CHG-022 / ISS-039）：
+# 实际并发由容器内 kas/base.yml 的 yp_build_threads(d) 按 cgroup 内存 + 可见 CPU 计算。
+bash scripts/build/threads.sh   # 记录 RESOURCE_TIER / RESOURCE_CORES / RESOURCE_MEM_GB / SUGGEST_*
 IMAGE="${YP_BUILDER_IMAGE:-ghcr.io/zeek-zhao/yp-builder:wrynose-m0}"
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
@@ -175,9 +175,13 @@ docker exec yp-m0-build bash -c \
 
 docker exec -w /work/build-run yp-m0-build \
   kas build kas/yp.yml:editions/prod.yml
+
+# 实际并发验收（唯一可信来源）：容器内 bitbake-getvar，非 threads.sh 诊断值
+docker exec -w /work/build-run yp-m0-build \
+  bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE
 ```
 
-期望：容器状态 `Up`；`threads.sh` 在 32c/128G 输出 `RESOURCE_TIER=standard` / `YP_BUILD_THREADS=32` / `YP_PARALLEL_MAKE='-j 16'`；`docker inspect` 三项 `0/0/0`（无限制）；复制命令无输出、退出码 `0`；构建末尾 `Tasks Summary: Attempted ... and all succeeded`，退出码 `0`。可在容器内用 `bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE` 确认并发确实为 32/-j16（见 RV-020）。
+期望：容器状态 `Up`；宿主 `threads.sh` 在 32c/128G 输出 `RESOURCE_TIER=standard` / `SUGGEST_BUILD_THREADS=32` / `SUGGEST_PARALLEL_MAKE='-j 16'`（**仅 daemon 级诊断，非 bitbake 实际值**）；`docker inspect` 三项 `0/0/0`（无限制）；复制命令无输出、退出码 `0`；构建末尾 `Tasks Summary: Attempted ... and all succeeded`，退出码 `0`；容器内 `bitbake-getvar` 显示 `BB_NUMBER_THREADS=32`、`PARALLEL_MAKE=-j 16`（实际值，标准机与诊断值一致；负向容器下二者可能不同，以 getvar 为准，见 RV-021）。
 
 > **镜像与卷属主必须同源**：路径 A 用默认 GHCR 镜像（`jenkins/1000`）配 1000 卷；**路径 B 必须设 `export YP_BUILDER_IMAGE=yp-builder:local`，让 `"$IMAGE"` 解析为本地重建的当前 UID 镜像**。GHCR 的 `wrynose-m0`（1000）在路径 B **不用于构建**——卷是当前 UID（如 1234）配上 1000 容器会被 entrypoint 拒绝。§3 步骤 3 的 GHCR pull 在路径 B 可跳过或仅作对照。
 
@@ -239,7 +243,7 @@ tar -xf cache-full.tar -C "$DEST_PARENT"
 ### 5.1 磁盘 / 内存不足
 
 - **判定**：`verify-env.sh` 打印 `FAIL DISK` → 退出码 `1`；`preflight.sh` 打印 `LOW_SPACE` → 退出码 `3`；`free -h` 明显低于 16 GB 或构建日志出现 `Killed` / cgroup `oom_kill`。
-- **处理**：清理旧 `cache-work/`、`build/`、无用镜像（`docker image prune`）；扩容到 ≥200 GB；内存不足时不要提高并发——8 GB 历史配额下仓库固定 `BB_NUMBER_THREADS=4`、`PARALLEL_MAKE="-j 2"`（CHG-005）。注意：**32c/128G 全配额构建不能沿用这组 4/-j2 值**；当前 `kas/base.yml` 仍固定 4/-j2 是已知缺口，按 `AGENTS.md` §2.1 另开变更收口，未收口前不得声称用满 32 核。
+- **处理**：清理旧 `cache-work/`、`build/`、无用镜像（`docker image prune`）；扩容到 ≥200 GB；内存不足时不要手动提高并发——并发由 `kas/base.yml` 的 `yp_build_threads(d)` 按容器 cgroup 内存 + 可见 CPU **自动分级**（M0.1.2 / CHG-022）：32c/≥120GB → 32/-j16，4c/8GB → 4/-j2（ISS-011 历史回退自动保留，不再固定写死）。标准 32c/128G 容器不加资源限制即可用满分级上限；实际值以容器内 `bitbake-getvar` 为准，不得仅凭 `threads.sh` 诊断值声称并发已生效。
 - **不要**：直接删 `downloads/` 或 `sstate/`，那会让二次构建退回冷构建。
 
 ### 5.2 UID 不一致（新机用户 UID≠1000）

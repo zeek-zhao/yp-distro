@@ -219,10 +219,10 @@ bash scripts/preflight.sh --downloads ./downloads --sstate ./sstate --uid 1000 -
 构建（保留命名容器，便于二次构建）：
 
 ```bash
-# 并发资源化（M0.1.1 / CHG-021）：按 Docker daemon 资源分级，32c/128G → 32/-j16。
-# 记录 threads.sh 输出的 RESOURCE_TIER / RESOURCE_CORES / RESOURCE_MEM_GB。
-eval "$(bash scripts/build/threads.sh)"
-export YP_BUILD_THREADS YP_PARALLEL_MAKE
+# 并发诊断（M0.1.2 / CHG-022）：threads.sh 只读 docker daemon，输出分级标签与 SUGGEST_*，
+# 仅作 daemon 级诊断、不是 bitbake 控制通道（ISS-039）；实际值由容器 bitbake-getvar 确认。
+# 记录 RESOURCE_TIER / RESOURCE_CORES / RESOURCE_MEM_GB / SUGGEST_BUILD_THREADS / SUGGEST_PARALLEL_MAKE。
+bash scripts/build/threads.sh
 
 docker run -d --name yp-m0-build \
   -v "$PWD:/mnt/repo:ro" \
@@ -245,7 +245,7 @@ time docker exec -w /work/build-run yp-m0-build \
   kas build kas/yp.yml:editions/prod.yml
 ```
 
-记录：容器是否 `Up`、`RESOURCE_TIER/RESOURCE_CORES/RESOURCE_MEM_GB`、`docker inspect` 三项、`bitbake-getvar` 的 `BB_NUMBER_THREADS`/`PARALLEL_MAKE`、复制退出码、构建墙钟、末尾 `Tasks Summary`、`Sstate summary` 原文。期望 prod 产物：
+记录：容器是否 `Up`、`RESOURCE_TIER/RESOURCE_CORES/RESOURCE_MEM_GB/SUGGEST_BUILD_THREADS/SUGGEST_PARALLEL_MAKE`（**仅 daemon 级诊断，不作 bitbake 已生效证据**）、`docker inspect` 三项、`bitbake-getvar` 的 `BB_NUMBER_THREADS`/`PARALLEL_MAKE`（**唯一实际值来源**，32c/128G 期望 32/-j16）、复制退出码、构建墙钟、末尾 `Tasks Summary`、`Sstate summary` 原文。期望 prod 产物：
 
 ```bash
 docker exec yp-m0-build bash -c \

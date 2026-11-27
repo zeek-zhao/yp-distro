@@ -28,6 +28,7 @@ scripts/ai-entry.sh --next   # 打印可直接粘贴给 AI 的单步提示词
 - 所有 `docker build` / `docker run` / 构建容器**不得设置** `--cpus`、`--memory`、`--cpu-quota`、`--cpuset-cpus`，也不得在 compose / kas 配置中限制；容器默认继承 Docker daemon 可见的全部 CPU 与内存。
 - 每次启动构建容器前必须记录四项：`nproc`、`/proc/meminfo` 的 `MemTotal`、`docker info --format 'NCPU={{.NCPU}} MemTotal={{.MemTotal}}'`、`docker inspect <容器> --format 'NanoCpus={{.HostConfig.NanoCpus}} Memory={{.HostConfig.Memory}} CpuQuota={{.HostConfig.CpuQuota}}'`。四项必须显示宿主全部资源，且 `NanoCpus=0`、`Memory=0`、`CpuQuota=0`；不满足则停止，不得继续构建，也不得把结果写成 full-quota PASS。
 - Docker 无限制不等于 bitbake 用满：构建并发（`BB_NUMBER_THREADS` / `PARALLEL_MAKE`）必须按实际 CPU/内存配置；32c/128G 不得沿用 8 GB 配额的 `4` / `-j 2` 固定值。并发取值须由设计/变更单明确，并在 RV 记录实际核数、内存与并发。
+- `scripts/build/threads.sh` 仅输出 Docker daemon 级诊断，不是 bitbake 并发控制通道；不得在 runbook 中用 `eval` / `export` 注入环境变量。实际并发由 `kas/base.yml` 的 `yp_build_threads(d)` 按容器 cgroup 内存（cgroup v2/v1，回退 `/proc/meminfo`）与可见 CPU 计算，使用容器内 `bitbake-getvar` 验收（M0.1.2 / CHG-022 / ISS-039）。
 - 宿主 shell 自身被 cgroup 限到 4 核/8 GB，不代表 Docker daemon 受限；不要用宿主 shell 的 `nproc` / 内存上限判断容器能力。若 Docker daemon 实际只有 4 核/8 GB，按 `RESOURCE_PARTIAL` 记录，只声明该配额下的结果。
 - 适用范围：本地/独立执行机上的 bitbake 构建与缓存操作容器。GitHub 托管 runner 不是该基线，CI 结果不得冒充 32c/128G 全配额构建证据。
 - 机器不足 32 核 / 128 GiB 时，仍使用实际全部资源，但在 RV 与报告中写 `RESOURCE_PARTIAL`、实际核数与内存；不得伪称 32c/128G。标准 32c/128G 结论只能在该基线上产生。

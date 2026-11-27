@@ -43,13 +43,18 @@ local_conf_header:
     BB_HASHSERVE_DB_DIR = "${SSTATE_DIR}"
     # 长构建中 server 偶发通信超时，放宽等待窗口（ISS-010 / CHG-003）
     BB_SERVER_TIMEOUT = "300"
-    # 构建并发资源化（M0.1.1 / CHG-021 / ISS-037）：按 bitbake 进程可见 CPU
-    # 动态分级——标准 32c 容器得 BB_NUMBER_THREADS=32、PARALLEL_MAKE=-j16；
-    # 4c/8GB 机得 4/-j2（ISS-011 历史回退自动保留），与 threads.sh 分级表一致。
-    # 用 oe.utils.cpu_count() 而非 os.environ：实测 kas 5.5 隔离 bitbake server
-    # 的 os.environ，环境变量注入（含 kas env: 段）无法传入 datastore（ISS-037）。
-    BB_NUMBER_THREADS = "${@oe.utils.cpu_count()}"
-    PARALLEL_MAKE = "-j ${@oe.utils.cpu_count() // 2}"
+    # 构建并发资源化（M0.1.2 / CHG-022 / ISS-038）：按 bitbake 进程可见 CPU
+    # 与容器 cgroup 内存双重分级——避免只按 CPU 翻倍导致 8GB 容器 OOM。
+    # 分级函数 yp_mem_bytes(d)/yp_build_threads(d) 定义在 meta-yp-distro/classes/
+    # yp-concurrency.bbclass（bitbake 的 local.conf 不支持多行 python def，ISS-040），
+    # 由下面 INHERIT 引入；Docker --memory 不改写 /proc/meminfo，故优先读 cgroup v2/v1，
+    # 值为 max/超范围时回退 /proc/meminfo MemTotal。
+    # 用 oe.utils.cpu_count() 取 CPU：kas 5.5 隔离 bitbake server 进程环境，
+    # 自定义环境变量无法传入 datastore（ISS-037），故不依赖任何 env 注入（ISS-039），
+    # 实际并发值以容器内 bitbake-getvar 为准。
+    INHERIT += "yp-concurrency"
+    BB_NUMBER_THREADS = "${@yp_build_threads(d)}"
+    PARALLEL_MAKE = "-j ${@max(1, int(d.getVar('BB_NUMBER_THREADS')) // 2)}"
     # 缓存目录指向 S4 挂载点（DES-002 §3.3）
     DL_DIR = "/work/downloads"
     SSTATE_DIR = "/work/sstate"

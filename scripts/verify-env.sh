@@ -132,22 +132,25 @@ elif [ "$res_mem_gb" -lt "$MEM_STD_GB" ]; then
   warn "RESOURCE_PARTIAL source=$res_src mem=${res_mem_gb} GB < ${MEM_STD_GB} GB 标准基线（结果不得写成 32c/128G full-quota PASS）"
 fi
 
-# 5b) 建议并发（M0.1.1 / CHG-021）：复用 threads.sh 唯一分级实现，不在此重复阈值表。
-# threads.sh 只读 daemon；daemon 不可用时它 exit 1，此处降级为 SKIP，不新增 fail/warn。
+# 5b) 建议并发（M0.1.2 / CHG-022）：复用 threads.sh 唯一分级实现，不在此重复阈值表。
+# threads.sh 只读 docker daemon（宿主级诊断），输出 SUGGEST_* —— 不是 bitbake 实际值；
+# 实际并发由容器内 yp_build_threads(d) 按 cgroup 内存 + 可见 CPU 计算，须 bitbake-getvar 确认。
+# daemon 不可用时 threads.sh exit 1，此处降级为 SKIP，不新增 fail/warn。
 threads_sh="$ROOT/scripts/build/threads.sh"
 if [ -x "$threads_sh" ] || [ -f "$threads_sh" ]; then
   t_out="$(bash "$threads_sh" 2>/dev/null)"
   if [ $? -eq 0 ] && [ -n "$t_out" ]; then
     t_tier="$(printf '%s\n' "$t_out" | sed -n 's/^RESOURCE_TIER=//p')"
-    t_thr="$(printf '%s\n' "$t_out" | sed -n 's/^export YP_BUILD_THREADS=//p')"
-    t_par="$(printf '%s\n' "$t_out" | sed -n "s/^export YP_PARALLEL_MAKE='//p" | tr -d "'")"
-    pass "SUGGEST_BUILD_THREADS tier=$t_tier threads=$t_thr"
-    pass "SUGGEST_PARALLEL_MAKE parallel=$t_par (via scripts/build/threads.sh)"
+    t_thr="$(printf '%s\n' "$t_out" | sed -n 's/^SUGGEST_BUILD_THREADS=//p')"
+    t_par="$(printf '%s\n' "$t_out" | sed -n "s/^SUGGEST_PARALLEL_MAKE='//p" | tr -d "'")"
+    # DIAGNOSTIC_ONLY：daemon 级建议，非 bitbake 生效值（负向容器下会与 getvar 不同）
+    pass "SUGGEST_BUILD_THREADS tier=$t_tier threads=$t_thr (DIAGNOSTIC_ONLY daemon级, 非bitbake实际值; 以 bitbake-getvar 为准)"
+    pass "SUGGEST_PARALLEL_MAKE parallel=$t_par (DIAGNOSTIC_ONLY daemon级; via scripts/build/threads.sh)"
   else
     skip "SUGGEST_BUILD_THREADS threads.sh 未能读取 docker daemon（不改 fail/warn）"
   fi
 else
-  warn "SUGGEST_BUILD_THREADS 缺 scripts/build/threads.sh（CHG-021 契约）"
+  warn "SUGGEST_BUILD_THREADS 缺 scripts/build/threads.sh（CHG-022 契约）"
 fi
 
 # 6) 当前 uid/gid 与镜像默认对比

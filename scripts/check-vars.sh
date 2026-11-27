@@ -20,8 +20,14 @@ RULES=(
   'BB_HASHSERVE|kas/base.yml|BB_HASHSERVE = "auto"'
   'BB_HASHSERVE_DB_DIR|kas/base.yml|BB_HASHSERVE_DB_DIR = "${SSTATE_DIR}"'
   'BB_SERVER_TIMEOUT|kas/base.yml|BB_SERVER_TIMEOUT = "300"'
-  'BB_NUMBER_THREADS|kas/base.yml|BB_NUMBER_THREADS = "${@oe.utils.cpu_count()}"'
-  'PARALLEL_MAKE|kas/base.yml|PARALLEL_MAKE = "-j ${@oe.utils.cpu_count() // 2}"'
+  'BB_NUMBER_THREADS|kas/base.yml|BB_NUMBER_THREADS = "${@yp_build_threads(d)}"'
+  'PARALLEL_MAKE|kas/base.yml|PARALLEL_MAKE = "-j ${@max(1, int(d.getVar('"'"'BB_NUMBER_THREADS'"'"')) // 2)}"'
+  'concurrency_inherit|kas/base.yml|INHERIT += "yp-concurrency"'
+  'yp_build_threads|meta-yp-distro/classes/yp-concurrency.bbclass|def yp_build_threads(d):'
+  'yp_mem_bytes|meta-yp-distro/classes/yp-concurrency.bbclass|def yp_mem_bytes(d):'
+  'cgroup_mem_v2|meta-yp-distro/classes/yp-concurrency.bbclass|/sys/fs/cgroup/memory.max'
+  'cgroup_mem_v1|meta-yp-distro/classes/yp-concurrency.bbclass|/sys/fs/cgroup/memory/memory.limit_in_bytes'
+  'mem_proc_fallback|meta-yp-distro/classes/yp-concurrency.bbclass|/proc/meminfo'
   'PACKAGE_CLASSES|kas/base.yml|PACKAGE_CLASSES ??= "package_rpm"'
   'DISTRO_FEATURES|kas/base.yml|DISTRO_FEATURES ??= ""'
   'INIT_MANAGER|kas/base.yml|INIT_MANAGER ??= "systemd"'
@@ -57,6 +63,23 @@ for rule in "${RULES[@]}"; do
     DRIFT=$((DRIFT+1))
   fi
 done
+
+# M0.1.2 / CHG-022：负向断言——并发不得回退到 env 控制通道（ISS-039）。
+# base.yml 不得再用 os.environ.get / YP_BUILD_THREADS 当控制变量；threads.sh 不得输出 export YP_。
+if grep -qE 'os\.environ\.get|YP_BUILD_THREADS|YP_PARALLEL_MAKE' kas/base.yml; then
+  echo "  DRIFT [CONCURRENCY_ENV] kas/base.yml 仍有 env 控制变量残留（应为 yp_build_threads(d)）" >&2
+  grep -nE 'os\.environ\.get|YP_BUILD_THREADS|YP_PARALLEL_MAKE' kas/base.yml >&2 || true
+  DRIFT=$((DRIFT+1))
+else
+  CHECKED=$((CHECKED+1))
+fi
+if grep -qE 'export YP_BUILD_THREADS|export YP_PARALLEL_MAKE' scripts/build/threads.sh; then
+  echo "  DRIFT [THREADS_EXPORT] threads.sh 仍输出 export YP_（应为 SUGGEST_* 诊断）" >&2
+  grep -nE 'export YP_BUILD_THREADS|export YP_PARALLEL_MAKE' scripts/build/threads.sh >&2 || true
+  DRIFT=$((DRIFT+1))
+else
+  CHECKED=$((CHECKED+1))
+fi
 
 # SSTATE_MIRRORS 禁令：任何赋值即漂移
 if grep -rqE 'SSTATE_MIRRORS[[:space:]]*=' kas/ meta-yp-distro/ scripts/ docker/ 2>/dev/null; then

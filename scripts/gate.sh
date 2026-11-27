@@ -89,23 +89,40 @@ while IFS= read -r n; do
 done < <(grep -oE '^\| [1-8] \|' docs/m0/acceptance.md | grep -oE '[1-8]')
 [ "$g5_bad" -eq 0 ] && pass "G5 traceability 引用的判据在 acceptance 均存在，且判据 1-8 均被引用"
 
-# G6 构建并发资源化契约（M0.1.1 / CHG-021）：分级唯一实现存在，base.yml 不写死标准值
+# G6 构建并发资源化契约（M0.1.2 / CHG-022）：诊断脚本只读 SUGGEST_*，base.yml 按 CPU+cgroup 内存分级
 echo "--- G6 构建并发资源化契约 ---"
 g6_bad=0
 if [ ! -x scripts/build/threads.sh ]; then
-  fail "G6 缺少可执行 scripts/build/threads.sh（分级唯一实现）"; g6_bad=$((g6_bad+1))
+  fail "G6 缺少可执行 scripts/build/threads.sh（daemon 级诊断）"; g6_bad=$((g6_bad+1))
 else
-  for tok in 'RESOURCE_TIER=' 'docker info' 'YP_BUILD_THREADS' 'YP_PARALLEL_MAKE' 'standard'; do
+  for tok in 'RESOURCE_TIER=' 'RESOURCE_MEM_GB=' 'SUGGEST_BUILD_THREADS=' 'SUGGEST_PARALLEL_MAKE=' 'docker info' 'standard'; do
     grep -Fq "$tok" scripts/build/threads.sh || { fail "G6 threads.sh 缺关键契约: $tok"; g6_bad=$((g6_bad+1)); }
   done
+  if grep -qE 'export YP_BUILD_THREADS|export YP_PARALLEL_MAKE' scripts/build/threads.sh; then
+    fail "G6 threads.sh 仍输出 export YP_（应为只读诊断，ISS-039）"; g6_bad=$((g6_bad+1))
+  fi
 fi
 if grep -qE 'BB_NUMBER_THREADS[[:space:]]*=[[:space:]]*"32"|PARALLEL_MAKE[[:space:]]*=[[:space:]]*"-j 16"' kas/base.yml; then
-  fail "G6 kas/base.yml 写死了 32/-j16 默认值（应由 oe.utils.cpu_count() 动态分级）"; g6_bad=$((g6_bad+1))
+  fail "G6 kas/base.yml 写死了 32/-j16 默认值（应动态分级）"; g6_bad=$((g6_bad+1))
 fi
-if ! grep -Fq 'oe.utils.cpu_count()' kas/base.yml; then
-  fail "G6 kas/base.yml 缺 oe.utils.cpu_count() 动态分级（CHG-021）"; g6_bad=$((g6_bad+1))
+bbclass='meta-yp-distro/classes/yp-concurrency.bbclass'
+if [ ! -f "$bbclass" ]; then
+  fail "G6 缺 $bbclass（分级函数所在 .bbclass，ISS-040）"; g6_bad=$((g6_bad+1))
+else
+  for tok in 'def yp_build_threads(d):' 'def yp_mem_bytes(d):' '/sys/fs/cgroup/memory.max' '/sys/fs/cgroup/memory/memory.limit_in_bytes' '/proc/meminfo'; do
+    grep -Fq "$tok" "$bbclass" || { fail "G6 $bbclass 缺关键契约: $tok"; g6_bad=$((g6_bad+1)); }
+  done
 fi
-[ "$g6_bad" -eq 0 ] && pass "G6 threads.sh 分级实现在位，base.yml 用 cpu_count 动态分级且未写死标准值"
+if ! grep -Fq 'INHERIT += "yp-concurrency"' kas/base.yml; then
+  fail "G6 kas/base.yml 未 INHERIT yp-concurrency（CHG-022）"; g6_bad=$((g6_bad+1))
+fi
+if ! grep -Fq 'BB_NUMBER_THREADS = "${@yp_build_threads(d)}"' kas/base.yml; then
+  fail "G6 kas/base.yml 缺 BB_NUMBER_THREADS=yp_build_threads(d) 赋值"; g6_bad=$((g6_bad+1))
+fi
+if grep -qE 'os\.environ\.get|YP_BUILD_THREADS|YP_PARALLEL_MAKE' kas/base.yml; then
+  fail "G6 kas/base.yml 仍有 env 控制变量残留（应为 yp_build_threads(d)，ISS-039）"; g6_bad=$((g6_bad+1))
+fi
+[ "$g6_bad" -eq 0 ] && pass "G6 threads.sh 只读 SUGGEST_* 诊断在位，base.yml 按 CPU+cgroup 内存动态分级且未写死"
 
 echo "===== GATE RESULT ====="
 if [ "$FAIL" -eq 0 ]; then
