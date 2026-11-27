@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-VAR-001 |
-| 版本 | v1.4 |
-| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对；M0.1.2/CHG-022 并发按 CPU+cgroup 内存分级，ISS-040 函数移 .bbclass） |
+| 版本 | v1.5 |
+| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对；M0.1.2/CHG-022 并发按 CPU+cgroup 内存分级，ISS-040 函数移 .bbclass；AI-011 §2.8 诊断措辞更正） |
 | 目的 | 记录关键变量的默认值、唯一定义处、可覆盖层与手改检测命令，使「手改配置可发现」（判据 8）闭环 |
 | 检测脚本 | `scripts/check-vars.sh`（统一断言，本表所有变量的期望值来源） |
 
@@ -29,7 +29,7 @@
 | 9 | `BB_SERVER_TIMEOUT` | `300` | `kas/base.yml` | 只读 | `grep -q 'BB_SERVER_TIMEOUT = "300"' kas/base.yml` |
 | 10 | `BB_NUMBER_THREADS` | `${@yp_build_threads(d)}`（CPU + cgroup 内存分级：32c/≥120GB→32、16c/≥32GB→min(16,cpu)、8c/≥16GB→min(8,cpu)、其他→min(4,cpu)，至少 1） | `kas/base.yml` | 只读（bitbake 动态分级，CHG-022/ISS-038；函数经 `INHERIT += "yp-concurrency"` 从 `.bbclass` 引入；`oe.utils.cpu_count()` 取 CPU，回退 `os.cpu_count()`；env 变量不再作控制通道 ISS-039） | `grep -Fq 'BB_NUMBER_THREADS = "${@yp_build_threads(d)}"' kas/base.yml` |
 | 11 | `PARALLEL_MAKE` | `-j ${@max(1, int(d.getVar('BB_NUMBER_THREADS')) // 2)}`（32→-j16、4→-j2，至少 -j1） | `kas/base.yml` | 只读（由 `BB_NUMBER_THREADS` 派生，不小于 1） | `grep -Fq "PARALLEL_MAKE = \"-j \${@max(1, int(d.getVar('BB_NUMBER_THREADS')) // 2)}\"" kas/base.yml` |
-| 29 | `yp_mem_bytes` / `yp_build_threads` / `INHERIT` | bitbake python 函数：读 cgroup v2 `/sys/fs/cgroup/memory.max` → v1 `/sys/fs/cgroup/memory/memory.limit_in_bytes` → 回退 `/proc/meminfo` `MemTotal`；`YP_MEM_BYTES` 语义即此返回值。函数定义必须在 `.bbclass`（local.conf 的 ConfHandler 不支持多行 `def`，ISS-040），`kas/base.yml` 用 `INHERIT += "yp-concurrency"` 引入 | `meta-yp-distro/classes/yp-concurrency.bbclass`（函数）+ `kas/base.yml`（INHERIT/赋值） | 只读（分级唯一实现；`scripts/build/threads.sh` 仅为 daemon 级诊断输出 `SUGGEST_*`，非控制通道 CHG-022） | `grep -Fq 'def yp_build_threads(d):' meta-yp-distro/classes/yp-concurrency.bbclass` |
+| 29 | `yp_mem_bytes` / `yp_build_threads` / `INHERIT` | bitbake python 函数：读 cgroup v2 `/sys/fs/cgroup/memory.max` → v1 `/sys/fs/cgroup/memory/memory.limit_in_bytes` → 回退 `/proc/meminfo` `MemTotal`；`YP_MEM_BYTES` 语义即此返回值。函数定义必须在 `.bbclass`（local.conf 的 ConfHandler 不支持多行 `def`，ISS-040），`kas/base.yml` 用 `INHERIT += "yp-concurrency"` 引入 | `meta-yp-distro/classes/yp-concurrency.bbclass`（函数）+ `kas/base.yml`（INHERIT/赋值） | 只读（bitbake 并发权威实现在 `.bbclass`；`scripts/build/threads.sh` 仅为 daemon 级诊断镜像输出 `SUGGEST_*`，分级表与之一致但非唯一实现、非控制通道 AI-011 §2.8/CHG-022） | `grep -Fq 'def yp_build_threads(d):' meta-yp-distro/classes/yp-concurrency.bbclass` |
 | 12 | `PACKAGE_CLASSES` | `package_rpm`（`??=`） | `kas/base.yml` | base < edition | `grep -q 'PACKAGE_CLASSES ??= "package_rpm"' kas/base.yml` |
 | 13 | `DISTRO_FEATURES` | 空（`??=`） | `kas/base.yml` | base < edition（dev append debug-tweaks；ci remove 图形） | `grep -q 'DISTRO_FEATURES ??= ""' kas/base.yml` |
 | 14 | `INIT_MANAGER` | `systemd`（`??=`） | `kas/base.yml` | base < edition | `grep -q 'INIT_MANAGER ??= "systemd"' kas/base.yml` |
@@ -57,3 +57,4 @@
 | v1.2 | 2026-11-26 | CHG-021：`BB_NUMBER_THREADS`/`PARALLEL_MAKE` 改 `oe.utils.cpu_count()` 动态分级（32c→32/-j16、4c→4/-j2），替代写死 4/-j2；env 注入因 kas 隔离 datastore 不生效（ISS-037）；手改检测断言新串 | zeek.zhao |
 | v1.3 | 2026-11-27 | CHG-022/ISS-038：`BB_NUMBER_THREADS` 改 `yp_build_threads(d)`（CPU + cgroup v2/v1 内存分级，回退 /proc/meminfo），`PARALLEL_MAKE` 从前者派生至少 -j1；新增 #29 `yp_mem_bytes`/`yp_build_threads`；`threads.sh` 仅 daemon 级 `SUGGEST_*` 诊断、去 export（ISS-039）；负向断言检出 env 控制通道残留 | zeek.zhao |
 | v1.4 | 2026-11-27 | ISS-040：分级函数从 `kas/base.yml` 移到 `meta-yp-distro/classes/yp-concurrency.bbclass`（bitbake ConfHandler 不支持 local.conf 多行 `def`，实测构建 ParseError），base.yml 用 `INHERIT += "yp-concurrency"` 引入；#29/check-vars/G6 断言目标改 bbclass | zeek.zhao |
+| v1.5 | 2026-11-27 | AI-011 §2.8/R4：#29 措辞改为「bitbake 权威实现在 .bbclass；threads.sh 为 daemon 诊断镜像、非唯一实现」，不把诊断镜像说成唯一实现 | zeek.zhao |

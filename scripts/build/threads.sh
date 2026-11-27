@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# M0.1.2（AI-010 §2.2 / CHG-022 / ISS-038）：Docker daemon 级资源诊断（只读）。
+# M0.1.2 / M0.1.3（AI-010 §2.2 / AI-011 §2.8 / CHG-022）：Docker daemon 级资源诊断（只读）。
 #
 # 本脚本只在宿主读取 Docker daemon 的 NCPU / MemTotal，输出分级标签与“建议值”
 # SUGGEST_*，供 runbook / verify-env 记录。**它不是 bitbake 并发控制通道**：
 #   - 不输出可 eval 的 export；YP_BUILD_THREADS / YP_PARALLEL_MAKE 已不再是控制变量（ISS-039）；
-#   - 实际并发由容器内 kas/base.yml 的 yp_build_threads(d) 按 cgroup 内存 + 可见 CPU 计算；
+#   - bitbake 并发的权威实现是 meta-yp-distro/classes/yp-concurrency.bbclass 的 yp_build_threads(d)
+#     （经 base.yml 的 INHERIT 引入），按 cgroup 内存 + 可见 CPU 计算；本脚本只是 daemon 级
+#     诊断镜像，分级表与之一致但不是"唯一实现"，不能替代容器内实际值（AI-011 §2.8 R4）；
 #   - 负向容器（--cpuset-cpus/--memory）下，daemon 建议值（宿主级）与容器内实际值会不同，
 #     最终必须以容器内 bitbake-getvar BB_NUMBER_THREADS PARALLEL_MAKE 为准（ISS-037）。
 # 只读：不启动容器、不写文件、不下载。daemon 不可用时 exit 1，不静默回退。
@@ -21,7 +23,7 @@ mem_bytes="$(docker info --format '{{.MemTotal}}' 2>/dev/null)"
 [ -n "$mem_bytes" ] && [ "$mem_bytes" -gt 0 ] 2>/dev/null || die "docker info MemTotal 无效: ${mem_bytes:-<empty>}"
 mem_gb=$((mem_bytes / 1024 / 1024 / 1024))
 
-# 分级表（与 kas/base.yml 的 yp_build_threads(d) 完全一致，AI-010 §2.1/§2.2）：
+# 分级表（与 yp-concurrency.bbclass 的 yp_build_threads(d) 一致，AI-010 §2.1/§2.2）：
 # standard cpus>=32 且 mem>=120 -> 32；mid cpus>=16 且 mem>=32 -> min(16,cpus)；
 # small   cpus>=8  且 mem>=16  -> min(8,cpus)；legacy 其他 -> min(4,cpus)。
 # 建议线程至少 1；PARALLEL_MAKE = max(1, threads//2)，不出现 -j 0。
