@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M1-PLAN-001 |
-| 版本 | v0.1 |
-| 状态 | Draft（待人类确认范围后转 Approved） |
+| 版本 | v0.3 |
+| 状态 | Approved（D 组范围、D-01 两层解释、S0 前置、资源全量使用口径已确认；S0 待执行） |
 | 责任人 | zeek.zhao |
 | 生效日期 | 2026-11-27 |
 | 上游 | [`yp-wrynose 发行版 PRD v0.1`](https://my.feishu.cn/docx/PA8kdIhZsoziwvxq3GVcNiVT6mh) §里程碑 M1、D 组 |
@@ -63,9 +63,9 @@ M0 没有做 QEMU 启动，D-03/D-09 无法落地。M1-S0 只补“目标能启�
 
 `yp-image-dev` 使用独立 `SSTATE_DIR`（建议 `/work/sstate/dev`），不直接写 M0 的 `/work/sstate`；DL_DIR 可共享。验收要看到 dev 构建不把 dev 缓存写入 prod 缓存路径。
 
-### 3.4 CI 资源口径
+### 3.4 CI 资源口径（已确认）
 
-四步 CI 首选 **self-hosted 32 核 / 128 GiB** runner（label 例：`yp-32c`）；没有该 runner 时用 `ubuntu-latest` 跑，但必须标 `RESOURCE_PARTIAL`，不得写成 32c/128G full-quota PASS。
+四步 CI 跑在 **GitHub-hosted `ubuntu-latest`**，不预设核数/内存，也**不使用 self-hosted 32c/128G runner**。所有构建容器不加 `--cpus` / `--memory` / `--cpu-quota` / `--cpuset-cpus`，机器有多少就用多少；每次记录实际 `nproc` / `MemTotal`，低于 32c/128G 标 `RESOURCE_PARTIAL`，达到基线才可写 full-quota。CI 只跑缓存增量（GHCR 预热缓存 + 分 job），不跑全冷构建；本地构建证据与 CI 证据分列，不互相替代。
 
 ## 4. Stage 规划
 
@@ -175,7 +175,7 @@ bash scripts/dev/gdb-connect.sh --target qemu --break yp_demo_main
 - `BUILDHISTORY_DIR` / `BUILDHISTORY_COMMIT` 配置与产物归档；
 - `scripts/ci/check-layer.sh`：运行 `yocto-check-layer`，并用一个故意不合规的临时层做负向测试；
 - `scripts/dev/four-step.sh`：build → devtool modify/build → deploy-target → gdbserver；
-- `.github/workflows/m1-dev.yml`：静态门禁 + 四步 E2E；
+- `.github/workflows/m1-dev.yml`：`ubuntu-latest` 上拆 `gate` / `build-dev` / `four-step` 三个 job，使用 GHCR 预热缓存；容器不加资源限制，所有 job 打印实际 `nproc`/`MemTotal`，低于 32c/128G 才标 `RESOURCE_PARTIAL`；
 - `D-07 bblock` 为 P2，不进入 M1 gate；有余量再做。
 
 **验收**：
@@ -223,7 +223,7 @@ CI 要连续 **3 次** green，且四步分别有日志段；一次通过只能�
 | D-06 | 两次构建的 buildhistory diff 可读并归档 | S4 |
 | D-07 | bblock 锁定某 recipe 后不重编（P2，不阻断 M1） | S4 可选 |
 | D-08 | `yocto-check-layer` 正向通过 + 临时坏层负向失败 | S4 |
-| D-09 | 四步流程 CI 连续 3 次 green | S4 |
+| D-09 | 四步流程在 GitHub-hosted `ubuntu-latest` 连续 3 次 green；每次用 runner 实际全部资源，记录 `nproc`/`MemTotal`，低于 32c/128G 才标 `RESOURCE_PARTIAL` | S4 |
 
 ## 6. 分支与发布线
 
@@ -240,21 +240,23 @@ CI 要连续 **3 次** green，且四步分别有日志段；一次通过只能�
 | 风险 | 应对 |
 |---|---|
 | QEMU 在容器内无 KVM，启动慢/超时 | 用 TCG，超时阈值按实测设；不把 TCG 通过写成硬件加速 |
-| eSDK 构建体积大、CI 超时 | SDK job 独立缓存；只在 self-hosted 32c 或分阶段 hosted 跑 |
+| eSDK 构建体积大、CI 超时 | SDK job 独立缓存；按 runner 实际资源分 job，超时则拆 job 或改手动，不降级成“未跑也通过” |
 | gdbserver 端口转发复杂 | 先 QEMU slirp 固定端口，失败再退到串口/本地 gdbstub，但 D-05 只认 gdbserver 证据 |
-| debuginfod 依赖 host 服务 | 先做本地最小服务；跑不通标 UNVERIFIED，不用 gdbserver 冒充 |
-| 四步 CI 在 hosted runner 资源不足 | 首选 self-hosted 32c/128G；hosted 只作 `RESOURCE_PARTIAL` |
+| debuginfod 依赖 host 服务 | 先做本地最小服务；跑不通标 UNVERIFIED，不用 gdbserver 冒充 D-05 通过 |
+| 四步 CI 在 hosted runner 资源不足 | 用 runner 实际全部资源；不足 32c/128G 时标 `RESOURCE_PARTIAL`，不引入 self-hosted，不写 full-quota PASS |
 | `devtool` 字面“进镜像”与工程实际冲突 | 按 §3.1 两层实现；如坚持字面，单开 CHG/偏离 |
 
-**待人类确认**：
+**已确认（2026-11-27）**：
 
-1. D-01 是否接受“宿主 SDK + 目标镜像”两层解释；
-2. M1-S0 的 QEMU 启动基线是否作为 M1 前置（建议接受）；
-3. 四步 CI 是否有 self-hosted 32c/128G runner；没有则按 `RESOURCE_PARTIAL` 验收；
-4. D-05 的 debuginfod 是否必须在 M1 内闭环，还是允许先 `UNVERIFIED` 留到 M1.1。
+1. D-01 接受“宿主 SDK + 目标镜像”两层解释；
+2. M1-S0 的 QEMU 启动基线作为 M1 前置；
+3. CI 无 self-hosted 32c/128G，跑 GitHub-hosted；资源按 runner 实际全部使用，不预设核数/内存，低于基线才标 `RESOURCE_PARTIAL`；
+4. D-05 的 debuginfod 仍在 M1 范围内；未闭环则 D-05 不通过，M1 不宣称全 P1，留 M1.1 补。
 
 ## 8. 变更记录
 
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v0.1 | 2026-11-27 | 建立 M1 开发者平台规划：D 组范围、S0–S5、验收矩阵、分支/tag、风险 | zeek.zhao |
+| v0.2 | 2026-11-27 | 确认 D-01 两层解释、S0 为 M1 前置、CI 使用 GitHub-hosted（无 self-hosted）；D-05 debuginfod 未闭环则 M1 不宣称全 P1 | zeek.zhao |
+| v0.3 | 2026-11-27 | 资源口径改为“机器有多少用多少、容器不加限制、记录实际值”；去掉固定 4c/16G 假设，低于 32c/128G 才标 RESOURCE_PARTIAL | zeek.zhao |
