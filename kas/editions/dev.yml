@@ -1,9 +1,16 @@
 header:
   version: 14
 
+# M1-S1 / DES-002: dev 镜像目标（kas 5.5 顶层单数 target，覆盖 base 的 core-image-minimal）。
+# prod 镜像仍由命令行 --target yp-image-prod 指定，不改 prod.yml。
+target: yp-image-dev
+
 # 开发：可调试、保留符号、不裁体积
 local_conf_header:
   dev: |
     DISTRO_FEATURES:append = " debug-tweaks"
     INHERIT:remove = " rm_work"
     DEBUG_FLAGS = "-g"
+    # M1-S1 / DES-002: dev 缓存按 edition 隔离（plan §3.3），不污染 prod 的 /work/sstate。
+    # base.yml 的 SSTATE_DIR="/work/sstate" 保持只读断言，仅此处 edition 覆盖。
+    SSTATE_DIR = "/work/sstate/dev"

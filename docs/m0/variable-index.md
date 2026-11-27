@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-VAR-001 |
-| 版本 | v1.5 |
-| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对；M0.1.2/CHG-022 并发按 CPU+cgroup 内存分级，ISS-040 函数移 .bbclass；AI-011 §2.8 诊断措辞更正） |
+| 版本 | v1.6 |
+| 状态 | Approved（见 YP-M0-RV-009、T7 变量空间核对；M0.1.2/CHG-022 并发按 CPU+cgroup 内存分级，ISS-040 函数移 .bbclass；AI-011 §2.8 诊断措辞更正；M1-S1 新增 #30/#31 dev edition 覆盖登记） |
 | 目的 | 记录关键变量的默认值、唯一定义处、可覆盖层与手改检测命令，使「手改配置可发现」（判据 8）闭环 |
 | 检测脚本 | `scripts/check-vars.sh`（统一断言，本表所有变量的期望值来源） |
 
@@ -47,6 +47,8 @@
 | 26 | `MIN_FREE_BYTES` | `10737418240`（10 GiB） | `scripts/cache/threshold.conf` | 只读（preflight 阈值） | `grep -q '^MIN_FREE_BYTES=10737418240$' scripts/cache/threshold.conf` |
 | 27 | `MACHINE`（measure.sh 默认） | `qemux86-64` | `scripts/build/measure.sh` | 命令行 `--machine` | `grep -q '^MACHINE="qemux86-64"$' scripts/build/measure.sh` |
 | 28 | `EDITION`（measure.sh 默认） | `ci` | `scripts/build/measure.sh` | 命令行 `--edition` | `grep -q '^EDITION="ci"$' scripts/build/measure.sh` |
+| 30 | `SSTATE_DIR`（dev edition 覆盖） | `/work/sstate/dev` | `kas/editions/dev.yml` | edition（dev 专属，plan §3.3 缓存隔离；base.yml 的 `/work/sstate` 仍只读） | `grep -q 'SSTATE_DIR = "/work/sstate/dev"' kas/editions/dev.yml` |
+| 31 | `target`（dev edition 覆盖） | `yp-image-dev`（base 为 `core-image-minimal`） | `kas/editions/dev.yml` | edition（kas 顶层单数 target；prod 用 `--target` 命令行覆盖） | `grep -q '^target: yp-image-dev$' kas/editions/dev.yml` |
 
 ## 变更记录
 
@@ -58,3 +60,4 @@
 | v1.3 | 2026-11-27 | CHG-022/ISS-038：`BB_NUMBER_THREADS` 改 `yp_build_threads(d)`（CPU + cgroup v2/v1 内存分级，回退 /proc/meminfo），`PARALLEL_MAKE` 从前者派生至少 -j1；新增 #29 `yp_mem_bytes`/`yp_build_threads`；`threads.sh` 仅 daemon 级 `SUGGEST_*` 诊断、去 export（ISS-039）；负向断言检出 env 控制通道残留 | zeek.zhao |
 | v1.4 | 2026-11-27 | ISS-040：分级函数从 `kas/base.yml` 移到 `meta-yp-distro/classes/yp-concurrency.bbclass`（bitbake ConfHandler 不支持 local.conf 多行 `def`，实测构建 ParseError），base.yml 用 `INHERIT += "yp-concurrency"` 引入；#29/check-vars/G6 断言目标改 bbclass | zeek.zhao |
 | v1.5 | 2026-11-27 | AI-011 §2.8/R4：#29 措辞改为「bitbake 权威实现在 .bbclass；threads.sh 为 daemon 诊断镜像、非唯一实现」，不把诊断镜像说成唯一实现 | zeek.zhao |
+| v1.6 | 2026-11-27 | M1-S1/DES-002：新增 #30 `SSTATE_DIR`（dev edition 覆盖 `/work/sstate/dev`，plan §3.3 缓存隔离）与 #31 `target`（dev edition `yp-image-dev`）；base.yml 只读断言不变 | zeek.zhao |
