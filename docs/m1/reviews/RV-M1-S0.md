@@ -64,6 +64,8 @@
 
 `bash -n scripts/dev/qemu-run.sh scripts/dev/qemu-smoke.sh` → SYNTAX_OK（gate G1 亦覆盖全部 36 个脚本）；`bash scripts/gate.sh` → **GATE_PASS**；`bash scripts/check-vars.sh` → **VARS_OK checked=36 drift=0**；token 扫描 0、无大二进制、工作区干净。
 
+**CI 状态（如实）**：push `db91de3` 到 `feat-m1-dev-platform` 后，按 head_sha 查询 GitHub Actions `total_count=0`——因 gate/publish workflow 的 push 分支限制为 `feat-m0*`/`release-m0*`，本分支 `feat-m1-*` 不匹配，且 `scripts/dev/**` 不在 `m0.yml` paths 内，故未触发 CI。本轮 AI-001 §4/§5 未要求改 workflow、观察 CI 或打 `m1.0` tag，故**不为让 CI 跑而改 paths**（遵循前序硬边界）；以本地 GATE_PASS/VARS_OK 为质量证据，远端 CI 记为「未触发（分支不匹配）」，不冒充 success。M1 后续 Stage 若需 CI，应单独评审 workflow 的 M1 分支触发策略。
+
 ## 4. 变更记录
 
 | 版本 | 日期 | 变更 | 作者 |
