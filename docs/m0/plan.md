@@ -3,13 +3,13 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M0-PLAN-001 |
-| 版本 | v2.4 |
+| 版本 | v2.18 |
 | 状态 | Approved（阶段计划；判据 1-8 全部收口） |
-
-> **编号说明（Stage E）**：`m0-resume-prompt.md` §9.1 要求新建 `ADR-004.md` 裁决分片发布契约，但 ADR-004 已在 Stage B 用于 kas 结构决策（Approved、已发布）。为不覆盖历史决策，分片发布契约顺延为 **YP-M0-ADR-005**（见 `docs/m0/adr/ADR-005.md`）。
 | 责任人 | zeek-zhao |
 | 生效日期 | 2026-11-24 |
 | 关联 | PRD v0.1（B 组 P0）、AGENTS.md、`docs/ai/m0-resume-prompt.md` |
+
+> **编号说明（Stage E）**：`m0-resume-prompt.md` §9.1 要求新建 `ADR-004.md` 裁决分片发布契约，但 ADR-004 已在 Stage B 用于 kas 结构决策（Approved、已发布）。为不覆盖历史决策，分片发布契约顺延为 **YP-M0-ADR-005**（见 `docs/m0/adr/ADR-005.md`）。
 
 ## 0. 记录补链（F-09）
 
