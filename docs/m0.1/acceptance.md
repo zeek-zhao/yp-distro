@@ -33,6 +33,6 @@
 
 | # | 项 | 证据 | 结论 |
 |---|---|---|---|
-| E9 | 资源兜底（CPU+内存分级）+ 文档去误导 | RV-021 §1：base.yml `yp_build_threads(d)` 按 cgroup v2/v1 内存+CPU 分级（纯 Python 复核 ALL_OK：64c/4GB→4/-j2 不按 CPU 翻倍）；threads.sh 只读 `SUGGEST_*` 诊断无 export，runbook/测试提示词无 eval/export，bitbake-getvar 为唯一验收；实测/CI 见 RV-021 §2–§5；4c/8G 全冷构建按用户要求不做 | 通过（静态+门禁）；实测/CI 见 RV-021；4c/8G 全冷构建按用户要求不做 |
+| E9 | 资源兜底（CPU+内存分级）+ 文档去误导 | RV-021：base.yml `INHERIT yp-concurrency` + `.bbclass` 的 `yp_build_threads(d)` 按 cgroup v2/v1 内存+CPU 分级（实测矩阵：32/123→32/-j16、4/8→4/-j2、16/16→8/-j4、32/64→16/-j8、64/4→4/-j2 不按 CPU 翻倍）；threads.sh 只读 `SUGGEST_*` 无 export，runbook/测试提示词无 eval/export；标准机 getvar 32/-j16 + 缓存 prod 构建 309s RC=0 0 ERROR ext4；CI push `9898bde` gate `45972533386` / publish `45972533380` 均 success（4 job 全绿）；tag/branch 见 RV-021 §5.2；4c/8G 全冷构建按用户要求不做 | 通过；tag/branch 见 RV-021 §5.2；4c/8G 全冷构建按用户要求不做 |
 
 结论只填：`通过` / `未通过` / `部分通过` / `UNVERIFIED`。填 `通过` 必须附真实输出位置。

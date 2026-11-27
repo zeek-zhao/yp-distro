@@ -27,7 +27,7 @@
 | E6 | 并发资源化 + bitbake 真生效（M0.1.1） | RV-020 §1：threads.sh=standard/32/-j16；fresh getvar=32/-j16（ISS-037 修复：cpu_count 动态分级）；变量契约防回归 | 完成 |
 | E7 | 全配额构建复验 + 4c/8G 边界（M0.1.1） | RV-020 §2：容器 inspect 0/0/0；prod 构建 #1 14s / #2 314s、0 ERROR、all succeeded、ext4 42M；CPU ~400%/mem ~2.2GiB 无 OOM；4c/8G 全冷构建未跑 | 部分完成：全配额构建通过；4c/8G 全冷构建 UNVERIFIED |
 | E8 | M0.1.1 发布线 CI + tag | RV-020 §5：gate `45962283036` / publish `45962283012` 均 success（4 job 全绿、push、head_sha=`59e254d`）；m0.1.1 tag + release-m0 快进 | 完成 |
-| E9 | 资源兜底（CPU+内存分级）+ 文档去误导（M0.1.2） | RV-021：base.yml `INHERIT yp-concurrency` + `.bbclass` 的 `yp_build_threads(d)` cgroup 内存+CPU 分级（纯 Python 复核 ALL_OK）；标准机 getvar 32/-j16、缓存 prod 构建 309s RC=0、0 ERROR、ext4 42M；三个 NEGATIVE_ONLY 容器 getvar 矩阵全通过（4/8→4/-j2、16/16→8/-j4、32/64→16/-j8）；threads.sh 只读 SUGGEST_*、无 eval/export；T5 CI 见 RV-021 §5；4c/8G 全冷构建按用户要求不做 | 完成（T4 通过）；T5 CI/tag 见 RV-021 §5 |
+| E9 | 资源兜底（CPU+内存分级）+ 文档去误导（M0.1.2） | RV-021：base.yml `INHERIT yp-concurrency` + `.bbclass` 的 `yp_build_threads(d)` cgroup 内存+CPU 分级；标准机 getvar 32/-j16、缓存 prod 构建 309s RC=0、0 ERROR、ext4 42M；三个 NEGATIVE_ONLY 容器 getvar 矩阵全通过（4/8→4/-j2、16/16→8/-j4、32/64→16/-j8）；threads.sh 只读 SUGGEST_*、无 eval/export；T5 CI：push `9898bde` gate `45972533386` / publish `45972533380` 均 success（4 job 全绿）；4c/8G 全冷构建按用户要求不做 | 完成（T4/T5 通过；tag/branch 见 RV-021 §5.2） |
 
 ## 2. 出口判据（§6.7）
 
