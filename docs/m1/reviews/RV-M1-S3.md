@@ -3,11 +3,11 @@
 | 项 | 值 |
 |---|---|
 | 文档编号 | YP-M1-RV-004 |
-| 版本 | v1.1（设计评审 + 实测证据回填） |
+| 版本 | v1.2（设计评审 + 实测证据回填 + push/CI 记录） |
 | 评审对象 | YP-M1-S3 实现（deploy-target.sh + gdb-connect.sh + yp-image-dev.bb 加 sshd/sftp-server/scp）；设计 DES-004 |
 | 评审人 | zeek.zhao |
 | 评审日期 | 2026-11-28 |
-| 关联 | `docs/m1/plan.md` §M1-S3 §3.1 §7；`docs/m1/design/S3-deploy-debug.md`（DES-004）；S2=`a441f91`；设计评审=`6aa1cfe` |
+| 关联 | `docs/m1/plan.md` §M1-S3 §3.1 §7；`docs/m1/design/S3-deploy-debug.md`（DES-004）；S2=`a441f91`；设计评审=`6aa1cfe`；push HEAD=`b858798` |
 | 结论 | S3 通过（Q1–Q4 + 实测）：D-03 `DEPLOY_OK`+目标机 `YP_DEMO_MARKER`；D-05-a/b `GDB_BREAKPOINT_HIT`+`SOURCE_LINE_OK`；dev 镜像重建 BUILD_RC=0（仅增量）；标注 RESOURCE_PARTIAL。D-05-c（debuginfod/minidebuginfo）如实 UNVERIFIED、留 M1.1（plan §7 第 4 条）；devshell 交互 UNVERIFIED |
 
 ## 1. 四问自评
@@ -115,7 +115,7 @@ GDB_CONNECT_OK break=yp_demo_main host=127.0.0.1:5678
 
 ### 3.8 CI 状态（如实）
 
-S3 设计评审（`6aa1cfe`）与实现回填提交 push 到 `feat-m1-dev-platform` 后，查询 GitHub Actions `total_count=0`——gate/publish workflow 的 push 分支限制为 `feat-m0*`/`release-m0*`，本分支 `feat-m1-*` 不匹配（与 S0/S1/S2 同一口径）。不为让 CI 跑而改 workflow paths（前序硬边界），以本地 GATE_PASS/VARS_OK 为质量证据，远端 CI 记「未触发（分支不匹配）」，不冒充 success。push 凭据经一次性环境变量与 git 参数传递，未写 git config/仓库、未打印 token。
+S3 两个提交（`6aa1cfe` 设计评审、`b858798` 实现回填）用一次性凭据 push `feat-m1-dev-platform` 成功（`a441f91..b858798`，远端 HEAD=`b858798b7cc327babee685d4677f1015dad4bd60`，本地 HEAD 一致）。按 head_sha 精确查询 GitHub Actions：`6aa1cfe` → `total_count=0`、`b858798` → `total_count=0`；分支 `feat-m1-dev-platform` 亦无新 run（最近 run 为 M0 历史 `300007ea`，2026-11-27）。根因：gate/publish workflow（`.github/workflows/m0-gate.yml`、`m0.yml`）push 分支限制为 `feat-m0*`/`release-m0*`，`ci.yml`/`pull-check.yml` 为 `[main]`，本分支 `feat-m1-*` 均不匹配（与 S0/S1/S2 同一口径）。不为让 CI 跑而改 workflow paths（前序硬边界），以本地 GATE_PASS/VARS_OK 为质量证据，远端 CI 记「未触发（分支不匹配）」，不冒充 success。push 凭据经临时 askpass 环境变量传递、用完即删，未写 git config/仓库、未打印 token。
 
 ## 4. 变更记录
 
@@ -123,3 +123,4 @@ S3 设计评审（`6aa1cfe`）与实现回填提交 push 到 `feat-m1-dev-platfo
 |---|---|---|---|
 | v1.0 | 2026-11-28 | 新建：S3 设计四问评审 + 设计阶段真实探测证据（dev 无 sshd→补 sshd、SSH/slirp 拓扑、gdbserver+源码行、D-05 三层分档、debuginfod/minidebuginfo 标 UNVERIFIED）；实测待回填 | zeek.zhao |
 | v1.1 | 2026-11-28 | 回填实测：dev 镜像重建 BUILD_RC=0（sshd/sftp-server/scp + 空密码 root，4 次迭代修复 B1–B4）；D-03 DEPLOY_OK+YP_DEMO_MARKER；D-05-a/b GDB_BREAKPOINT_HIT+SOURCE_LINE_OK（修复 B5 nc 消耗 accept、B6 gdb 批处理顺序）；负向路径非 0；debuginfod/minidebuginfo 标 UNVERIFIED 留 M1.1；RESOURCE_PARTIAL；S3 通过 | zeek.zhao |
+| v1.2 | 2026-11-28 | 补记 push 后 CI 状态：`a441f91..b858798` 推送成功、远端 HEAD=`b858798`、按 head_sha 查询 Actions `total_count=0`（`feat-m1-*` 不匹配 workflow 分支过滤），口径同 S0–S2，不冒充 success | zeek.zhao |
