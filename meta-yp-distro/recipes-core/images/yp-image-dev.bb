@@ -12,4 +12,10 @@ IMAGE_INSTALL += "\
     packagegroup-yp-kernel-tools \
     "
 
+# M1-S3 / DES-004: deploy-target 走 scp/ssh，需目标侧 sshd 监听（debug-tweaks 允许空密码 root 登录）。
+# gdbserver/gdb 已由 packagegroup-yp-devtools 提供（D-05-a），此处只补 SSH 部署通道（D-03）。
+# 三项缺一不可：sshd 监听 22；sftp-server 供宿主 OpenSSH9 scp 的默认 SFTP 子系统；
+# scp 供旧协议(-O)/目标侧自检回退。实测 dev 镜像初版只装 sshd 时 scp 报 "Subsystem sftp ... no such file"。
+IMAGE_INSTALL += "openssh-sshd openssh-sftp-server openssh-scp"
+
 IMAGE_FSTYPES = "ext4"

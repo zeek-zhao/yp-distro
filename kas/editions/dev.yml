@@ -11,6 +11,10 @@ local_conf_header:
     DISTRO_FEATURES:append = " debug-tweaks"
     INHERIT:remove = " rm_work"
     DEBUG_FLAGS = "-g"
+    # M1-S3 / DES-004: deploy-target 走 scp/ssh，需目标 sshd 允许空密码 root 登录。
+    # debug-tweaks 是 DISTRO_FEATURES，显式放开三项 IMAGE_FEATURES 以确保
+    # root/shadow 不 zap + sshd PermitRootLogin/PermitEmptyPasswords=yes。
+    EXTRA_IMAGE_FEATURES:append = " allow-empty-password empty-root-password allow-root-login"
     # M1-S1 / DES-002: dev 缓存按 edition 隔离（plan §3.3），不污染 prod 的 /work/sstate。
     # base.yml 的 SSTATE_DIR="/work/sstate" 保持只读断言，仅此处 edition 覆盖。
     SSTATE_DIR = "/work/sstate/dev"

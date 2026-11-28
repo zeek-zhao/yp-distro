@@ -92,9 +92,18 @@
 
 ### 3.4 配方与 kas 变更
 
-- **`meta-yp-distro/recipes-core/images/yp-image-dev.bb`**：`IMAGE_INSTALL += " openssh-sshd"`（为 deploy-target 提供 SSH 通道；gdbserver/gdb 已由 S1 `packagegroup-yp-devtools` 提供，不重复添加）。
-- **`kas/editions/dev.yml`**：不在本轮全局启用 `DISTRO_FEATURES:append = " debuginfod minidebuginfo"`（全量重编 OOM 风险，plan §7 第 4 条）；以配方注释记录该配置入口与「留 M1.1」结论。若实现阶段 dry-run 证实增量可控且实际跑通，再回填启用证据。
+- **`meta-yp-distro/recipes-core/images/yp-image-dev.bb`**：`IMAGE_INSTALL += " openssh-sshd openssh-sftp-server openssh-scp"`（为 deploy-target 提供 SSH/scp/SFTP 通道；gdbserver/gdb 已由 S1 `packagegroup-yp-devtools` 提供，不重复添加）。见 §3.4b 修正 1。
+- **`kas/editions/dev.yml`**：追加 `EXTRA_IMAGE_FEATURES:append = " allow-empty-password empty-root-password allow-root-login"`（放开空密码 root SSH 登录，见 §3.4b 修正 2）；**不在本轮**全局启用 `DISTRO_FEATURES:append = " debuginfod minidebuginfo"`（全量重编 OOM 风险，plan §7 第 4 条）；以注释记录该配置入口与「留 M1.1」结论。
 - **`docs/m0/variable-index.md`**：本 Stage 不新增受保护 bitbake 变量（`openssh-sshd` 是 `IMAGE_INSTALL` 值、`hostfwd` 是 QEMU 命令行参数，均非受保护变量），不改；`scripts/check-vars.sh` RULES 保持只读断言不变。
+
+### 3.4b 实现阶段的设计修正（真实探测回填）
+
+设计评审后实测发现三处必须修正（详见 RV-M1-S3 §3.1 B1–B6），已在实现提交中落地：
+
+1. **SSH 组件从单 `openssh-sshd` 改为三项**：`openssh-sshd openssh-sftp-server openssh-scp`。只装 sshd 时，宿主 OpenSSH9 scp 默认走 SFTP 子系统→目标无 `sftp-server`→`Connection closed`；`-O` 旧协议又需目标 `scp` 命令。三者缺一不可。
+2. **root 空密码需显式 `EXTRA_IMAGE_FEATURES`**：`debug-tweaks`（DISTRO_FEATURES）未自动放开三个 IMAGE_FEATURES，实测 root shadow=`root:*`、sshd 默认拒绝空密码。dev.yml 补 `EXTRA_IMAGE_FEATURES:append = " allow-empty-password empty-root-password allow-root-login"`（见 §3.4 dev.yml 变更）。
+3. **QEMU 必须加 `ip=dhcp` 内核参数**：本镜像 `/etc/network/interfaces` 只有 lo，guest 无 eth0 IP 时 slirp hostfwd 转发到 guest:22/5678 失败（ssh banner 超时）。hostfwd 语法用双冒号 `tcp::<host>-:<guest>`（单冒号被 QEMU 8.2 拒）。
+4. **gdb 批处理先 `file` 后 `target remote`**：反序会让 gdbserver 在 gdb 重读符号时 reset；去掉 nc 就绪探测（会消耗 gdbserver 一次 accept），固定 sleep 2；`set breakpoint pending off` 让坏符号快速失败。
 
 ### 3.5 `yp-demo` 样例（实现阶段生成，不入库二进制）
 
