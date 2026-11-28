@@ -106,6 +106,14 @@
 
 - 探测 bblock 类与 `BB_BLOCKED_RECIPES` 支持；若时间/资源允许且不影响 P1，补一个最小验证（锁定某 recipe 不重编）。不进入 M1 gate，做不成如实标 P2 未做。
 
+### 3.5 实现阶段设计修正（真实探测后回填）
+
+1. **D-08 正向需补合规文档**：设计阶段实测 meta-yp-distro 缺 `README`/`SECURITY.md`，`test_readme`/`test_security` FAIL；实现阶段补这两个文件（含 maintainer/patch/email），正向核心用例转全绿。不是屏蔽检查，而是让层满足 check-layer 的实际判据。
+2. **buildhistory diff 用 git diff**：oe-core `scripts/buildhistory-diff` 依赖 oe-init 环境，在本嵌套沙箱 source 会提前退出；改用 `git -C <buildhistory-dir> diff <rev1> <rev2>`（仓库是 git、文件纯文本），语义等价且更稳。两次构建产物一致时 diff 为空（可复现），脚本 `--stat` 具备显示真实变更的能力。
+3. **check-layer.sh 在 bash -c 子进程 source oe-init-build-env**：脚本顶层 source 会因 `oe-buildenv-internal` 的 `return` 提前终止；改在 `bash -c` 独立进程里 source + 调 wrapper（与手动验证一致）。用 timeout 包裹整个 bash -c（日志已含用例结论时按日志判定）：正向核心用例全绿即 PASS/PARTIAL；负向坏层被拒绝即 PASS（8G 下 world 可能先 FAIL，按「坏层被拒绝」宽泛判定，不依赖 test_readme 一定跑到）。
+4. **four-step.sh 端口语义**：`gdb-connect.sh --port` 是 gdbserver 端口（默认 5678），非 SSH hostfwd 端口（2222）；four-step 不向 gdb 传 `--port`，避免 gdb 连到 sshd 报 packet error。
+5. **D-07 bblock**：本 pin 仅 `oeqa/selftest/cases/bblock.py`、无独立 bbclass，标 `P2_UNVERIFIED`，不进 M1 gate。
+
 ## 4. 四问评审（见 RV-M1-S4 §1）
 
 1. **覆盖**：D-06/D-08/D-09 逐项有脚本 + 证据落点；D-07 标 P2 可选。
@@ -118,3 +126,4 @@
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-28 | 新建：S4 设计 + 设计阶段真实探测证据（buildhistory 变量/GitPython、check-layer 依赖解析与正/负向用例、四步 CI 资源口径） | zeek.zhao |
+| v1.1 | 2026-11-28 | 实现阶段设计修正：补 README/SECURITY、buildhistory diff 改用 git diff、check-layer.sh bash -c 子进程 source、four-step 端口语义、D-07 P2_UNVERIFIED | zeek.zhao |

@@ -1,0 +1,34 @@
+meta-yp-distro
+==============
+
+Yocto distribution layer for the yp-wrynose distribution (YP-M1 developer
+platform). This layer provides the `yp-wrynose` distro configuration,
+`meta-yp-distro` images/packagegroups, and build concurrence helpers.
+
+Layer dependencies (see conf/layer.conf):
+  - core  (openembedded-core)
+  - yocto (meta-poky; registered collection name, ISS-009)
+
+Compatible release series: wrynose (see LAYERSERIES_COMPAT_meta-yp-distro).
+
+Contents
+--------
+  conf/distro/yp-wrynose.conf   distro definition (DISTRO = "yp-wrynose")
+  classes/yp-concurrency.bbclass  CPU/memory-aware concurrency helper
+  recipes-core/images/          yp-image-dev / yp-image-prod
+  recipes-core/packagegroups/   base / devtools / kernel-tools groups
+
+Maintainer
+----------
+  zeek.zhao <zeek.zhao@foxmail.com>
+
+Patching / contributions
+------------------------
+Send patches to the maintainer email above. Patches should be generated with
+`git format-patch`, include a signed-off-by line, and target the
+`feat-m1-dev-platform` branch. Do not rebase or force-push published tags
+(`m0.1.3` and earlier are frozen).
+
+License
+-------
+See COPYING.MIT in the repository root for the layer metadata license.

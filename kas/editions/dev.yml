@@ -18,3 +18,9 @@ local_conf_header:
     # M1-S1 / DES-002: dev 缓存按 edition 隔离（plan §3.3），不污染 prod 的 /work/sstate。
     # base.yml 的 SSTATE_DIR="/work/sstate" 保持只读断言，仅此处 edition 覆盖。
     SSTATE_DIR = "/work/sstate/dev"
+    # M1-S4 / DES-005 / D-06: buildhistory 仅 dev edition 启用，产物按 TOPDIR 隔离，
+    # 每次构建自动提交，供 buildhistory-diff 做两次构建差异归档（不污染 prod/base）。
+    INHERIT += " buildhistory"
+    BUILDHISTORY_DIR = "${TOPDIR}/buildhistory"
+    BUILDHISTORY_COMMIT = "1"
+    BUILDHISTORY_FEATURES = "image package"
