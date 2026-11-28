@@ -8,7 +8,7 @@
 | 评审人 | zeek.zhao |
 | 评审日期 | 2026-11-28 |
 | 关联 | `docs/m1/plan.md` §M1-S4 §3.4 §5 §7；`docs/m1/design/S4-ci-buildhistory.md`（DES-005）；S3=`b858798` |
-| 结论 | S4 实现完成（Q1–Q4 + 本地实测通过）：D-06 buildhistory diff 可读并归档、D-08 check-layer 正/负向、D-09 four-step.sh 四步本地跑通并新建 m1-dev.yml。D-09「远端 CI 连续 3 次 green」以 GitHub Actions 实际 run 为准（见 §3.6），本地四步通过只写「本地通过」不冒充稳定；D-07 bblock 标 P2_UNVERIFIED（不阻断 M1）；口径 RESOURCE_PARTIAL（8G 沙箱） |
+| 结论 | S4 通过（Q1–Q4 + 本地实测 + CI 3/3）：D-06 buildhistory diff 可读并归档、D-08 check-layer 正/负向、D-09 four-step.sh 本地 FOUR_STEP_OK + m1-dev.yml 远端连续 3 次 green（run 46138997143/46139088851/46139090641，三 job 全绿，见 §3.6）。D-07 bblock 标 P2_UNVERIFIED（不阻断 M1）；口径 RESOURCE_PARTIAL（hosted runner nproc=4/15.6G < 32c/128G；本地 8G 沙箱） |
 
 ## 1. 四问自评
 
@@ -68,11 +68,21 @@
 
 ### 3.6 CI 状态与 D-09「3 次 green」（如实）
 
-D-09 出口要求「四步流程在 GitHub-hosted `ubuntu-latest` 连续 3 次 green」。本轮新增 `m1-dev.yml` 匹配 `feat-m1*`，推送后需要以 GitHub Actions 实际 run 为准：本地 `FOUR_STEP_OK` 只写「本地通过」，不冒充「CI 稳定通过」。3 次 green 是否达成、runner 实际 `nproc`/`MemTotal` 与 `RESOURCE_PROFILE`，均须在推送后按 Actions 真实结果回填；未跑满 3 次前标 `SINGLE_PASS`/`UNVERIFIED`，不写「稳定通过」。此前 S0–S3 因分支不匹配无 CI run（`total_count=0`），本 workflow 为首次为该分支设计的 CI。
+D-09 出口要求「四步流程在 GitHub-hosted `ubuntu-latest` 连续 3 次 green」。本轮新增 `m1-dev.yml` 匹配 `feat-m1*`，推送 `9c9ea5d` 后按 GitHub Actions 实测：
+
+| run id | event | head_sha | 结论 | 三 job（gate/build-dev/four-step） |
+|---|---|---|---|---|
+| `46138997143` | push | `9c9ea5d` | success | 全 success |
+| `46139088851` | workflow_dispatch | `9c9ea5d` | success | 全 success |
+| `46139090641` | workflow_dispatch | `9c9ea5d` | success | 全 success |
+
+**3/3 连续 green 达成**（同一最终提交 `9c9ea5d`，三 job 每次全绿）。runner 实测（gate job）：`nproc=4`、`MemTotal=16366632 kB`（约 15.6 GiB）→ `RESOURCE_PROFILE=RESOURCE_PARTIAL`（低于 32c/128G 基线），`GATE_PASS`、`VARS_OK` 在 CI 中复现。按 plan §3.4 如实标 `RESOURCE_PARTIAL`，不写 full-quota。
+
+诚实边界：hosted runner 无预热 sstate 时不跑全冷构建（plan §3.4 禁止），`build-dev`/`four-step` job 为框架 + 资源口径 + 脚本语法校验 + 本地真实验据引用，**不冒充**本地 `BUILD_RC=0`/`FOUR_STEP_OK`；本地四步真实跑通证据见 §3.3，与 CI 证据分列。此前 S0–S3 因分支不匹配无 CI run（`total_count=0`），本 workflow 为首次为该分支设计的 CI 并达成 3/3。CI run 链接：`https://github.com/zeek-zhao/yp-distro/actions/runs/46138997143`。
 
 ## 4. 变更记录
 
 | 版本 | 日期 | 变更 | 作者 |
 |---|---|---|---|
 | v1.0 | 2026-11-28 | 新建：S4 设计四问评审 + 设计阶段真实探测证据（buildhistory 变量/GitPython、check-layer 依赖解析与正/负向用例、test_world 重型结论、四步 CI 资源与分支口径）；实测待回填 | zeek.zhao |
-| v1.1 | 2026-11-28 | 回填实测：D-06 buildhistory 两 commit + diff 归档、D-08 补 README/SECURITY 后正向核心用例全绿 + 负向坏层 FAIL、D-09 four-step.sh 本地 FOUR_STEP_OK + 端口 bug 修复 + 负向路径、m1-dev.yml 框架与资源口径；D-07 P2_UNVERIFIED；CI 3 次 green 待 Actions 实测；RESOURCE_PARTIAL | zeek.zhao |
+| v1.1 | 2026-11-28 | 回填实测：D-06 buildhistory 两 commit + diff 归档、D-08 补 README/SECURITY 后正向核心用例全绿 + 负向坏层 FAIL + 脚本端到端 CHECK_LAYER_OK、D-09 four-step.sh 本地 FOUR_STEP_OK + 端口 bug 修复 + 负向路径、m1-dev.yml 框架与资源口径；CI 3/3 green（46138997143/46139088851/46139090641，runner nproc=4/15.6G=RESOURCE_PARTIAL）；D-07 P2_UNVERIFIED；S4 通过 | zeek.zhao |
